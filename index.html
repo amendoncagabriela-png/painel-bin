@@ -184,7 +184,7 @@
 <style>
   /* Identidade BIN: preto #191919 e vermelho #A62A2E na moldura, dourado #AF6839 → #FAF4B4 como destaque, Arial/Helvetica */
   .bd {
-    --bin-black: #191919; --bin-red: #A62A2E; --bin-gold: #AF6839; --bin-gold-light: #FAF4B4;
+    --bin-black: #191919; --bin-red: #A62A2E; --bin-gold: #AF6839; --bin-gold-light: #FAF4B4; --bin-proj: #2E7DBF;
     --bin-font: Arial, Helvetica, "Helvetica Neue", sans-serif;
     --rail-fg: #F4F1EA; --rail-muted: #B9B2A6; --rail-ok: #6FD39A; --rail-warn: #F2C36B; --rail-bad: #FF8F86;
     display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--bin-font); max-width: 82rem; margin-inline: auto; color: var(--color-fg);
@@ -207,6 +207,12 @@
   .bd-tab:hover { color: var(--color-fg); }
   .bd-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--bin-red); }
   .bd-tab .curto { display: none; }
+  /* Botões "pai": Comercial e Financeiro */
+  .bd-areas { display: flex; gap: var(--cds-gap-sm); margin-bottom: calc(-1 * var(--cds-gap-lg) + var(--cds-gap-sm)); }
+  .bd-area { appearance: none; border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg-muted); border-radius: 999px; padding: .45rem 1.2rem; font: 700 var(--cds-font-size-body) var(--bin-font); letter-spacing: .02em; cursor: pointer; }
+  .bd-area:hover { color: var(--color-fg); }
+  .bd-area[aria-pressed="true"] { background: var(--bin-black); border-color: var(--bin-black); color: #fff; box-shadow: inset 0 -3px 0 var(--bin-gold); }
+  .bd-area:focus-visible { outline: 2px solid var(--bin-gold); outline-offset: 2px; }
   .bd-tab:focus-visible, .bd-chip:focus-visible, .bd select:focus-visible, .bd tr.click:focus-visible { outline: 2px solid var(--bin-gold); outline-offset: 2px; }
   .bd-page { display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
   /* Filtros */
@@ -269,6 +275,15 @@
   .bd-kpi .ico { grid-column: 2; grid-row: 1 / span 3; width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1.5px solid rgba(250,244,180,.35); display: grid; place-items: center; color: var(--bin-gold-light); align-self: center; }
   .bd-kpi .ico svg { width: 1.2rem; height: 1.2rem; }
   .bd-kpi .val { font-size: 1.6rem; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; color: #fff; grid-column: 1; overflow-wrap: anywhere; }
+  /* Projeção: sempre em azul e com a etiqueta "projeção", para não ser lida como faturamento realizado */
+  .bd-kpi.proj { box-shadow: inset 3px 0 0 var(--bin-proj); }
+  .bd-kpi.proj .val { color: #8EC3EE; }
+  .tag-proj { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border: 1px solid var(--bin-proj); border-radius: 999px; color: #8EC3EE; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: .1em; }
+  .bd-card .tag-proj { color: var(--bin-proj); }
+  .txt-proj { color: var(--bin-proj); font-weight: 700; }
+  .bd-mini { margin-top: var(--cds-gap-sm); }
+  .bd-mini > summary { cursor: pointer; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 700; padding: .3rem 0; }
+  .bd-mini[open] > summary { margin-bottom: var(--cds-gap-xs); }
   .bd-kpi .sub { font-size: var(--cds-font-size-caption); color: var(--rail-muted); grid-column: 1; line-height: 1.4; font-variant-numeric: tabular-nums; }
   .bd-rail .up { color: var(--rail-ok) !important; } .bd-rail .down { color: var(--rail-bad) !important; } .bd-rail .mid { color: var(--rail-warn) !important; }
   /* Cartões */
@@ -347,7 +362,7 @@
   }
   /* Celular */
   @media (max-width: 40rem) {
-    .bd { gap: var(--cds-gap-md); --tabs-h: 3.4rem; }
+    .bd { gap: var(--cds-gap-md); --tabs-h: 3.4rem; --areas-h: 2.3rem; }
     .bd-top-in { padding: var(--cds-pad-md) var(--cds-pad-lg); gap: var(--cds-gap-sm) var(--cds-gap-md); }
     .bd-logo { height: 38px; }
     .bd-brand { flex-basis: 8rem; }
@@ -362,13 +377,16 @@
     .bd-status .st-lbl-c { display: inline; }
     .bd-status b { white-space: nowrap; }
     .bd-atu-pop { margin: 0 -8px calc(-1 * var(--cds-gap-md)); }
-    .bd-tabs { position: sticky; top: var(--status-h); z-index: 20; height: var(--tabs-h); margin: 0 -16px; background: var(--bin-black); border: 0; gap: 0; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,.25); overflow: hidden; }
+    .bd-areas { position: sticky; top: var(--status-h); z-index: 21; height: var(--areas-h); margin: 0 -16px calc(-1 * var(--cds-gap-md)); gap: 0; background: #0f0f0f; border-bottom: 1px solid #2a2a2a; }
+    .bd-area { flex: 1 1 0; border: 0; border-radius: 0; background: transparent; color: #8f897f; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; padding: 0; }
+    .bd-area[aria-pressed="true"] { background: transparent; color: #FAF4B4; box-shadow: inset 0 -2px 0 var(--bin-gold); }
+    .bd-tabs { position: sticky; top: calc(var(--status-h) + var(--areas-h)); z-index: 20; height: var(--tabs-h); margin: 0 -16px; background: var(--bin-black); border: 0; gap: 0; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,.25); overflow: hidden; }
     .bd-tab { flex: 1 1 0; flex-direction: column; justify-content: center; gap: .1rem; padding: 0 .1rem; margin: 0; height: 100%; color: #B9B2A6; font-size: .64rem; border-bottom: 3px solid transparent; min-width: 0; }
     .bd-tab[aria-selected="true"] { color: #fff; border-bottom-color: var(--bin-red); }
     .bd-tab svg { width: 1.15rem; height: 1.15rem; }
     .bd-tab .longo { display: none; }
     .bd-tab .curto { display: inline; }
-    .bd .bd-ctl { top: calc(var(--status-h) + var(--tabs-h)); }
+    .bd .bd-ctl { top: calc(var(--status-h) + var(--areas-h) + var(--tabs-h)); }
     .bd-ctl { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: var(--cds-pad-sm) 16px; box-shadow: 0 6px 8px -8px rgba(0,0,0,.35); }
     .bd-chips { flex-wrap: nowrap; }
     .bd-ctl > *, .bd-chips > * { flex-shrink: 0; }
@@ -437,14 +455,18 @@
     <div class="bd-goldline"></div>
   </header>
 
+  <div class="bd-areas" role="group" aria-label="Área">
+    <button class="bd-area" type="button" data-area="com" aria-pressed="true">Comercial</button>
+    <button class="bd-area" type="button" data-area="fin" aria-pressed="false">Financeiro</button>
+  </div>
   <nav class="bd-tabs" role="tablist" aria-label="Seções do painel">
-    <button class="bd-tab" role="tab" data-tab="mes" id="aba-mes" aria-selected="true"><svg><use href="#i-pace"/></svg><span class="longo">Mês atual</span><span class="curto">Mês</span></button>
-    <button class="bd-tab" role="tab" data-tab="ano" id="aba-ano" aria-selected="false"><svg><use href="#i-cash"/></svg><span class="longo">Ano</span><span class="curto">Ano</span></button>
-    <button class="bd-tab" role="tab" data-tab="lojas" id="aba-lojas" aria-selected="false"><svg><use href="#i-box"/></svg><span class="longo">Lojas</span><span class="curto">Lojas</span></button>
-    <button class="bd-tab" role="tab" data-tab="raiox" id="aba-raiox" aria-selected="false"><svg><use href="#i-lens"/></svg><span class="longo">Raio-X</span><span class="curto">Raio-X</span></button>
-    <button class="bd-tab" role="tab" data-tab="produtos" id="aba-produtos" aria-selected="false"><svg><use href="#i-cart"/></svg><span class="longo">Produtos</span><span class="curto">Produtos</span></button>
-    <button class="bd-tab" role="tab" data-tab="gastos" id="aba-gastos" aria-selected="false"><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
-    <button class="bd-tab" role="tab" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas e markup</span><span class="curto">Metas</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="mes" id="aba-mes" aria-selected="true"><svg><use href="#i-pace"/></svg><span class="longo">Mês atual</span><span class="curto">Mês</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="ano" id="aba-ano" aria-selected="false"><svg><use href="#i-cash"/></svg><span class="longo">Ano</span><span class="curto">Ano</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="lojas" id="aba-lojas" aria-selected="false"><svg><use href="#i-box"/></svg><span class="longo">Lojas</span><span class="curto">Lojas</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="raiox" id="aba-raiox" aria-selected="false"><svg><use href="#i-lens"/></svg><span class="longo">Raio-X</span><span class="curto">Raio-X</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas</span><span class="curto">Metas</span></button>
+    <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
+    <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
   </nav>
 
   <!-- ===================== MÊS ATUAL ===================== -->
@@ -604,6 +626,9 @@
         <div class="bd-kpi"><span class="lbl">Acumulado <span class="lbl-ano-per"></span></span><span class="ico"><svg><use href="#i-cash"/></svg></span>
           <span class="val" data-source="kpis" data-field="ytd_atual">—</span>
           <span class="sub"><span data-source="kpis" data-field="ytd_var">—</span> vs. mesmo período anterior</span></div>
+        <div class="bd-kpi proj" id="kpi-proj" hidden><span class="lbl">Fechamento de <span id="proj-ano"></span><span class="tag-proj">projeção</span></span><span class="ico"><svg><use href="#i-proj"/></svg></span>
+          <span class="val" id="proj-val">—</span>
+          <span class="sub" id="proj-sub">—</span></div>
         <div class="bd-kpi" id="kpi-mesmas"><span class="lbl">Mesmas lojas</span><span class="ico"><svg><use href="#i-proj"/></svg></span>
           <span class="val" data-source="kpis" data-field="mesmas_lojas_var">—</span>
           <span class="sub">sem: <span data-source="kpis" data-field="lojas_fora">—</span></span></div>
@@ -628,7 +653,7 @@
         </div>
         <div class="bd-card" id="card-mensal">
           <h3><span data-source="historia_ano" data-field="titulo_mensal">Mês a mês</span> <span class="per">| R$ milhões, até 5 anos</span></h3>
-          <p class="bd-note">O ano escolhido em dourado e mais grosso; o ano anterior em vermelho; os demais em cinza. Mostra até 5 anos (o escolhido e os 4 anteriores). Toque no gráfico para comparar os anos.</p>
+          <p class="bd-note">O ano escolhido em dourado e mais grosso; o ano anterior em vermelho; os demais em cinza. Mostra até 5 anos (o escolhido e os 4 anteriores). Toque no gráfico para comparar os anos.<span id="mensal-proj-nota"></span></p>
           <div class="bd-chart" id="chart-mensal" data-source="mensal"></div>
         </div>
       </div>
@@ -730,8 +755,17 @@
         <div class="bd-grid2">
           <div class="bd-card">
             <h3><span data-k="t_dow">Dia da semana</span> <span class="per">| R$ mil, média por dia aberto</span></h3>
-            <p class="bd-note">Faturamento médio de cada dia da semana no período.</p>
+            <p class="bd-note" id="rx-dow-nota">Faturamento médio de cada dia da semana no período.</p>
             <div class="bd-chart" id="rx-chart-dow" style="min-height: 200px"></div>
+            <details class="bd-mini">
+              <summary>Números por dia da semana (para conferir com o ERP)</summary>
+              <div class="bd-tablewrap">
+                <table id="rx-tab-dow" class="bd-cards c2">
+                  <thead><tr><th class="l">Dia</th><th>Dias com venda</th><th>Faturamento</th><th>Média por dia</th><th>Pedidos por dia</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </details>
           </div>
           <div class="bd-card">
             <h3><span data-k="t_forma">Forma de pagamento</span> <span class="per">| % do faturamento</span></h3>
@@ -774,6 +808,17 @@
         <div class="k-ag"><h3><i></i>Onde agir</h3><p data-k="onde_agir">—</p></div>
         <div class="k-rs"><h3><i></i>Ressalva</h3><p data-k="ressalva">—</p></div>
       </div></details>
+    </div>
+    <div class="bd-card" id="card-markup">
+      <h3><span id="mk-titulo">Markup por loja</span> <span class="per">| mês atual, média do ano e anos anteriores</span></h3>
+      <p class="bd-note" id="markup-nota">—</p>
+      <div class="bd-tablewrap">
+        <table id="tab-markup" class="bd-cards c3">
+          <thead><tr><th class="l">Loja</th><th id="mk-th-atual">Mês atual</th><th id="mk-th-media">Média do ano</th><th>Diferença</th><th id="mk-th-a1">ERP</th><th id="mk-th-a2">ERP</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="bd-legend"><span>Mês atual e média do ano: markup da planilha Metas_2026. Anos anteriores: ERP, lucro ÷ custo dos produtos vendidos (relatório 02), só onde há 6 meses ou mais de relatório. O ERP usa o custo cadastrado no sistema e fica abaixo da planilha: compare cada coluna com ela mesma, não uma com a outra.</span></div>
     </div>
     <div class="bd-layout">
       <aside class="bd-rail" aria-label="Indicadores de produtos">
@@ -988,17 +1033,6 @@
         </table>
       </div>
       <div class="bd-legend"><span class="ok">● 100% ou mais</span><span class="warn">● 90% a 99%</span><span class="bad">● abaixo de 90%</span><span>Diferença em pontos percentuais</span></div>
-    </div>
-    <div class="bd-card" id="card-markup">
-      <h3><span id="mk-titulo">Markup por loja</span> <span class="per">| mês atual e média do ano</span></h3>
-      <p class="bd-note" id="markup-nota">—</p>
-      <div class="bd-chart" id="mk-chart" style="min-height: 200px"></div>
-      <div class="bd-tablewrap">
-        <table id="tab-markup" class="bd-cards c2">
-          <thead><tr><th class="l">Loja</th><th id="mk-th-atual">Mês atual</th><th>Média do ano</th><th>Diferença</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
     </div>
     <details class="bd-card">
       <summary>Metas do 4º trimestre de 2025 <span class="per">| set a dez/2025</span></summary>
@@ -1586,7 +1620,7 @@
   });
 
   /* ---------- Formatação e utilidades ---------- */
-  const GOLD = 'var(--bin-gold)', MUTED = 'var(--cds-chart-muted)', BAD = 'var(--color-bad)';
+  const GOLD = 'var(--bin-gold)', MUTED = 'var(--cds-chart-muted)', BAD = 'var(--color-bad)', PROJ = 'var(--bin-proj)';
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   const brl2 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const int = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
@@ -1737,15 +1771,22 @@
 
   /* ---------- Abas ---------- */
   let aba = 'mes';
+  // Duas áreas: Comercial (Mês, Ano, Lojas, Raio-X, Metas) e Financeiro (Produtos e markup, Gastos). Cada área lembra a última aba aberta.
+  const ultAba = { com: 'mes', fin: 'produtos' };
+  const areaDe = (id) => { const b = $$('.bd-tab').find((x) => x.dataset.tab === id); return b ? b.dataset.area : 'com'; };
   function showTab(id, push) {
     if (!$$('.bd-page').some((p) => p.dataset.page === id)) return;
     aba = id;
+    const area = areaDe(id); ultAba[area] = id;
+    $$('.bd-area').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.area === area)));
+    $$('.bd-tab').forEach((b) => { b.hidden = b.dataset.area !== area; });
     $$('.bd-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
     $$('.bd-page').forEach((p) => { p.hidden = p.dataset.page !== id; });
     if (push) { dash.setLink(id); window.scrollTo({ top: 0 }); }
     render();
   }
   $$('.bd-tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab, true)));
+  $$('.bd-area').forEach((b) => b.addEventListener('click', () => showTab(ultAba[b.dataset.area], true)));
 
   /* ---------- Gráficos ---------- */
   function drawCurva(el, rows) {
@@ -1894,7 +1935,7 @@
     }
   }
 
-  function drawMensal(el, rows, anoSel) {
+  function drawMensal(el, rows, anoSel, proj = []) {
     el.replaceChildren();
     if (!rows.length) return;
     const W = Math.max(280, el.clientWidth), H = 250;
@@ -1905,7 +1946,7 @@
     const larg = (a) => a === anoSel ? 3.4 : a === anoSel - 1 ? 2 : 1.3;
     const opac = (a) => a === anoSel ? 1 : a === anoSel - 1 ? 0.85 : 0.6;
     const fmtY = d3.max(rows, (d) => d.faturamento) < 1e6 ? mil : mi;
-    const y = d3.scaleLinear([d3.min(rows, (d) => d.faturamento) * 0.92, d3.max(rows, (d) => d.faturamento) * 1.03], [H - 26, 12]).nice();
+    const y = d3.scaleLinear([d3.min([...rows, ...proj], (d) => d.faturamento) * 0.92, d3.max([...rows, ...proj], (d) => d.faturamento) * 1.03], [H - 26, 12]).nice();
     const ticks = y.ticks(4);
     const ml = d3.max(ticks, (t) => measure(svg, fmtY(t))) + 10;
     const mr = d3.max(anos, (a) => measure(svg, String(a))) + 12;
@@ -1919,6 +1960,15 @@
     const line = d3.line().x((d) => x(d.mes_num)).y((d) => y(d.faturamento));
     const series = anos.map((a) => ({ ano: a, pts: rows.filter((d) => d.ano === a) }));
     for (const s of series) svg.append('path').datum(s.pts).attr('d', line).style('fill', 'none').style('stroke', color(s.ano)).style('stroke-opacity', opac(s.ano)).attr('stroke-width', larg(s.ano)).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    // Projeção do ano escolhido: azul tracejado, partindo do último mês realizado
+    const sel = series.find((s) => s.ano === anoSel);
+    if (proj.length && sel && sel.pts.length) {
+      const pp = [sel.pts[sel.pts.length - 1], ...proj];
+      svg.append('path').datum(pp).attr('d', line).style('fill', 'none').style('stroke', PROJ).attr('stroke-width', 2.6).attr('stroke-dasharray', '6 5').attr('stroke-linecap', 'round');
+      for (const p of proj) svg.append('circle').attr('cx', x(p.mes_num)).attr('cy', y(p.faturamento)).attr('r', 3.2).style('fill', 'var(--color-panel)').style('stroke', PROJ).attr('stroke-width', 1.8);
+      const lp = proj[proj.length - 1];
+      svg.append('text').attr('x', x(lp.mes_num)).attr('y', y(lp.faturamento) - 10).attr('text-anchor', 'end').attr('font-size', 11).attr('font-weight', 700).style('fill', PROJ).text('projeção');
+    }
     const ends = series.map((s) => { const p = s.pts[s.pts.length - 1]; return { ano: s.ano, x: x(p.mes_num), y: y(p.faturamento) }; });
     for (const e of ends) svg.append('circle').attr('cx', e.x).attr('cy', e.y).attr('r', e.ano === anoSel ? 4.5 : e.ano === anoSel - 1 ? 3.5 : 2.5).style('fill', color(e.ano)).style('fill-opacity', opac(e.ano));
     const lab = ends.map((e) => ({ ...e, ly: e.y })).sort((a, b) => a.ly - b.ly);
@@ -1943,6 +1993,8 @@
           dots.append('circle').attr('cx', x(mth)).attr('cy', y(p.faturamento)).attr('r', 4).style('fill', color(a));
           lines.push({ color: color(a), text: `${a}  ${brl.format(p.faturamento)}` });
         }
+        const pq = proj.find((d) => d.mes_num === mth);
+        if (pq) { dots.append('circle').attr('cx', x(mth)).attr('cy', y(pq.faturamento)).attr('r', 4).style('fill', PROJ); lines.unshift({ color: PROJ, text: `${anoSel} projeção  ${brl.format(pq.faturamento)}` }); }
         tipLines(tip, MESES[mth - 1], lines);
         tip.hidden = false;
         const [ex, ey] = d3.pointer(ev, el);
@@ -2104,21 +2156,69 @@
       fillStory($('#hero-ano'), hr, where);
       for (const id of ['titulo_anual', 'titulo_mensal']) { const el = $(`#ano [data-field="${id}"]`); el.dataset.where = where; el.textContent = hr ? hr[id] : ''; }
     }
+    // Projeção até dezembro do ano em curso (em azul, sempre com a palavra "projeção")
+    const pj = projAno(loja);
+    const pjAqui = pj && pj.ano === ano ? pj : null;
+    $('#kpi-proj').hidden = !pjAqui;
+    if (pjAqui) {
+      $('#proj-ano').textContent = String(ano) + ' ';
+      $('#proj-val').textContent = money(pjAqui.total);
+      $('#proj-sub').textContent = `${pjAqui.varAno == null ? '' : pct(pjAqui.varAno, true) + ' vs. ' + (ano - 1) + ' · '}realizado até ${MESES[pjAqui.M - 1]} + estimativa de ${MESES[pjAqui.M]} a dez`;
+    }
     const an = dash.data('anual');
     if (an.status === 'ok') {
       const rows = an.data.filter((r) => r.loja === loja && r.faturamento > 0);
       const ult = d3.max(rows, (r) => r.ano);
-      const fmtL = d3.max(rows, (r) => r.faturamento) < 1e6 ? mil : mi;
-      drawCols($('#chart-anual'), rows.map((r) => ({ key: String(r.ano), label: String(r.ano) + (r.ano === ult && r.meses < 12 ? '*' : ''), value: r.faturamento,
-        color: r.ano === ano ? GOLD : MUTED, alpha: r.meses < 12 ? 0.7 : 1, raw: r })), {
+      const fmtL = d3.max(rows, (r) => r.faturamento + (pj && r.ano === pj.ano ? pj.proj : 0)) < 1e6 ? mil : mi;
+      drawCols($('#chart-anual'), rows.map((r) => { const pr = pj && r.ano === pj.ano ? pj : null;
+        return { key: String(r.ano), label: String(r.ano) + (pr ? ' proj.' : r.ano === ult && r.meses < 12 ? '*' : ''), value: r.faturamento, value2: pr ? pr.proj : 0, color2: PROJ,
+          color: r.ano === ano ? GOLD : MUTED, alpha: r.meses < 12 ? 0.7 : 1, raw: r, pr }; }), {
         fmtLabel: fmtL,
-        tip: (r) => { const i = rows.indexOf(r.raw), prev = rows[i - 1]; return { title: r.label, lines: [{ text: brl.format(r.value) }, ...(prev && r.raw.meses === 12 ? [{ text: pct(r.value / prev.faturamento - 1, true) + ' vs. ' + prev.ano }] : []), ...(r.raw.meses < 12 ? [{ text: r.raw.meses + ' meses lançados' }] : [])] }; } });
+        tip: (r) => { const i = rows.indexOf(r.raw), prev = rows[i - 1];
+          if (r.pr) return { title: `${r.raw.ano} · projeção`, lines: [{ color: GOLD, text: `Realizado ${MESES[0]}–${MESES[r.pr.M - 1]}  ${brl.format(r.value)}` }, { color: PROJ, text: `Projeção ${MESES[r.pr.M]}–dez  ${brl.format(r.pr.proj)}` }, { text: `Fechamento projetado  ${brl.format(r.pr.total)}` }, ...(r.pr.varAno != null ? [{ text: pct(r.pr.varAno, true) + ' vs. ' + (r.raw.ano - 1) }] : [])] };
+          return { title: r.label, lines: [{ text: brl.format(r.value) }, ...(prev && r.raw.meses === 12 ? [{ text: pct(r.value / prev.faturamento - 1, true) + ' vs. ' + prev.ano }] : []), ...(r.raw.meses < 12 ? [{ text: r.raw.meses + ' meses lançados' }] : [])] }; } });
       const p = rows.find((r) => r.ano === ult && r.meses < 12);
-      $('#anual-nota').textContent = `${loja === 'Todas' ? 'Todas as lojas' : loja + ' ' + (NOMES[loja] || '')}, em R$ ${fmtL === mil ? 'mil' : 'milhões'}. O ano escolhido em dourado.` + (p ? ` * ${p.ano} parcial: ${MESES[0]} a ${MESES[p.meses - 1]}.` : '');
+      const nota = $('#anual-nota');
+      nota.textContent = `${loja === 'Todas' ? 'Todas as lojas' : loja + ' ' + (NOMES[loja] || '')}, em R$ ${fmtL === mil ? 'mil' : 'milhões'}. O ano escolhido em dourado.` + (p && !pj ? ` * ${p.ano} parcial: ${MESES[0]} a ${MESES[p.meses - 1]}.` : '');
+      if (pj) nota.append(' ', Object.assign(document.createElement('span'), { className: 'txt-proj', textContent: `Em azul, a projeção de ${MESES[pj.M]} a dez/${pj.ano}: é estimativa, não faturamento realizado.` }), ` ${pj.txtMetodo}`);
     } else if (an.status === 'error') setFail($('#chart-anual'));
     const mg = dash.data('mensal');
-    if (mg.status === 'ok') drawMensal($('#chart-mensal'), mg.data.filter((r) => r.loja === loja && r.ano >= ano - 4 && r.ano <= ano), ano);
+    $('#mensal-proj-nota').replaceChildren(...(pjAqui ? [' ', Object.assign(document.createElement('span'), { className: 'txt-proj', textContent: `Linha azul tracejada: projeção de ${MESES[pjAqui.M]} a dez/${ano} (estimativa).` })] : []));
+    if (mg.status === 'ok') drawMensal($('#chart-mensal'), mg.data.filter((r) => r.loja === loja && r.ano >= ano - 4 && r.ano <= ano), ano, pjAqui ? pjAqui.meses : []);
     else if (mg.status === 'error') setFail($('#chart-mensal'));
+  }
+
+  // Projeção do ano em curso: cada mês que falta = mesmo mês do ano anterior × (1 + crescimento do acumulado do ano sobre os mesmos meses do ano anterior).
+  // O mês em andamento usa a projeção pelo ritmo da aba Mês atual quando há leitura de todas as lojas.
+  function projAno(loja) {
+    const mg = dash.data('mensal');
+    if (mg.status !== 'ok') return null;
+    const R = mg.data.filter((r) => r.loja === loja);
+    const ult = d3.max(R, (r) => r.ano); if (!ult) return null;
+    const M = d3.max(R.filter((r) => r.ano === ult), (r) => r.mes_num);
+    if (!M || M >= 12) return null;
+    const v = (a, m) => { const x = R.find((r) => r.ano === a && r.mes_num === m); return x ? x.faturamento : null; };
+    let real = 0, base = 0;
+    for (let m = 1; m <= M; m++) { real += v(ult, m) || 0; base += v(ult - 1, m) || 0; }
+    if (!(base > 0)) return null;
+    const cresc = real / base - 1;
+    const ac = dash.data('acomp');
+    const meses = []; let ritmo = null;
+    for (let m = M + 1; m <= 12; m++) {
+      const mesK = `${ult}-${String(m).padStart(2, '0')}`;
+      let f = null;
+      if (ac.status === 'ok') {
+        const rs = ac.data.filter((r) => r.mes === mesK && r.dias_rest > 0 && r.projecao != null && r.loja === loja);
+        if (rs.length) { f = d3.sum(rs, (r) => r.projecao); ritmo = { mes: m, ate: d3.max(rs, (r) => r.data) }; }
+      }
+      if (f == null) { const b = v(ult - 1, m); if (b == null) continue; f = b * (1 + cresc); }
+      meses.push({ ano: ult, mes_num: m, faturamento: f });
+    }
+    if (!meses.length) return null;
+    const proj = d3.sum(meses, (r) => r.faturamento);
+    const antTotal = d3.sum(R.filter((r) => r.ano === ult - 1), (r) => r.faturamento);
+    const txtMetodo = `Como foi estimada: ${ritmo ? `${MESES[ritmo.mes - 1]} pelo ritmo da última leitura (${dBRy(ritmo.ate)}); ` : ''}os demais meses repetem o mesmo mês de ${ult - 1} com o crescimento do acumulado de ${ult} (${pct(cresc, true)}).`;
+    return { ano: ult, M, real, cresc, meses, proj, total: real + proj, varAno: antTotal > 0 ? (real + proj) / antTotal - 1 : null, txtMetodo };
   }
 
   /* ---------- Aba Lojas ---------- */
@@ -2303,13 +2403,21 @@
     const dias = dash.data('l2_dias');
     const nDias = new Map();
     // Dias com venda: no grupo, o dia conta uma vez (o maior número de dias entre as lojas em cada mês e dia da semana)
-    const diasMD = new Map(); if (dias.status === 'ok') for (const r of dias.data) if (daLoja(lojaDe(r)) && r.mes >= de && r.mes <= ate) { const k = r.mes + '|' + r.dow; diasMD.set(k, Math.max(diasMD.get(k) || 0, Number(r.dias))); }
+    const diasMD = new Map(); if (dias.status === 'ok') for (const r of dias.data) if (daLoja(lojaDe(r)) && !inc(lojaDe(r), r.mes) && r.mes >= de && r.mes <= ate) { const k = r.mes + '|' + r.dow; diasMD.set(k, Math.max(diasMD.get(k) || 0, Number(r.dias))); }
     for (const [k, n] of diasMD) { const d = Number(k.split('|')[1]); nDias.set(d, (nDias.get(d) || 0) + n); }
-    const dowRows = [1, 2, 3, 4, 5, 6, 0].filter((d) => nDias.get(d)).map((d) => { const v = d3.sum(cur.filter((r) => r.dow === d), (r) => r.val); return { d, v: v / nDias.get(d), ped: d3.sum(cur.filter((r) => r.dow === d), (r) => r.ped) / nDias.get(d) }; });
+    const dowRows = [1, 2, 3, 4, 5, 6, 0].filter((d) => nDias.get(d)).map((d) => { const v = d3.sum(cur.filter((r) => r.dow === d), (r) => r.val); return { d, v: v / nDias.get(d), tot: v, dias: nDias.get(d), ped: d3.sum(cur.filter((r) => r.dow === d), (r) => r.ped) / nDias.get(d) }; });
     const melhorDow = dowRows.slice().sort((a, c) => c.v - a.v)[0];
     set('t_dow', melhorDow ? `${DOW[melhorDow.d]} é o dia mais forte` : 'Dia da semana');
     drawCols($('#rx-chart-dow'), dowRows.map((r) => ({ key: String(r.d), label: DOW[r.d].slice(0, 3), value: r.v, color: r === melhorDow ? GOLD : MUTED, r })), { h: 200, fmtLabel: mil,
       tip: (x) => ({ title: DOW[x.r.d], lines: [{ text: `Média por dia  ${brl.format(x.r.v)}` }, { text: `Pedidos por dia  ${int.format(x.r.ped)}` }, { text: `${nDias.get(x.r.d)} dias com venda` }] }) });
+    $('#rx-dow-nota').textContent = 'Média de cada dia da semana no período: faturamento do dia ÷ dias em que houve venda. A data é a de emissão do pedido no ERP (relatório 01; na L2, a do pagamento no relatório 06). Domingos e feriados só entram se houve venda.' + (loja === 'Todas' ? ' Em todas as lojas, cada dia conta uma vez.' : '');
+    fillTable($('#rx-tab-dow'), dowRows, [
+      { cls: 'l nm', fmt: (r) => DOW[r.d] },
+      { fmt: (r) => int.format(r.dias) },
+      { fmt: (r) => brl.format(r.tot) },
+      { fmt: (r) => brl.format(r.v) },
+      { fmt: (r) => int.format(r.ped) },
+    ]);
 
     // Forma de pagamento (ignora o filtro de forma, para mostrar a fatia de cada uma)
     const baseForma = L.filter((r) => r.mes >= de && r.mes <= ate && (cli === 'todos' || r.cli === cli) && r.faixa !== 'dev');
@@ -2732,6 +2840,111 @@
   }
   root.addEventListener('click', (ev) => { const a = ev.target.closest('a[href="#atualizacao"]'); if (!a) return; ev.preventDefault(); const d = $('#atualizacao'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 
+
+  /* ---------- Aba Metas ---------- */
+  const K = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const hideEmpty = (table, rows) => {
+    const ths = [...table.querySelectorAll('thead th')];
+    ths.forEach((th, i) => {
+      const f = th.dataset.field;
+      const empty = K.includes(f) && !rows.some((r) => r[f] != null);
+      th.hidden = empty;
+      table.querySelectorAll('tbody tr').forEach((tr) => { if (tr.children[i]) tr.children[i].hidden = empty; });
+    });
+  };
+  function renderMetas() {
+    const h = dash.data('historia_metas');
+    if (h.status === 'ok') fillStory($('#metas .bd-hero'), h.data[0]);
+    const ref = P().mt_ref === 'loja' ? 'loja' : 'gerente';
+    opcoesG($('#mt-ref'), [[null, [['loja', 'Meta da loja'], ['gerente', 'Meta do gerente']]]], ref);
+    const refTxt = ref === 'gerente' ? 'meta do gerente' : 'meta da loja';
+    $('#mt-ref-txt').textContent = refTxt;
+    const m26 = dash.data('metas_2026_ating'), t26 = $('#tab-metas26');
+    if (m26.status === 'ok') {
+      const suf = ref === 'gerente' ? '_g' : '';
+      const p = (f) => ({ cls: (r) => metaCls(r[f]), fmt: (r) => r[f] == null ? '' : pct0(r[f]) });
+      fillTable(t26, m26.data, [{ cls: 'l cod', fmt: (r) => r.loja }, { cls: 'l nm', fmt: (r) => `${r.loja} ${r.nome}` }, ...K.map((k) => p(k + suf)), p('acum_loja'), p('acum_gerente')]);
+      hideEmpty(t26, m26.data);
+    }
+
+    // Mesmo mês em anos diferentes
+    const am = dash.data('ating_meses');
+    if (am.status === 'ok' && am.data.length) {
+      const D = am.data;
+      const mesesN = [...new Set(D.map((r) => r.mes_num))].sort((a, c) => a - c);
+      const anosDe = (n) => [...new Set(D.filter((r) => r.mes_num === n).map((r) => r.ano))].sort((a, c) => c - a);
+      const comDois = mesesN.filter((n) => anosDe(n).length > 1);
+      const padrao = comDois.length ? comDois[comDois.length - 1] : mesesN[mesesN.length - 1];
+      const mn = mesesN.includes(Number(P().ger_mes)) ? Number(P().ger_mes) : padrao;
+      opcoesG($('#ger-mes'), [['Com ano anterior para comparar', comDois.map((n) => [String(n), MESES_LONGOS[n - 1]])], ['Só um ano com meta', mesesN.filter((n) => !comDois.includes(n)).map((n) => [String(n), MESES_LONGOS[n - 1]])]].filter((g) => g[1].length), String(mn));
+      const [a1, a0] = anosDe(mn);
+      const f = 'pct_' + ref;
+      const linha = (l, a) => D.find((r) => r.loja === l && r.ano === a && r.mes_num === mn);
+      const lojas = [...new Set(D.filter((r) => r.mes_num === mn).map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
+      const rows = lojas.map((l) => { const x1 = linha(l, a1), x0 = a0 ? linha(l, a0) : null; return { loja: l, x1, x0, v1: x1 ? x1[f] : null, v0: x0 ? x0[f] : null }; })
+        .filter((r) => r.x1).sort((a, c) => (c.v1 ?? 0) - (a.v1 ?? 0));
+      const and = rows.some((r) => r.x1.andamento);
+      $('#ger-titulo').textContent = a0 ? `${cap(MESES_LONGOS[mn - 1])}: ${rows.filter((r) => r.v0 != null && r.v1 > r.v0).length} de ${rows.filter((r) => r.v0 != null).length} lojas ${and ? 'caminham para' : 'tiveram'} atingimento maior que em ${a0}` : `Atingimento da ${refTxt} em ${MESES_LONGOS[mn - 1]}/${a1}`;
+      $('#ger-nota').textContent = `Faturado ÷ ${refTxt} em ${MESES_LONGOS[mn - 1]}${a0 ? ` de ${a1} (barra) e de ${a0} (traço)` : ` de ${a1}`}.` + (and ? ` ${a1} ainda está em andamento: vale a projeção pelo ritmo da última leitura (${dBR(rows.find((r) => r.x1.andamento).x1.ate)}).` : '') + (a0 ? '' : ' A meta do gerente de 2025 só existe de setembro a dezembro.') + (lojas.includes('L8') && a0 === 2025 ? ' Em 2026 a L8 passou a incluir a M N, que até 2025 ficava na L3.' : '');
+      drawHBars($('#ger-chart'), rows.map((r) => ({ key: r.loja, label: estreito() ? r.loja : nomeLoja(r.loja), value: r.v1, ref: r.v0, color: r.v1 < 1 ? BAD : r.v0 != null && r.v1 > r.v0 ? GOLD : MUTED })),
+        { refLine: 1, refLabel: '100% da meta', minHi: 1.2, tip: (b) => { const r = rows.find((q) => q.loja === b.key); return [{ color: GOLD, text: `${a1}${r.x1.andamento ? ' (projeção)' : ''}  ${pct0(r.v1)} · ${money(r.x1.faturado)} de ${money(r.x1['meta_' + ref])}` }, ...(r.x0 ? [{ color: 'var(--color-fg)', text: `${a0}  ${pct0(r.v0)} · ${money(r.x0.faturado)} de ${money(r.x0['meta_' + ref])}` }] : [])]; } });
+      $('.g-a1').textContent = String(a1) + (and ? ' (em curso)' : ''); $('.g-a0').textContent = a0 ? String(a0) : '—';
+      $('.g-f1').textContent = `Faturado ${a1}`; $('.g-m1').textContent = `Meta ${a1}`;
+      fillTable($('#ger-tab'), rows, [
+        { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
+        { cls: (r) => metaCls(r.v1), fmt: (r) => pct0(r.v1) },
+        { cls: (r) => metaCls(r.v0), fmt: (r) => r.v0 == null ? 'sem meta' : pct0(r.v0) },
+        { cls: (r) => r.v0 == null ? '' : r.v1 >= r.v0 ? 'ok' : 'bad', fmt: (r) => r.v0 == null ? '—' : ((r.v1 - r.v0) >= 0 ? '+' : '') + Math.round((r.v1 - r.v0) * 100) + ' p.p.' },
+        { fmt: (r) => money(r.x1.faturado) },
+        { fmt: (r) => money(r.x1['meta_' + ref]) },
+      ]);
+    }
+
+    const mt = dash.data('metas_t4');
+    if (mt.status === 'ok') {
+      const p = (f) => ({ cls: (r) => metaCls(r[f]), fmt: (r) => pct0(r[f]) });
+      fillTable($('#tab-metas'), mt.data, [{ cls: 'l cod', fmt: (r) => r.loja }, { cls: 'l nm', fmt: (r) => `${r.loja} ${r.nome}` }, p('set_25'), p('out_25'), p('nov_25'), p('dez_25'), p('pct_loja_t4'), p('pct_gerente_t4')]);
+    }
+  }
+
+  /* ---------- Markup (resumo na aba Produtos e markup) ---------- */
+  // Mês em curso e média dos meses fechados vêm da planilha Metas_2026; os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
+  function renderMarkup() {
+    const mk = dash.data('markup_2026');
+    if (mk.status !== 'ok' || !mk.data.length) { $('#markup-nota').textContent = 'Sem leituras de markup na planilha Metas_2026.'; return; }
+    const atual = K.filter((k) => mk.data.some((r) => r[k] != null)).pop();
+    const iA = K.indexOf(atual), fech = K.slice(0, iA);
+    const ultLeit = mk.data.map((r) => r.ultima_leitura).filter(Boolean).sort().pop();
+    const fam = dash.data('l2_familias');
+    const erp = new Map();   // loja|ano -> lucro e custo dos produtos vendidos
+    if (fam.status === 'ok') for (const r of fam.data) {
+      if (r.per_ini.slice(0, 4) !== r.per_fim.slice(0, 4)) continue;
+      const k = lojaDe(r) + '|' + r.per_ini.slice(0, 4), o = erp.get(k) || { lucro: 0, custo: 0, meses: new Set() };
+      o.lucro += Number(r.lucro); o.custo += Number(r.custo); erp.set(k, o);
+      for (let m = Number(r.per_ini.slice(5, 7)); m <= Number(r.per_fim.slice(5, 7)); m++) o.meses.add(m);
+    }
+    const anoAtual = Number((ultLeit || '2026').slice(0, 4));
+    const anosErp = [anoAtual - 1, anoAtual - 2];
+    // Só mostra o ano do ERP com pelo menos 6 meses de relatório de produtos da loja
+    const mkErp = (l, a) => { const o = erp.get(l + '|' + a); return o && o.custo > 0 && o.meses.size >= 6 ? o.lucro / o.custo : null; };
+    const rows = mk.data.filter((r) => r[atual] != null).map((r) => { const v = fech.map((k) => r[k]).filter((x) => x != null);
+      return { loja: r.loja, cur: r[atual], med: v.length ? d3.mean(v) : null, e1: mkErp(r.loja, anosErp[0]), e2: mkErp(r.loja, anosErp[1]) }; })
+      .sort((a, c) => c.cur - a.cur);
+    const abaixo = rows.filter((r) => r.med != null && r.cur < r.med);
+    $('#mk-th-atual').textContent = `${MESES[iA]} (em curso)`;
+    $('#mk-th-media').textContent = `Média ${anoAtual}`;
+    $('#mk-th-a1').textContent = `${anosErp[0]} (ERP)`; $('#mk-th-a2').textContent = `${anosErp[1]} (ERP)`;
+    $('#mk-titulo').textContent = abaixo.length ? `${abaixo.length} de ${rows.length} lojas com markup abaixo da própria média em ${MESES_LONGOS[iA]}` : `Todas as lojas com markup na média ou acima em ${MESES_LONGOS[iA]}`;
+    $('#markup-nota').textContent = `${cap(MESES_LONGOS[iA])} na última leitura (${dBRy(ultLeit)}); a média é dos meses fechados de ${MESES[0]} a ${MESES[iA - 1] || MESES[0]}/${anoAtual}. Em vermelho, abaixo da média.`;
+    fillTable($('#tab-markup'), rows, [
+      { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
+      { cls: (r) => r.med != null && r.cur < r.med ? 'bad' : '', fmt: (r) => pct(r.cur) },
+      { fmt: (r) => pct(r.med) },
+      { cls: (r) => r.med == null ? '' : r.cur >= r.med ? 'ok' : 'bad', fmt: (r) => r.med == null ? '—' : pp1(r.cur - r.med) },
+      { fmt: (r) => pct(r.e1) },
+      { fmt: (r) => pct(r.e2) },
+    ]);
+  }
   /* ---------- Faixa fixa: última atualização e botão "Atualizar dados" ---------- */
   // O botão só relê as pastas quando o painel foi aberto pelo "Abrir painel.cmd" (servidor local no computador).
   // No Claude ou no celular ele explica como atualizar, porque a página não tem acesso às pastas.
@@ -2806,7 +3019,7 @@
     if (aba === 'ano') renderAno();
     if (aba === 'lojas') renderLojas();
     if (aba === 'raiox') renderRaiox();
-    if (aba === 'produtos') renderProdutos();
+    if (aba === 'produtos') { renderMarkup(); renderProdutos(); }
     if (aba === 'gastos') renderGastos();
     if (aba === 'metas') renderMetas();
   }
