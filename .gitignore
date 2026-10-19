@@ -1,0 +1,10 @@
+# Este repositório é público: só o código do painel entra aqui.
+# Nunca versionar dados, relatórios do ERP, planilhas ou o arquivo trancado.
+*.enc.json
+*.csv
+*.xls
+*.xlsx
+*.pdf
+*.txt
+dados.js
+Extracoes_ERP/
