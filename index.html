@@ -285,6 +285,12 @@
   .bd-dev-faixa { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: 0 0 var(--cds-gap-sm); padding: .55rem .8rem; border-radius: var(--cds-radius); background: rgba(242,195,107,.16); border: 1px solid #E0A83A; color: var(--color-fg); font-size: var(--cds-font-size-caption); line-height: 1.45; }
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
   .bd-dev { display: inline-block; background: #F2C36B; color: #191919; font-weight: 800; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: .2rem .6rem; border-radius: 999px; white-space: nowrap; }
+  /* Sinal de atenção: custo acima da venda no mês corrente */
+  .alerta { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; margin-right: .45rem; border-radius: 50%; background: var(--color-bad); color: #fff; font-weight: 800; font-size: .85rem; vertical-align: .1em; box-shadow: 0 0 0 3px rgba(196,48,43,.18); }
+  .bd-tab.com-alerta, .bd-area.com-alerta { position: relative; }
+  .bd-tab.com-alerta::after, .bd-area.com-alerta::after { content: '!'; position: absolute; top: .25rem; right: .3rem; width: .95rem; height: .95rem; border-radius: 50%; background: #E5484D; color: #fff; font: 800 .62rem/0.95rem Arial, sans-serif; text-align: center; }
+  #card-custo .bd-btn-atu { margin-left: auto; }
+  #card-custo .bd-btn-atu[disabled] { opacity: .5; cursor: default; }
   .bd-mini { margin-top: var(--cds-gap-sm); }
   .emp-resumo { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin: 0 0 var(--cds-gap-md); }
   .emp-chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: .25rem .7rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
@@ -801,7 +807,9 @@
   <section class="bd-page" data-page="produtos" id="produtos" hidden>
     <div class="bd-ctl">
       <label class="bd-f"><span>Loja</span><select id="pd-loja" class="sel-unid" aria-label="Loja"></select></label>
-      <label class="bd-f"><span>Período</span><select id="pd-per" aria-label="Período do relatório"></select></label>
+      <label class="bd-f"><span>Ano</span><select id="pd-ano" aria-label="Ano"></select></label>
+      <label class="bd-f"><span>De</span><select id="pd-de" aria-label="Mês inicial"></select></label>
+      <label class="bd-f"><span>Até</span><select id="pd-ate" aria-label="Mês final"></select></label>
       <label class="bd-f"><span>Ordenar</span><select id="pd-ord" aria-label="Ordenar famílias"></select></label>
     </div>
     <p class="bd-erp-nota" data-rel="produtos"></p>
@@ -816,6 +824,23 @@
         <div class="k-ag"><h3><i></i>Onde agir</h3><p data-k="onde_agir">—</p></div>
         <div class="k-rs"><h3><i></i>Ressalva</h3><p data-k="ressalva">—</p></div>
       </div></details>
+    </div>
+    <div class="bd-card" id="card-custo">
+      <h3><span class="alerta" id="cm-alerta" hidden title="Há produtos com custo acima da venda nos relatórios do mês corrente" aria-label="Atenção">!</span><span id="cm-titulo">Custo acima da venda</span> <span class="per">| revisão de cadastro no ERP</span></h3>
+      <p class="bd-note" id="cm-nota">—</p>
+      <div class="bd-ctl bd-ctl-in">
+        <label class="bd-f"><span>Loja</span><select id="cm-loja" aria-label="Loja"></select></label>
+        <label class="bd-f"><span>Relatório</span><select id="cm-per" aria-label="Período do relatório"></select></label>
+        <button type="button" class="bd-btn-atu" id="cm-baixar">Baixar relatório (CSV)</button>
+      </div>
+      <div class="emp-resumo" id="cm-resumo"></div>
+      <div class="bd-tablewrap">
+        <table id="tab-custo" class="bd-cards c2">
+          <thead><tr><th class="l">Loja</th><th class="l">Código</th><th class="l">Produto</th><th>Qtd. vendida</th><th>Custo unit.</th><th>Venda unit.</th><th>Perda</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="bd-note" id="cm-mais"></p>
     </div>
     <div class="bd-card" id="card-markup">
       <h3><span id="mk-titulo">Markup por loja</span> <span class="per">| mês atual, média do ano e anos anteriores</span></h3>
@@ -952,6 +977,17 @@
             </table>
           </div>
         </div>
+        <div class="bd-card" id="gs-treino">
+          <h3><span id="tr-titulo">Treinamento e capacitação</span> <span class="per">| investimento em pessoas, por ano</span></h3>
+          <p class="bd-note" id="tr-nota">—</p>
+          <div class="bd-chart" id="tr-chart" style="min-height: 200px"></div>
+          <div class="bd-tablewrap">
+            <table id="tr-tab" class="bd-cards c2">
+              <thead><tr><th class="l">Loja</th><th id="tr-th-a">Ano</th><th id="tr-th-b">Ano anterior</th><th>Média por mês</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
         <div class="bd-card" id="gs-socios">
           <h3><span data-k="t_soc">Retiradas dos sócios</span> <span class="per">| à parte das despesas operacionais</span></h3>
           <p class="bd-note" data-k="n_soc">—</p>
@@ -1000,7 +1036,7 @@
     </div>
     <div class="bd-card">
       <h3>Lojas e empresas <span class="per">| CNPJ, local, abertura, tempo de atividade e regime</span></h3>
-      <p class="bd-note">Cada unidade fiscal e em qual loja do painel o faturamento dela aparece. Anos em atividade contados da abertura até hoje.</p>
+      <p class="bd-note">Cada unidade fiscal e em qual loja do painel o faturamento dela aparece. O tempo de atividade é do ponto (o endereço da loja): quando outro CNPJ assume a mesma loja aberta, a abertura continua sendo a primeira.</p>
       <div class="emp-resumo" id="emp-resumo"></div>
       <div class="bd-tablewrap">
         <table id="tab-empresas" class="bd-cards c2" data-source="cadastro" data-row-key="unidade">
@@ -1009,8 +1045,9 @@
             <th class="l">Razão social</th>
             <th class="l">CNPJ</th>
             <th class="l">Localização</th>
-            <th class="l">Abertura</th>
-            <th>Anos em atividade</th>
+            <th class="l">Abertura do ponto</th>
+            <th>Anos em atividade no ponto</th>
+            <th class="l">Data do CNPJ</th>
             <th class="l">Regime tributário</th>
             <th class="l">Situação</th>
             <th class="l">No painel</th>
@@ -1018,6 +1055,7 @@
           <tbody></tbody>
         </table>
       </div>
+      <div class="bd-legend" id="emp-legenda"><span>* CNPJ novo: a loja continuou aberta no mesmo ponto, agora com outro CNPJ.</span><span>* CNPJ antigo: CNPJ aberto antes, que passou a operar neste ponto.</span></div>
     </div>
   </section>
 
@@ -2519,7 +2557,7 @@
 
   /* ---------- Aba Produtos (relatório de produtos do ERP, por trimestre ou semestre) ---------- */
   const nMeses = (de, ate) => (Number(ate.slice(0, 4)) - Number(de.slice(0, 4))) * 12 + Number(ate.slice(5, 7)) - Number(de.slice(5, 7)) + 1;
-  const perCurto = (de, ate) => de.slice(0, 4) === ate.slice(0, 4) ? `${MESES[Number(de.slice(5, 7)) - 1]}–${MESES[Number(ate.slice(5, 7)) - 1]}/${de.slice(0, 4)}` : `${mesNome(de)} a ${mesNome(ate)}`;
+  const perCurto = (de, ate) => de === ate ? mesNome(de) : de.slice(0, 4) === ate.slice(0, 4) ? `${MESES[Number(de.slice(5, 7)) - 1]}–${MESES[Number(ate.slice(5, 7)) - 1]}/${de.slice(0, 4)}` : `${mesNome(de)} a ${mesNome(ate)}`;
   const pp1 = (v) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' p.p.';
   function renderProdutos() {
     const fam = dash.data('l2_familias'), prod = dash.data('l2_produtos');
@@ -2538,16 +2576,22 @@
     const pers = [...new Set(F.map((r) => r.per_ini + '|' + r.per_fim))].sort().reverse();
     // Comparação: relatórios do ano anterior que cabem nos mesmos meses; só vale se cobrirem o período inteiro.
     const compara = (de, ate) => { const ps = pers.filter((p) => { const [a, b] = p.split('|'); return a >= addMes(de, -12) && b <= addMes(ate, -12); }); const n = d3.sum(ps, (p) => nMeses(...p.split('|'))); return n === nMeses(de, ate) ? ps : null; };
-    const ops = [];
-    for (const y of [...new Set(pers.map((p) => p.slice(0, 4)))]) {
-      const ps = pers.filter((p) => p.startsWith(y)); const de = ps.map((p) => p.split('|')[0]).sort()[0], ate = ps.map((p) => p.split('|')[1]).sort().pop();
-      if (ps.length > 1) ops.push({ grp: 'Anos', id: 'a' + y, txt: ate.endsWith('-12') && de.endsWith('-01') ? `Ano ${y}` : `${y} · ${perCurto(de, ate)}`, ps, de, ate });
-    }
-    for (const p of pers) { const [de, ate] = p.split('|'); ops.push({ grp: 'Relatórios do ERP', id: 'p' + p, txt: perCurto(de, ate) + ([ate === MES_CORRENTE ? 'em curso' : '', compara(de, ate) ? '' : 'sem comparação'].filter(Boolean).map((t, i) => (i ? ', ' : ' · ') + t).join('')), ps: [p], de, ate }); }
-    for (const o of ops) o.ant = compara(o.de, o.ate);
-    const padrao = ops.find((o) => o.grp !== 'Anos' && o.ant) || ops[0];
-    const op = ops.find((o) => o.id === prm.pd_per) || padrao;
-    selPeriodo($('#pd-per'), ops, op.id);
+    // Período igual ao de Gastos e Raio-X: ano e, dentro dele, de/até. Os relatórios de produtos vêm por período (ex.: jan a jun),
+    // então De e Até mostram os inícios e fins de relatório do ano, e entram os relatórios que cabem inteiros no intervalo.
+    const anosP = [...new Set(pers.map((p) => p.slice(0, 4)))].sort().reverse();
+    const anoP = anosP.includes(prm.pd_ano) ? prm.pd_ano : anosP[0];
+    const persAno = pers.filter((p) => p.startsWith(anoP));
+    const inis = [...new Set(persAno.map((p) => p.split('|')[0]))].sort(), fins = [...new Set(persAno.map((p) => p.split('|')[1]))].sort();
+    let deP = inis.includes(prm.pd_de) ? prm.pd_de : inis[0];
+    let ateP = fins.includes(prm.pd_ate) ? prm.pd_ate : fins[fins.length - 1];
+    if (ateP < deP) ateP = fins.find((f) => f >= deP) || fins[fins.length - 1];
+    let psSel = persAno.filter((p) => { const [a, b] = p.split('|'); return a >= deP && b <= ateP; });
+    if (!psSel.length) psSel = persAno.filter((p) => { const [a, b] = p.split('|'); return a <= ateP && b >= deP; });
+    const op = { ps: psSel, de: psSel.map((p) => p.split('|')[0]).sort()[0], ate: psSel.map((p) => p.split('|')[1]).sort().pop() };
+    op.ant = compara(op.de, op.ate);
+    opcoesG($('#pd-ano'), [[null, anosP.map((a) => [a, a])]], anoP);
+    const nomeM = (m, fim) => MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (fim && m === MES_CORRENTE ? ' (em curso)' : '') + (m.slice(0, 4) !== anoP ? '/' + m.slice(0, 4) : '');
+    opcoesG($('#pd-de'), [[null, inis.map((m) => [m, nomeM(m)])]], deP); opcoesG($('#pd-ate'), [[null, fins.map((m) => [m, nomeM(m, true)])]], ateP);
     const ordem = ['venda', 'lucro', 'margem', 'cresc'].includes(prm.pd_ord) ? prm.pd_ord : 'venda';
     opcoesG($('#pd-ord'), [[null, [['venda', 'Maior venda'], ['lucro', 'Maior lucro bruto'], ['margem', 'Maior margem'], ['cresc', 'Maior crescimento']]]], ordem);
     const ag = (ps) => { const rows = F.filter((r) => ps.includes(r.per_ini + '|' + r.per_fim));
@@ -2649,6 +2693,36 @@
   // Compras de mercadoria, investimentos e pagamento de empréstimos ficam fora das despesas operacionais.
   const MERC = 'Mercadorias para revenda', INVEST = 'Investimentos (bens)';
   const ehOperacional = (r) => r.grupo !== MERC && r.grupo !== INVEST && r.sub !== 'Pagamento de empréstimos';
+  /* ---------- Treinamento e capacitação (Gastos): leitura de investimento em pessoas para o orçamento do ano seguinte ---------- */
+  function renderTreino(pagas, daLoja, ano, parcial) {
+    const SUB = 'Treinamento e capacitação';
+    const base = pagas.filter((r) => daLoja(lojaDe(r)));
+    const T = base.filter((r) => r.subgrupo === SUB).map((r) => ({ loja: lojaDe(r), mes: r.mes, v: Number(r.valor) }));
+    if (!T.length) { $('#tr-titulo').textContent = SUB; $('#tr-nota').textContent = 'Nenhum pagamento de treinamento ou capacitação nas contas pagas desta seleção.'; $('#tr-chart').replaceChildren(); fillTable($('#tr-tab'), [], []); return; }
+    // Meses com contas pagas no ERP em cada ano (para a média por mês não contar meses sem relatório)
+    const mesesAno = (a, f = () => true) => new Set(base.filter((r) => r.mes.startsWith(a) && r.mes !== parcial && f(r)).map((r) => r.mes)).size;
+    const anos = [...new Set(base.map((r) => r.mes.slice(0, 4)))].sort();
+    const tot = (a, f = () => true) => d3.sum(T.filter((r) => r.mes.startsWith(a) && f(r)), (r) => r.v);
+    const rowsA = anos.map((a) => ({ a, v: tot(a), n: mesesAno(a) }));
+    drawCols($('#tr-chart'), rowsA.map((x) => ({ key: x.a, label: x.a + (x.n < 12 ? '*' : ''), value: x.v, color: x.a === ano ? GOLD : MUTED, alpha: x.n < 12 ? 0.7 : 1, x })), { h: 200, fmtLabel: (v) => v >= 1000 ? (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : brl.format(v),
+      tip: (r) => ({ title: r.x.a, lines: [{ text: `Pago  ${brl.format(r.x.v)}` }, { text: `${r.x.n} ${r.x.n === 1 ? 'mês' : 'meses'} de contas pagas no ERP` }, ...(r.x.n ? [{ text: `Média por mês  ${brl.format(r.x.v / r.x.n)}` }] : [])] }) });
+    const cur = rowsA.find((x) => x.a === ano) || { v: 0, n: 0 }, ant = rowsA.find((x) => x.a === String(Number(ano) - 1));
+    const media = cur.n ? cur.v / cur.n : null;
+    $('#tr-titulo').textContent = `${money(cur.v)} em treinamento e capacitação em ${ano}` + (ant && ant.n ? ` (${ant.a}: ${money(ant.v)})` : '');
+    $('#tr-nota').textContent = `Conta "Despesa com capacitação/treinamento" das contas pagas do ERP (relatório 05), separada dos demais benefícios. ` +
+      (media != null ? `Em ${ano}, média de ${money(media)} por mês em ${cur.n} ${cur.n === 1 ? 'mês' : 'meses'} fechados: no mesmo ritmo, ${money(media * 12)} em 12 meses, uma base para o orçamento de ${Number(ano) + 1} (estimativa). ` : '') +
+      'Anos com * têm menos de 12 meses de contas pagas no ERP.';
+    const lojas = [...new Set(T.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
+    $('#tr-th-a').textContent = ano; $('#tr-th-b').textContent = String(Number(ano) - 1);
+    const linhas = lojas.map((l) => { const n = mesesAno(ano, (r) => lojaDe(r) === l), v = tot(ano, (r) => r.loja === l); return { loja: l, v, va: tot(String(Number(ano) - 1), (r) => r.loja === l), med: n ? v / n : null }; }).sort((a, c) => c.v - a.v);
+    fillTable($('#tr-tab'), linhas, [
+      { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
+      { fmt: (r) => r.v ? brl.format(r.v) : '—' },
+      { fmt: (r) => r.va ? brl.format(r.va) : '—' },
+      { fmt: (r) => r.med ? brl.format(r.med) : '—' },
+    ]);
+  }
+
   function renderGastos() {
     const pg = dash.data('l2_pagas');
     if (pg.status !== 'ok') { if (pg.status === 'error' || pg.status === 'missing') vazio($('#gs-chart-mes'), 'As contas pagas do ERP ainda não foram carregadas.'); return; }
@@ -2676,6 +2750,7 @@
     opcoesG($('#gs-ano'), [[null, anosD.map((a) => [a, a])]], anoG);
     const optM = mesesAno.map((m) => [m, MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (m === parcial ? ' (em curso)' : '')]);
     opcoesG($('#gs-de'), [[null, optM]], de); opcoesG($('#gs-ate'), [[null, optM]], ate);
+    renderTreino(pg.data, daLoja, anoG, parcial);
     const somaG = (f) => d3.sum(G.filter(f), (r) => r.v);
     const grupos = [...new Set(G.map((r) => r.grupo))].sort((a, c) => somaG((r) => r.grupo === c) - somaG((r) => r.grupo === a));
     const subsDe = (g) => [...new Set(G.filter((r) => r.grupo === g).map((r) => r.sub))].sort((a, c) => somaG((r) => r.sub === c && r.grupo === g) - somaG((r) => r.sub === a && r.grupo === g));
@@ -2975,34 +3050,102 @@
     const cad = dash.data('cadastro');
     if (cad.status !== 'ok' || !cad.data.length) return;
     const hoje = new Date();
+    const ehData = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
     const tempo = (ini) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) return null;
+      if (!ehData(ini)) return null;
       const d = new Date(ini + 'T12:00:00');
       let m = (hoje.getFullYear() - d.getFullYear()) * 12 + hoje.getMonth() - d.getMonth(); if (hoje.getDate() < d.getDate()) m--;
       return Math.max(0, m);
     };
     const tTxt = (m) => m == null ? '—' : m < 12 ? `${m} ${m === 1 ? 'mês' : 'meses'}` : `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'}${m % 12 ? ` e ${m % 12} ${m % 12 === 1 ? 'mês' : 'meses'}` : ''}`;
     const ativa = (r) => !/^Baixada|Sem operação|fechada/i.test(r.situacao);   // "Será baixada" ainda opera
-    const rows = cad.data.map((r) => ({ ...r, meses: tempo(r.inicio) }));
+    // O tempo de atividade é do ponto (endereço da loja): troca de CNPJ na mesma loja aberta não zera a contagem
+    const rows = cad.data.map((r) => { const ap = ehData(r.abertura_ponto) ? r.abertura_ponto : r.inicio; return { ...r, ap, meses: tempo(ap) }; });
     const ativas = rows.filter(ativa);
     const regimes = d3.rollups(ativas, (v) => v.length, (r) => r.regime).sort((a, c) => c[1] - a[1]);
-    const maisAntiga = rows.filter((r) => r.meses != null).sort((a, c) => c.meses - a.meses)[0];
-    $('#emp-headline').textContent = `${ativas.length} de ${rows.length} unidades fiscais em operação; ${regimes.map(([g, n]) => `${n} no ${g}`).join(', ')}.`;
-    $('#emp-comp').textContent = maisAntiga ? `A mais antiga é a ${maisAntiga.razao_social} (${maisAntiga.unidade}), aberta em ${dBRy(maisAntiga.inicio)}: ${tTxt(maisAntiga.meses)} de atividade.` : '';
+    const pontos = d3.rollups(ativas, (v) => v[0], (r) => r.ponto || r.bairro).map((x) => x[1]);
+    const maisAntigo = pontos.filter((r) => r.meses != null).sort((a, c) => c.meses - a.meses)[0];
+    $('#emp-headline').textContent = `${ativas.length} de ${rows.length} unidades fiscais em operação, em ${pontos.length} pontos; ${regimes.map(([g, n]) => `${n} no ${g}`).join(', ')}.`;
+    $('#emp-comp').textContent = maisAntigo ? `O ponto mais antigo em operação é ${maisAntigo.ponto || maisAntigo.bairro} (${maisAntigo.unidade}), aberto em ${dBRy(maisAntigo.ap)}: ${tTxt(maisAntigo.meses)} de atividade.` : '';
     const chip = (t, v) => { const s = document.createElement('span'); s.className = 'emp-chip'; s.append(Object.assign(document.createElement('b'), { textContent: v }), document.createTextNode(' ' + t)); return s; };
-    $('#emp-resumo').replaceChildren(chip("em operação", String(ativas.length)), ...regimes.map(([g, n]) => chip(g, String(n))), chip("fechadas ou baixadas", String(rows.length - ativas.length)));
+    $('#emp-resumo').replaceChildren(chip('em operação', String(ativas.length)), chip('pontos abertos', String(pontos.length)), ...regimes.map(([g, n]) => chip(g, String(n))), chip('fechadas ou baixadas', String(rows.length - ativas.length)));
+    const marca = { novo: 'CNPJ novo', antigo: 'CNPJ antigo' };
     fillTable($('#tab-empresas'), rows, [
       { cls: 'l cod', fmt: (r) => r.unidade },
       { cls: 'l nm wrap', fmt: (r) => r.razao_social },
       { cls: 'l', fmt: (r) => r.cnpj },
       { cls: 'l wrap', fmt: (r) => r.bairro },
-      { cls: 'l', fmt: (r) => /^\d{4}-\d{2}-\d{2}$/.test(r.inicio) ? dBRy(r.inicio) : r.inicio },
-      { fmt: (r) => ativa(r) ? tTxt(r.meses) : "—" },
+      { cls: 'l', fmt: (r) => ehData(r.ap) ? dBRy(r.ap) : r.ap },
+      { fmt: (r) => ativa(r) ? tTxt(r.meses) : '—' },
+      { cls: 'l', fmt: (r) => (ehData(r.inicio) ? dBRy(r.inicio) : r.inicio) + (marca[r.cnpj_no_ponto] ? ` * ${marca[r.cnpj_no_ponto]}` : '') },
       { cls: 'l', fmt: (r) => r.regime },
       { cls: (r) => 'l wrap ' + (/^Ativa/i.test(r.situacao) ? '' : 'warn'), fmt: (r) => r.situacao },
       { cls: 'l wrap', fmt: (r) => r.loja_painel },
     ]);
   }
+
+  /* ---------- Custo acima da venda (Financeiro > Produtos): lista para revisão de cadastro no ERP ---------- */
+  // Mês corrente = relatório cujo período inclui o mês de hoje. Quando há itens nele, o indicador, a aba e a área ganham o sinal de atenção.
+  const noMesCorrente = (r) => r.per_ini <= MES_CORRENTE && r.per_fim >= MES_CORRENTE;
+  function custoRows() { const d = dash.data('erp_custo'); return d.status === 'ok' ? d.data.map((r) => ({ ...r, loja: lojaDe(r), qtd: Number(r.qtd), cu: Number(r.custo_unit), vu: Number(r.venda_unit), perda: Number(r.perda), custo: Number(r.custo), venda: Number(r.venda) })) : []; }
+  function alertaCusto() {
+    const n = custoRows().filter(noMesCorrente).length;
+    for (const el of [$('#aba-produtos'), $('.bd-area[data-area="fin"]')]) if (el) { el.classList.toggle('com-alerta', n > 0); if (n) el.title = `${n} produtos com custo acima da venda no mês corrente`; else el.removeAttribute('title'); }
+    return n;
+  }
+  let cmLinhas = [];
+  function renderCusto() {
+    const all = custoRows();
+    const card = $('#card-custo');
+    const nAtual = alertaCusto();
+    $('#cm-alerta').hidden = !nAtual;
+    if (!all.length) { $('#cm-titulo').textContent = 'Nenhum produto com custo acima da venda'; $('#cm-nota').textContent = 'Nos relatórios de produtos (02) lidos, nenhum item vendido tem custo maior que a venda.'; $('#cm-resumo').replaceChildren(); fillTable($('#tab-custo'), [], []); $('#cm-baixar').disabled = true; cmLinhas = []; return; }
+    const prm = P();
+    const lojas = [...new Set(all.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
+    const loja = prm.cm_loja === 'Todas' || lojas.includes(prm.cm_loja) ? prm.cm_loja : 'Todas';
+    opcoesG($('#cm-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', lojas.map((l) => [l, nomeLoja(l)])]], loja);
+    const daLoja = all.filter((r) => loja === 'Todas' || r.loja === loja);
+    const pers = [...new Set(daLoja.map((r) => r.per_ini + '|' + r.per_fim))].sort().reverse();
+    const temAtual = daLoja.some(noMesCorrente);
+    const ops = [...(temAtual ? [['atual', `Mês corrente (${mesNome(MES_CORRENTE)})`]] : []), ['todos', 'Todos os relatórios'], ...pers.map((p) => { const [a, b] = p.split('|'); return ['p' + p, perCurto(a, b)]; })];
+    const per = ops.some((o) => o[0] === prm.cm_per) ? prm.cm_per : ops[0][0];
+    opcoesG($('#cm-per'), [[null, ops]], per);
+    const L = daLoja.filter((r) => per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)).sort((a, c) => c.perda - a.perda);
+    cmLinhas = L;
+    const perda = d3.sum(L, (r) => r.perda), nLojas = new Set(L.map((r) => r.loja)).size;
+    $('#cm-titulo').textContent = L.length ? `${int.format(L.length)} produtos vendidos com custo acima da venda` : 'Nenhum produto com custo acima da venda neste filtro';
+    $('#cm-nota').textContent = `Itens do relatório de produtos (02) em que o custo total passou da venda total, como estão no ERP (a tampa de marmitex aparece separada da base). Prováveis erros de custo ou de preço no cadastro: revisar com urgência.${nAtual ? ` Atenção: ${nAtual} desses itens estão nos relatórios do mês corrente.` : ''}`;
+    const chip = (t, v) => { const s = document.createElement('span'); s.className = 'emp-chip'; s.append(Object.assign(document.createElement('b'), { textContent: v }), document.createTextNode(' ' + t)); return s; };
+    $('#cm-resumo').replaceChildren(chip('produtos', int.format(L.length)), chip('de perda na venda', money(perda)), chip(nLojas === 1 ? 'loja' : 'lojas', String(nLojas)));
+    const top = L.slice(0, 15);
+    fillTable($('#tab-custo'), top, [
+      { cls: 'l cod', fmt: (r) => r.loja },
+      { cls: 'l', fmt: (r) => r.codigo },
+      { cls: 'l nm wrap', fmt: (r) => r.descricao },
+      { fmt: (r) => int.format(r.qtd) },
+      { fmt: (r) => brl2.format(r.cu) },
+      { fmt: (r) => brl2.format(r.vu) },
+      { cls: 'bad', fmt: (r) => brl2.format(r.perda) },
+    ]);
+    $('#cm-mais').textContent = L.length > top.length ? `Mostrando os ${top.length} de maior perda. O relatório completo (${int.format(L.length)} itens) sai no botão "Baixar relatório".` : '';
+    $('#cm-baixar').disabled = !L.length;
+    card.dataset.n = String(L.length);
+  }
+  // Planilha para o Excel (separador ; e vírgula decimal), com os itens do filtro escolhido
+  function baixarCusto() {
+    if (!cmLinhas.length) return;
+    const n = (v, d = 2) => Number(v).toFixed(d).replace('.', ',');
+    const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+    const cab = ['Loja', 'Relatório de', 'Relatório até', 'Código', 'Produto', 'Família', 'Qtd. vendida', 'Custo unitário', 'Venda unitária', 'Custo total', 'Venda total', 'Perda (custo - venda)'];
+    const lin = cmLinhas.map((r) => [q(r.loja), r.per_ini, r.per_fim, q(r.codigo), q(r.descricao), q(r.familia), n(r.qtd, 3), n(r.cu, 4), n(r.vu, 4), n(r.custo), n(r.venda), n(r.perda)].join(';'));
+    const blob = new Blob(['﻿' + [cab.join(';'), ...lin].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `custo_acima_da_venda_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  $('#cm-baixar').addEventListener('click', baixarCusto);
 
   /* ---------- Markup (resumo na aba Produtos e markup) ---------- */
   // Mês em curso e média dos meses fechados vêm da planilha Metas_2026; os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
@@ -3118,7 +3261,8 @@
     if (aba === 'ano') renderAno();
     if (aba === 'lojas') renderLojas();
     if (aba === 'raiox') renderRaiox();
-    if (aba === 'produtos') { renderMarkup(); renderProdutos(); }
+    alertaCusto();
+    if (aba === 'produtos') { renderCusto(); renderMarkup(); renderProdutos(); }
     if (aba === 'gastos') renderGastos();
     if (aba === 'empresas') renderEmpresas();
     if (aba === 'metas') renderMetas();
@@ -3139,8 +3283,12 @@
   ao('#rx-cli', (v) => ({ rx_cli: v }));
   ao('#rx-forma', (v) => ({ rx_forma: v }));
   ao('#pd-loja', (v) => ({ pd_loja: v }));
-  ao('#pd-per', (v) => ({ pd_per: v }));
+  ao('#pd-ano', (v) => ({ pd_ano: v, pd_de: '', pd_ate: '' }));
+  ao('#pd-de', (v) => ({ pd_de: v }));
+  ao('#pd-ate', (v) => ({ pd_ate: v }));
   ao('#pd-ord', (v) => ({ pd_ord: v }));
+  ao('#cm-loja', (v) => ({ cm_loja: v, cm_per: '' }));
+  ao('#cm-per', (v) => ({ cm_per: v }));
   ao('#gs-loja', (v) => ({ gs_loja: v }));
   ao('#gs-ano', (v) => ({ gs_ano: v, gs_de: '', gs_ate: '' }));
   ao('#gs-de', (v) => ({ gs_de: v }));
