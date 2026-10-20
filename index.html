@@ -281,6 +281,10 @@
   .tag-proj { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border: 1px solid var(--bin-proj); border-radius: 999px; color: #8EC3EE; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: .1em; }
   .bd-card .tag-proj { color: var(--bin-proj); }
   .txt-proj { color: var(--bin-proj); font-weight: 700; }
+  /* Selo "Em desenvolvimento": telas e quadros que ainda têm dados de uma loja só */
+  .bd-dev-faixa { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: 0 0 var(--cds-gap-sm); padding: .55rem .8rem; border-radius: var(--cds-radius); background: rgba(242,195,107,.16); border: 1px solid #E0A83A; color: var(--color-fg); font-size: var(--cds-font-size-caption); line-height: 1.45; }
+  .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
+  .bd-dev { display: inline-block; background: #F2C36B; color: #191919; font-weight: 800; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: .2rem .6rem; border-radius: 999px; white-space: nowrap; }
   .bd-mini { margin-top: var(--cds-gap-sm); }
   .emp-resumo { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin: 0 0 var(--cds-gap-md); }
   .emp-chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: .25rem .7rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
@@ -887,7 +891,9 @@
   <section class="bd-page" data-page="gastos" id="gastos" hidden>
     <div class="bd-ctl">
       <label class="bd-f"><span>Loja</span><select id="gs-loja" class="sel-unid" aria-label="Loja"></select></label>
-      <label class="bd-f"><span>Período</span><select id="gs-per" aria-label="Período"></select></label>
+      <label class="bd-f"><span>Ano</span><select id="gs-ano" aria-label="Ano"></select></label>
+      <label class="bd-f"><span>De</span><select id="gs-de" aria-label="Mês inicial"></select></label>
+      <label class="bd-f"><span>Até</span><select id="gs-ate" aria-label="Mês final"></select></label>
       <label class="bd-f"><span>Grupo</span><select id="gs-grupo" aria-label="Grupo de gasto"></select></label>
     </div>
     <p class="bd-erp-nota" data-rel="gastos"></p>
@@ -2313,6 +2319,14 @@
     ], { key: (r) => `${r.ano},${r.mes},${enc(r.loja)}`, onClick: (r) => abrir(r.loja) });
   }
 
+  // Selo "Em desenvolvimento" no alto de um quadro ou de uma tela cujos dados ainda vêm de uma loja só
+  function emDev(host, on, motivo) {
+    if (!host) return;
+    let f = host.querySelector(':scope > .bd-dev-faixa');
+    if (!on) { if (f) f.remove(); return; }
+    if (!f) { f = document.createElement('div'); f.className = 'bd-dev-faixa'; f.setAttribute('role', 'note'); host.prepend(f); }
+    f.replaceChildren(Object.assign(document.createElement('span'), { className: 'bd-dev', textContent: 'Em desenvolvimento' }), document.createTextNode(motivo));
+  }
   /* ---------- Aba Raio-X (filtros aplicados direto sobre os dados do ERP) ---------- */
   const FAIXAS = [['a20', 'Até R$ 20'], ['a50', 'R$ 20 a 50'], ['a100', 'R$ 50 a 100'], ['a300', 'R$ 100 a 300'], ['a1000', 'R$ 300 a 1.000'], ['m1000', 'Acima de R$ 1.000']];
   const FORMAS = ['Pix', 'Dinheiro', 'Débito', 'Crédito', 'A prazo', 'Outros'];
@@ -2459,6 +2473,7 @@
     const tf = d3.sum(baseForma, (r) => r.val), tfa = d3.sum(baseFormaAnt, (r) => r.val);
     const formaRows = FORMAS.map((f) => ({ f, v: tf > 0 ? d3.sum(baseForma.filter((r) => r.forma === f), (r) => r.val) / tf : 0, a: tfa > 0 ? d3.sum(baseFormaAnt.filter((r) => r.forma === f), (r) => r.val) / tfa : null })).filter((r) => r.v > 0.001).sort((a, c) => c.v - a.v);
     const vista = d3.sum(formaRows.filter((r) => FORMA_GR['g:vista'].includes(r.f)), (r) => r.v);
+    emDev($('#raiox [data-k="t_forma"]').closest('.bd-card'), b.comForma.size <= 1, `Forma de pagamento só da ${[...b.comForma].join(', ') || 'L2'} por enquanto: as demais lojas entram quando o relatório 06 (vendas por forma de pagamento) delas for salvo na pasta.`);
     if (!temForma) set('t_forma', loja === 'Todas' ? 'Forma de pagamento: só por loja (hoje, L2)' : 'Forma de pagamento: falta o relatório 06 desta loja');
     else if (formaRows.length) set('t_forma', `${formaRows[0].f} lidera com ${pct0(formaRows[0].v)}; à vista somam ${pct0(vista)}`);
     if (!temForma) vazio($('#rx-chart-forma'), loja === 'Todas' ? 'A forma de pagamento (relatório 06) hoje só existe para a L2: escolha a L2 para ver Pix, dinheiro, cartão e prazo.' : 'O ERP desta loja ainda não tem o relatório 06 (forma de pagamento). Extraia o 06 para ver Pix, dinheiro, cartão e prazo.');
@@ -2512,6 +2527,11 @@
     const prm = P();
     const disp = [...new Set(fam.data.map(lojaDe))];
     const loja = disp.includes(prm.pd_loja) ? prm.pd_loja : disp[0];
+    // Lojas com histórico de produtos (mais de um relatório); as demais só têm o mês de teste
+    const nPer = d3.rollup(fam.data, (v) => new Set(v.map((r) => r.per_ini + '|' + r.per_fim)).size, lojaDe);
+    const comHist = disp.filter((l) => nPer.get(l) > 1).sort((a, c) => ord(a) - ord(c));
+    const soTeste = disp.filter((l) => !comHist.includes(l)).sort((a, c) => ord(a) - ord(c));
+    emDev($('#produtos'), comHist.length <= 1, `Produtos com histórico só da ${comHist.join(', ') || 'L2'}${soTeste.length ? `; ${soTeste.join(', ')} têm apenas o relatório de teste` : ''}. As outras lojas entram quando o relatório 02 (vendas por produto) delas for salvo mês a mês.`);
     selUnid($('#pd-loja'), disp, loja);
     notaErp('produtos', loja);
     const F = fam.data.filter((r) => lojaDe(r) === loja), PR = prod.status === 'ok' ? prod.data.filter((r) => lojaDe(r) === loja) : [];
@@ -2643,10 +2663,19 @@
       .map((r) => ({ loja: lojaDe(r), mes: r.mes, grupo: r.grupo, sub: r.subgrupo || r.grupo, forn: r.fornecedor, v: Number(r.valor) }));
     const meses = [...new Set(G.map((r) => r.mes))].sort();
     const { ult: ultData, parcial } = ultInfo();
-    const ops = periodos(meses, parcial);
-    const op = ops.find((o) => o.id === prm.gs_per) || ops.find((o) => o.id === '12m') || ops[0];
-    const { de, ate } = op;
-    selPeriodo($('#gs-per'), ops, op.id);
+    if (!meses.length) { vazio($('#gs-chart-mes'), 'Sem contas pagas para esta loja.'); return; }
+    // Período igual ao do Raio-X: ano e, dentro dele, de/até (um mês só quando de = até)
+    const anosD = [...new Set(meses.map((m) => m.slice(0, 4)))].sort().reverse();
+    const ultFech = meses.filter((m) => m !== parcial).pop() || meses[meses.length - 1];
+    const anoG = anosD.includes(prm.gs_ano) ? prm.gs_ano : ultFech.slice(0, 4);
+    const mesesAno = meses.filter((m) => m.startsWith(anoG));
+    const fimPadrao = mesesAno.filter((m) => m !== parcial).pop() || mesesAno[mesesAno.length - 1];
+    let de = mesesAno.includes(prm.gs_de) ? prm.gs_de : mesesAno[0];
+    let ate = mesesAno.includes(prm.gs_ate) ? prm.gs_ate : fimPadrao;
+    if (de > ate) [de, ate] = [ate, de];
+    opcoesG($('#gs-ano'), [[null, anosD.map((a) => [a, a])]], anoG);
+    const optM = mesesAno.map((m) => [m, MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (m === parcial ? ' (em curso)' : '')]);
+    opcoesG($('#gs-de'), [[null, optM]], de); opcoesG($('#gs-ate'), [[null, optM]], ate);
     const somaG = (f) => d3.sum(G.filter(f), (r) => r.v);
     const grupos = [...new Set(G.map((r) => r.grupo))].sort((a, c) => somaG((r) => r.grupo === c) - somaG((r) => r.grupo === a));
     const subsDe = (g) => [...new Set(G.filter((r) => r.grupo === g).map((r) => r.sub))].sort((a, c) => somaG((r) => r.sub === c && r.grupo === g) - somaG((r) => r.sub === a && r.grupo === g));
@@ -2999,6 +3028,8 @@
       return { loja: r.loja, cur: r[atual], med: v.length ? d3.mean(v) : null, e1: mkErp(r.loja, anosErp[0]), e2: mkErp(r.loja, anosErp[1]) }; })
       .sort((a, c) => c.cur - a.cur);
     const abaixo = rows.filter((r) => r.med != null && r.cur < r.med);
+    const comErp = rows.filter((r) => r.e1 != null || r.e2 != null).map((r) => r.loja);
+    emDev($('#card-markup'), comErp.length <= 1, `Colunas de ${anosErp[0]} e ${anosErp[1]} (ERP) só ${comErp.length ? 'da ' + comErp.join(', ') : 'quando houver relatório de produtos'}: as outras lojas não têm 6 meses de relatório de produtos. Mês atual e média do ano valem para todas.`);
     $('#mk-th-atual').textContent = `${MESES[iA]} (em curso)`;
     $('#mk-th-media').textContent = `Média ${anoAtual}`;
     $('#mk-th-a1').textContent = `${anosErp[0]} (ERP)`; $('#mk-th-a2').textContent = `${anosErp[1]} (ERP)`;
@@ -3111,7 +3142,9 @@
   ao('#pd-per', (v) => ({ pd_per: v }));
   ao('#pd-ord', (v) => ({ pd_ord: v }));
   ao('#gs-loja', (v) => ({ gs_loja: v }));
-  ao('#gs-per', (v) => ({ gs_per: v }));
+  ao('#gs-ano', (v) => ({ gs_ano: v, gs_de: '', gs_ate: '' }));
+  ao('#gs-de', (v) => ({ gs_de: v }));
+  ao('#gs-ate', (v) => ({ gs_ate: v }));
   ao('#gs-grupo', (v) => ({ gs_grupo: v }));
   ao('#mt-ref', (v) => ({ mt_ref: v }));
   ao('#ger-mes', (v) => ({ ger_mes: v }));
