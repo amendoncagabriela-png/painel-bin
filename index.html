@@ -282,6 +282,9 @@
   .bd-card .tag-proj { color: var(--bin-proj); }
   .txt-proj { color: var(--bin-proj); font-weight: 700; }
   .bd-mini { margin-top: var(--cds-gap-sm); }
+  .emp-resumo { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin: 0 0 var(--cds-gap-md); }
+  .emp-chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: .25rem .7rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .emp-chip b { color: var(--color-fg); font-size: var(--cds-font-size-body); }
   .bd-mini > summary { cursor: pointer; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 700; padding: .3rem 0; }
   .bd-mini[open] > summary { margin-bottom: var(--cds-gap-xs); }
   .bd-kpi .sub { font-size: var(--cds-font-size-caption); color: var(--rail-muted); grid-column: 1; line-height: 1.4; font-variant-numeric: tabular-nums; }
@@ -467,6 +470,7 @@
     <button class="bd-tab" role="tab" data-area="com" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas</span><span class="curto">Metas</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
+    <button class="bd-tab" role="tab" data-area="fin" data-tab="empresas" id="aba-empresas" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Empresas</span><span class="curto">Empresas</span></button>
   </nav>
 
   <!-- ===================== MÊS ATUAL ===================== -->
@@ -751,7 +755,7 @@
           <p class="bd-note" data-k="n_mensal">Toque numa barra para ver pedidos e ticket médio do mês.</p>
           <div class="bd-chart" id="rx-chart-mes"></div>
         </div>
-        <div class="bd-card"><h3>Mês a mês e acumulado do ano <span class="per">| faturamento do ERP</span></h3><p class="bd-note">Cada mês e o acumulado de janeiro até ele, contra o mesmo acumulado do ano anterior. O mês corrente aparece como em curso; * o acumulado inclui o mês em curso, comparado com o mês inteiro do ano anterior.</p><div class="bd-tablewrap"><table id="rx-tab-acum" class="bd-cards"><thead><tr><th class="l">Mês</th><th>No mês</th><th>Ano anterior</th><th>Acumulado no ano</th><th>Acumulado ano ant.</th><th>Variação acumulada</th></tr></thead><tbody></tbody></table></div></div>
+        <div class="bd-card" hidden><h3>Mês a mês e acumulado do ano <span class="per">| faturamento do ERP</span></h3><p class="bd-note">Cada mês e o acumulado de janeiro até ele, contra o mesmo acumulado do ano anterior. O mês corrente aparece como em curso; * o acumulado inclui o mês em curso, comparado com o mês inteiro do ano anterior.</p><div class="bd-tablewrap"><table id="rx-tab-acum" class="bd-cards"><thead><tr><th class="l">Mês</th><th>No mês</th><th>Ano anterior</th><th>Acumulado no ano</th><th>Acumulado ano ant.</th><th>Variação acumulada</th></tr></thead><tbody></tbody></table></div></div>
         <div class="bd-grid2">
           <div class="bd-card">
             <h3><span data-k="t_dow">Dia da semana</span> <span class="per">| R$ mil, média por dia aberto</span></h3>
@@ -977,6 +981,36 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== EMPRESAS ===================== -->
+  <section class="bd-page" data-page="empresas" id="empresas" hidden>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Empresas do grupo · cadastro</div>
+      <h2 class="bd-headline" id="emp-headline">—</h2>
+      <p class="bd-comp" id="emp-comp">—</p>
+    </div>
+    <div class="bd-card">
+      <h3>Lojas e empresas <span class="per">| CNPJ, local, abertura, tempo de atividade e regime</span></h3>
+      <p class="bd-note">Cada unidade fiscal e em qual loja do painel o faturamento dela aparece. Anos em atividade contados da abertura até hoje.</p>
+      <div class="emp-resumo" id="emp-resumo"></div>
+      <div class="bd-tablewrap">
+        <table id="tab-empresas" class="bd-cards c2" data-source="cadastro" data-row-key="unidade">
+          <thead><tr>
+            <th class="l">Unid.</th>
+            <th class="l">Razão social</th>
+            <th class="l">CNPJ</th>
+            <th class="l">Localização</th>
+            <th class="l">Abertura</th>
+            <th>Anos em atividade</th>
+            <th class="l">Regime tributário</th>
+            <th class="l">Situação</th>
+            <th class="l">No painel</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -2907,6 +2941,40 @@
     }
   }
 
+  /* ---------- Empresas (cadastro das unidades fiscais) ---------- */
+  function renderEmpresas() {
+    const cad = dash.data('cadastro');
+    if (cad.status !== 'ok' || !cad.data.length) return;
+    const hoje = new Date();
+    const tempo = (ini) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) return null;
+      const d = new Date(ini + 'T12:00:00');
+      let m = (hoje.getFullYear() - d.getFullYear()) * 12 + hoje.getMonth() - d.getMonth(); if (hoje.getDate() < d.getDate()) m--;
+      return Math.max(0, m);
+    };
+    const tTxt = (m) => m == null ? '—' : m < 12 ? `${m} ${m === 1 ? 'mês' : 'meses'}` : `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'}${m % 12 ? ` e ${m % 12} ${m % 12 === 1 ? 'mês' : 'meses'}` : ''}`;
+    const ativa = (r) => !/^Baixada|Sem operação|fechada/i.test(r.situacao);   // "Será baixada" ainda opera
+    const rows = cad.data.map((r) => ({ ...r, meses: tempo(r.inicio) }));
+    const ativas = rows.filter(ativa);
+    const regimes = d3.rollups(ativas, (v) => v.length, (r) => r.regime).sort((a, c) => c[1] - a[1]);
+    const maisAntiga = rows.filter((r) => r.meses != null).sort((a, c) => c.meses - a.meses)[0];
+    $('#emp-headline').textContent = `${ativas.length} de ${rows.length} unidades fiscais em operação; ${regimes.map(([g, n]) => `${n} no ${g}`).join(', ')}.`;
+    $('#emp-comp').textContent = maisAntiga ? `A mais antiga é a ${maisAntiga.razao_social} (${maisAntiga.unidade}), aberta em ${dBRy(maisAntiga.inicio)}: ${tTxt(maisAntiga.meses)} de atividade.` : '';
+    const chip = (t, v) => { const s = document.createElement('span'); s.className = 'emp-chip'; s.append(Object.assign(document.createElement('b'), { textContent: v }), document.createTextNode(' ' + t)); return s; };
+    $('#emp-resumo').replaceChildren(chip("em operação", String(ativas.length)), ...regimes.map(([g, n]) => chip(g, String(n))), chip("fechadas ou baixadas", String(rows.length - ativas.length)));
+    fillTable($('#tab-empresas'), rows, [
+      { cls: 'l cod', fmt: (r) => r.unidade },
+      { cls: 'l nm wrap', fmt: (r) => r.razao_social },
+      { cls: 'l', fmt: (r) => r.cnpj },
+      { cls: 'l wrap', fmt: (r) => r.bairro },
+      { cls: 'l', fmt: (r) => /^\d{4}-\d{2}-\d{2}$/.test(r.inicio) ? dBRy(r.inicio) : r.inicio },
+      { fmt: (r) => ativa(r) ? tTxt(r.meses) : "—" },
+      { cls: 'l', fmt: (r) => r.regime },
+      { cls: (r) => 'l wrap ' + (/^Ativa/i.test(r.situacao) ? '' : 'warn'), fmt: (r) => r.situacao },
+      { cls: 'l wrap', fmt: (r) => r.loja_painel },
+    ]);
+  }
+
   /* ---------- Markup (resumo na aba Produtos e markup) ---------- */
   // Mês em curso e média dos meses fechados vêm da planilha Metas_2026; os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
   function renderMarkup() {
@@ -3021,6 +3089,7 @@
     if (aba === 'raiox') renderRaiox();
     if (aba === 'produtos') { renderMarkup(); renderProdutos(); }
     if (aba === 'gastos') renderGastos();
+    if (aba === 'empresas') renderEmpresas();
     if (aba === 'metas') renderMetas();
   }
 
@@ -3048,7 +3117,7 @@
   ao('#ger-mes', (v) => ({ ger_mes: v }));
   dash.onData(render);
   const inicial = location.hash.slice(1);
-  if (inicial && inicial !== 'mes') showTab(inicial === 'empresas' ? 'mes' : inicial, false);
+  if (inicial && inicial !== 'mes') showTab(inicial, false);
   window.addEventListener('hashchange', () => showTab(location.hash.slice(1) || 'mes', false));
 </script>
 <p class="bd-rodape">Dados gerados em <span id="gerado-em"></span> a partir dos relatórios do ERP e das planilhas da BIN. Os números chegam trancados do Google Drive e são abertos só neste aparelho.</p>
