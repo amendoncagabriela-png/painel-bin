@@ -291,6 +291,18 @@
   .bd-tab.com-alerta::after, .bd-area.com-alerta::after { content: '!'; position: absolute; top: .25rem; right: .3rem; width: .95rem; height: .95rem; border-radius: 50%; background: #E5484D; color: #fff; font: 800 .62rem/0.95rem Arial, sans-serif; text-align: center; }
   #card-custo .bd-btn-atu { margin-left: auto; }
   #card-custo .bd-btn-atu[disabled] { opacity: .5; cursor: default; }
+  /* DRE gerencial: tabela de verdade (rola para o lado no celular) */
+  .bd-dre { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .bd-dre th, .bd-dre td { padding: .45rem .6rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--color-border-line); }
+  .bd-dre th { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .bd-dre .l { text-align: left; white-space: normal; min-width: 13rem; }
+  .bd-dre tr.dre-sub td { font-weight: 700; background: rgba(175,104,57,.08); }
+  .bd-dre tr.dre-tot td { font-weight: 800; border-top: 2px solid var(--bin-gold); }
+  .bd-dre tr.dre-det td { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .bd-dre tr.dre-det td.l { padding-left: 1.6rem; font-style: italic; }
+  .bd-dre td.ok { color: var(--color-ok); }
+  .bd-dre td.bad { color: var(--color-bad); }
+  #demonstracoes .bd-tablewrap { overflow-x: auto; }
   .bd-mini { margin-top: var(--cds-gap-sm); }
   .emp-resumo { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin: 0 0 var(--cds-gap-md); }
   .emp-chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: .25rem .7rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
@@ -480,6 +492,7 @@
     <button class="bd-tab" role="tab" data-area="com" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas</span><span class="curto">Metas</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
+    <button class="bd-tab" role="tab" data-area="fin" data-tab="demonstracoes" id="aba-demonstracoes" aria-selected="false" hidden><svg><use href="#i-flag"/></svg><span class="longo">Demonstrações</span><span class="curto">DRE</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="empresas" id="aba-empresas" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Empresas</span><span class="curto">Empresas</span></button>
   </nav>
 
@@ -949,6 +962,17 @@
           <span class="val" data-k="media">—</span><span class="sub" data-k="media_sub">—</span></div>
       </aside>
       <div class="bd-main">
+        <div class="bd-card" id="gs-treino">
+          <h3><span id="tr-titulo">Gasto por ano</span> <span class="per" id="tr-sub">| por ano, conforme o filtro de Grupo</span></h3>
+          <p class="bd-note" id="tr-nota">—</p>
+          <div class="bd-chart" id="tr-chart" style="min-height: 200px"></div>
+          <div class="bd-tablewrap">
+            <table id="tr-tab" class="bd-cards c2">
+              <thead><tr><th class="l">Loja</th><th id="tr-th-a">Ano</th><th id="tr-th-b">Ano anterior</th><th>Média por mês</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
         <div class="bd-card">
           <h3><span data-k="t_mes">Pago mês a mês</span> <span class="per">| R$ mil; barra = período, traço = ano anterior</span></h3>
           <p class="bd-note">Toque numa barra para ver o mês e o faturamento.</p>
@@ -973,17 +997,6 @@
           <div class="bd-tablewrap">
             <table id="gs-tab-grupo" class="bd-cards">
               <thead><tr><th class="l">Grupo</th><th>Pago</th><th>Ano anterior</th><th>Variação</th><th>Fatia</th><th>% faturamento</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="bd-card" id="gs-treino">
-          <h3><span id="tr-titulo">Treinamento e capacitação</span> <span class="per">| investimento em pessoas, por ano</span></h3>
-          <p class="bd-note" id="tr-nota">—</p>
-          <div class="bd-chart" id="tr-chart" style="min-height: 200px"></div>
-          <div class="bd-tablewrap">
-            <table id="tr-tab" class="bd-cards c2">
-              <thead><tr><th class="l">Loja</th><th id="tr-th-a">Ano</th><th id="tr-th-b">Ano anterior</th><th>Média por mês</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -1023,6 +1036,57 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DEMONSTRAÇÕES ===================== -->
+  <section class="bd-page" data-page="demonstracoes" id="demonstracoes" hidden>
+    <div class="bd-ctl">
+      <label class="bd-f"><span>Ano</span><select id="dm-ano" aria-label="Ano"></select></label>
+      <label class="bd-f"><span>De</span><select id="dm-de" aria-label="Mês inicial"></select></label>
+      <label class="bd-f"><span>Até</span><select id="dm-ate" aria-label="Mês final"></select></label>
+      <div class="bd-chips" id="dm-vis" role="group" aria-label="Visão"></div>
+    </div>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Demonstrações gerenciais · todas as lojas · <span id="dm-quem"></span></div>
+      <h2 class="bd-headline" id="dm-headline">—</h2>
+      <p class="bd-comp" id="dm-comp">—</p>
+    </div>
+    <div class="bd-layout">
+      <aside class="bd-rail" aria-label="Indicadores das demonstrações">
+        <div class="bd-goldline"></div>
+        <div class="bd-kpi"><span class="lbl">Receita de vendas</span><span class="ico"><svg><use href="#i-cash"/></svg></span><span class="val" data-dm="rec">—</span><span class="sub" data-dm="rec_var">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Margem bruta (caixa)</span><span class="ico"><svg><use href="#i-pct"/></svg></span><span class="val" data-dm="mb">—</span><span class="sub" data-dm="mb_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Resultado operacional</span><span class="ico"><svg><use href="#i-proj"/></svg></span><span class="val" data-dm="ro">—</span><span class="sub" data-dm="ro_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Resultado do período</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-dm="rp">—</span><span class="sub" data-dm="rp_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Geração de caixa</span><span class="ico"><svg><use href="#i-coin"/></svg></span><span class="val" data-dm="gc">—</span><span class="sub" data-dm="gc_sub">depois de investimentos e empréstimos</span></div>
+        <div class="bd-kpi"><span class="lbl">Ponto de equilíbrio</span><span class="ico"><svg><use href="#i-target"/></svg></span><span class="val" data-dm="pe">—</span><span class="sub" data-dm="pe_sub">—</span></div>
+      </aside>
+      <div class="bd-main">
+        <div class="bd-card">
+          <h3>DRE gerencial <span class="per" id="dm-dre-sub">| regime de caixa</span></h3>
+          <p class="bd-note" id="dm-nota">—</p>
+          <div class="bd-tablewrap"><table class="bd-dre" id="dm-dre"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="bd-card">
+          <h3>Fluxo de caixa simplificado <span class="per">| do resultado à geração de caixa</span></h3>
+          <div class="bd-tablewrap"><table class="bd-dre" id="dm-fc"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="bd-card">
+          <h3>Indicadores <span class="per">| sobre a receita de vendas</span></h3>
+          <div class="bd-tablewrap"><table class="bd-dre" id="dm-ind"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <details class="bd-card">
+          <summary>Como ler e o que falta <span class="per">| limites desta primeira versão</span></summary>
+          <ul class="bd-notes">
+            <li>Regime de caixa: as despesas entram pela data do pagamento (contas pagas do ERP, relatório 05), não pela competência. A receita é o faturamento mensal das lojas (planilha VENDAS - EVOLUÇÃO e leituras do mês).</li>
+            <li>Compras de mercadoria fazem o papel do custo da mercadoria vendida (CMV). O CMV correto precisa do estoque do fim de cada mês de todas as lojas (relatório 10) ou do relatório de CMV por loja (03).</li>
+            <li>Pessoal inclui as retiradas dos sócios como salário, até a criação da conta de lucros no ERP.</li>
+            <li>Só entram os meses em que cada loja tem contas pagas no ERP (ex.: L2, L5 e L9 só a partir de set/out de 2024); a mesma regra vale para a receita, para não misturar bases. A variação compara as mesmas lojas nos mesmos meses.</li>
+            <li>Ainda não dá para montar o balanço patrimonial: faltam os saldos de contas a receber e a pagar em aberto (relatórios 13 e 14), o estoque mensal, o imobilizado e o saldo dos empréstimos, ou o balancete da contabilidade por CNPJ.</li>
+          </ul>
+        </details>
       </div>
     </div>
   </section>
@@ -2693,28 +2757,28 @@
   // Compras de mercadoria, investimentos e pagamento de empréstimos ficam fora das despesas operacionais.
   const MERC = 'Mercadorias para revenda', INVEST = 'Investimentos (bens)';
   const ehOperacional = (r) => r.grupo !== MERC && r.grupo !== INVEST && r.sub !== 'Pagamento de empréstimos';
-  /* ---------- Treinamento e capacitação (Gastos): leitura de investimento em pessoas para o orçamento do ano seguinte ---------- */
-  function renderTreino(pagas, daLoja, ano, parcial) {
-    const SUB = 'Treinamento e capacitação';
-    const base = pagas.filter((r) => daLoja(lojaDe(r)));
-    const T = base.filter((r) => r.subgrupo === SUB).map((r) => ({ loja: lojaDe(r), mes: r.mes, v: Number(r.valor) }));
-    if (!T.length) { $('#tr-titulo').textContent = SUB; $('#tr-nota').textContent = 'Nenhum pagamento de treinamento ou capacitação nas contas pagas desta seleção.'; $('#tr-chart').replaceChildren(); fillTable($('#tr-tab'), [], []); return; }
+  /* ---------- Gasto por ano (Gastos): segue o filtro de Grupo; leitura de investimento e base de orçamento do ano seguinte ---------- */
+  function renderAnualGasto(G, ok, nome, ano, parcial) {
+    const T = G.filter(ok);
     // Meses com contas pagas no ERP em cada ano (para a média por mês não contar meses sem relatório)
-    const mesesAno = (a, f = () => true) => new Set(base.filter((r) => r.mes.startsWith(a) && r.mes !== parcial && f(r)).map((r) => r.mes)).size;
-    const anos = [...new Set(base.map((r) => r.mes.slice(0, 4)))].sort();
+    const mesesAno = (a, f = () => true) => new Set(G.filter((r) => r.mes.startsWith(a) && r.mes !== parcial && f(r)).map((r) => r.mes)).size;
+    $('#tr-sub').textContent = '| por ano, conforme o filtro de Grupo';
+    if (!T.length) { $('#tr-titulo').textContent = cap(nome); $('#tr-nota').textContent = `Nenhum pagamento de ${nome} nas contas pagas desta seleção.`; $('#tr-chart').replaceChildren(); fillTable($('#tr-tab'), [], []); return; }
+    const anos = [...new Set(G.map((r) => r.mes.slice(0, 4)))].sort();
     const tot = (a, f = () => true) => d3.sum(T.filter((r) => r.mes.startsWith(a) && f(r)), (r) => r.v);
     const rowsA = anos.map((a) => ({ a, v: tot(a), n: mesesAno(a) }));
-    drawCols($('#tr-chart'), rowsA.map((x) => ({ key: x.a, label: x.a + (x.n < 12 ? '*' : ''), value: x.v, color: x.a === ano ? GOLD : MUTED, alpha: x.n < 12 ? 0.7 : 1, x })), { h: 200, fmtLabel: (v) => v >= 1000 ? (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : brl.format(v),
+    const fmtV = (v) => v >= 1e6 ? (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi' : v >= 1000 ? (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : brl.format(v);
+    drawCols($('#tr-chart'), rowsA.map((x) => ({ key: x.a, label: x.a + (x.n < 12 ? '*' : ''), value: x.v, color: x.a === ano ? GOLD : MUTED, alpha: x.n < 12 ? 0.7 : 1, x })), { h: 200, fmtLabel: fmtV,
       tip: (r) => ({ title: r.x.a, lines: [{ text: `Pago  ${brl.format(r.x.v)}` }, { text: `${r.x.n} ${r.x.n === 1 ? 'mês' : 'meses'} de contas pagas no ERP` }, ...(r.x.n ? [{ text: `Média por mês  ${brl.format(r.x.v / r.x.n)}` }] : [])] }) });
     const cur = rowsA.find((x) => x.a === ano) || { v: 0, n: 0 }, ant = rowsA.find((x) => x.a === String(Number(ano) - 1));
     const media = cur.n ? cur.v / cur.n : null;
-    $('#tr-titulo').textContent = `${money(cur.v)} em treinamento e capacitação em ${ano}` + (ant && ant.n ? ` (${ant.a}: ${money(ant.v)})` : '');
-    $('#tr-nota').textContent = `Conta "Despesa com capacitação/treinamento" das contas pagas do ERP (relatório 05), separada dos demais benefícios. ` +
+    $('#tr-titulo').textContent = `${money(cur.v)} em ${nome} em ${ano}` + (ant && ant.v ? ` (${ant.a}: ${money(ant.v)})` : '');
+    $('#tr-nota').textContent = `Contas pagas do ERP (relatório 05), pela data do pagamento. ` +
       (media != null ? `Em ${ano}, média de ${money(media)} por mês em ${cur.n} ${cur.n === 1 ? 'mês' : 'meses'} fechados: no mesmo ritmo, ${money(media * 12)} em 12 meses, uma base para o orçamento de ${Number(ano) + 1} (estimativa). ` : '') +
-      'Anos com * têm menos de 12 meses de contas pagas no ERP.';
+      'Anos com * têm menos de 12 meses de contas pagas no ERP. Troque o Grupo no alto da página para ver outro gasto.';
     const lojas = [...new Set(T.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
     $('#tr-th-a').textContent = ano; $('#tr-th-b').textContent = String(Number(ano) - 1);
-    const linhas = lojas.map((l) => { const n = mesesAno(ano, (r) => lojaDe(r) === l), v = tot(ano, (r) => r.loja === l); return { loja: l, v, va: tot(String(Number(ano) - 1), (r) => r.loja === l), med: n ? v / n : null }; }).sort((a, c) => c.v - a.v);
+    const linhas = lojas.map((l) => { const n = mesesAno(ano, (r) => r.loja === l), v = tot(ano, (r) => r.loja === l); return { loja: l, v, va: tot(String(Number(ano) - 1), (r) => r.loja === l), med: n ? v / n : null }; }).filter((r) => r.v || r.va).sort((a, c) => c.v - a.v);
     fillTable($('#tr-tab'), linhas, [
       { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
       { fmt: (r) => r.v ? brl.format(r.v) : '—' },
@@ -2751,7 +2815,6 @@
     opcoesG($('#gs-ano'), [[null, anosD.map((a) => [a, a])]], anoG);
     const optM = mesesAno.map((m) => [m, MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (m === parcial ? ' (em curso)' : '')]);
     opcoesG($('#gs-de'), [[null, optM]], de); opcoesG($('#gs-ate'), [[null, optM]], ate);
-    renderTreino(pg.data, daLoja, anoG, parcial);
     const somaG = (f) => d3.sum(G.filter(f), (r) => r.v);
     const grupos = [...new Set(G.map((r) => r.grupo))].sort((a, c) => somaG((r) => r.grupo === c) - somaG((r) => r.grupo === a));
     const subsDe = (g) => [...new Set(G.filter((r) => r.grupo === g).map((r) => r.sub))].sort((a, c) => somaG((r) => r.sub === c && r.grupo === g) - somaG((r) => r.sub === a && r.grupo === g));
@@ -2763,6 +2826,7 @@
     const grSel = filtro.startsWith('g:') && filtro !== 'g:op' ? filtro.slice(2) : filtro.startsWith('s:') ? filtro.slice(2).split('|')[0] : null;
     const subSel = filtro.startsWith('s:') ? filtro.slice(2).split('|')[1] : null;
     const ok = (r) => filtro === 'todos' || (filtro === 'g:op' ? ehOperacional(r) : r.grupo === grSel && (!subSel || r.sub === subSel));
+    renderAnualGasto(G, ok, filtro === 'todos' ? 'todos os gastos' : filtro === 'g:op' ? 'despesas operacionais' : subSel ? subSel.toLowerCase() : grSel.toLowerCase(), anoG, parcial);
     const de0 = addMes(de, -12), ate0 = addMes(ate, -12);
     // ComparaÃ§Ã£o com o ano anterior sÃ³ com as lojas que tÃªm o perÃ­odo inteiro nos dois anos (o ERP de algumas comeÃ§a no fim de 2024)
     const inicioL = new Map(); for (const r of G) if (!inicioL.has(r.loja) || r.mes < inicioL.get(r.loja)) inicioL.set(r.loja, r.mes);
@@ -3046,6 +3110,131 @@
     }
   }
 
+  /* ---------- Demonstrações gerenciais (todas as lojas juntas, regime de caixa) ---------- */
+  function renderDemonstracoes() {
+    const vd = dash.data('vendas'), pg = dash.data('l2_pagas');
+    if (vd.status !== 'ok' || pg.status !== 'ok') return;
+    // Cobertura: cada loja entra só nos meses entre o primeiro e o último mês com contas pagas no ERP (receita e despesas na mesma base)
+    const cob = new Map();
+    for (const r of pg.data) { const l = lojaDe(r), o = cob.get(l) || { de: r.mes, ate: r.mes }; if (r.mes < o.de) o.de = r.mes; if (r.mes > o.ate) o.ate = r.mes; cob.set(l, o); }
+    const coberto = (l, m) => { const o = cob.get(l); return !!o && m >= o.de && m <= o.ate; };
+    const { parcial } = ultInfo();
+    const rec = new Map(), desp = new Map();   // chave loja|mes(|linha)
+    for (const r of vd.data) { const k = r.loja + '|' + r.mes; rec.set(k, (rec.get(k) || 0) + Number(r.faturamento)); }
+    const ehSocio = (r) => r.grupo === 'Sócios' || /pr[óo]-?labore|retirada/i.test(r.grupo);
+    const linhaDe = (r) => {
+      const g = r.grupo, s = r.subgrupo || '';
+      if (ehSocio(r) || g === 'Pessoal') return 'pes';
+      if (g === 'Mercadorias para revenda') return 'merc';
+      if (g === 'Impostos') return /vendas/i.test(s) ? 'imp_v' : /lucro/i.test(s) ? 'imp_l' : 'out';
+      if (g === 'Estrutura das lojas') return 'est';
+      if (g === 'Administrativo') return 'adm';
+      if (g === 'Logística e veículos') return 'log';
+      if (g === 'Comercial e marketing') return 'com';
+      if (g === 'Financeiro') return /empr[ée]stimo/i.test(s) ? 'emp' : 'fin';
+      if (/Investimentos/.test(g)) return 'inv';
+      return 'out';
+    };
+    const add = (k, v) => desp.set(k, (desp.get(k) || 0) + v);
+    for (const r of pg.data) { const b = lojaDe(r) + '|' + r.mes + '|', v = Number(r.valor); add(b + linhaDe(r), v); if (ehSocio(r)) add(b + 'ret', v); }
+    const lojas = [...cob.keys()];
+    const mesesTodos = [...new Set(vd.data.map((r) => r.mes))].filter((m) => m !== parcial && lojas.some((l) => coberto(l, m))).sort();
+    if (!mesesTodos.length) return;
+    // Período: ano e de/até (igual às outras telas)
+    const prm = P();
+    const anosD = [...new Set(mesesTodos.map((m) => m.slice(0, 4)))].sort().reverse();
+    const ano = anosD.includes(prm.dm_ano) ? prm.dm_ano : anosD[0];
+    const mesesAno = mesesTodos.filter((m) => m.startsWith(ano));
+    let de = mesesAno.includes(prm.dm_de) ? prm.dm_de : mesesAno[0], ate = mesesAno.includes(prm.dm_ate) ? prm.dm_ate : mesesAno[mesesAno.length - 1];
+    if (de > ate) [de, ate] = [ate, de];
+    opcoesG($('#dm-ano'), [[null, anosD.map((a) => [a, a])]], ano);
+    const optM = mesesAno.map((m) => [m, MESES_LONGOS[Number(m.slice(5, 7)) - 1]]);
+    opcoesG($('#dm-de'), [[null, optM]], de); opcoesG($('#dm-ate'), [[null, optM]], ate);
+    const vis = prm.dm_vis === 'mes' ? 'mes' : 'per';
+    chips($('#dm-vis'), [['per', 'Período'], ['mes', 'Mês a mês']], vis, (v) => dash.setParams({ dm_vis: v }));
+    const meses = mesesAno.filter((m) => m >= de && m <= ate);
+    const msA = meses.map((m) => addMes(m, -12));
+    // Soma de uma linha num conjunto de meses; f decide se a loja-mês entra
+    const soma = (lin, ms, f) => { let s = 0; for (const m of ms) for (const l of lojas) if (f(l, m)) s += lin === 'rec' ? (rec.get(l + '|' + m) || 0) : (desp.get(l + '|' + m + '|' + lin) || 0); return s; };
+    const ambos = (l, m) => coberto(l, m) && coberto(l, addMes(m, -12));      // mês atual com o mesmo mês do ano anterior coberto
+    const ambosA = (l, m) => coberto(l, m) && coberto(l, addMes(m, 12));     // mês do ano anterior com o mês atual coberto
+    const temAnt = lojas.some((l) => meses.some((m) => ambos(l, m)));
+    const dre = (ms, f) => {
+      const v = (lin) => soma(lin, ms, f);
+      const o = { rec: v('rec'), imp_v: v('imp_v'), merc: v('merc'), pes: v('pes'), ret: v('ret'), est: v('est'), adm: v('adm'), log: v('log'), com: v('com'), out: v('out'), fin: v('fin'), imp_l: v('imp_l'), inv: v('inv'), emp: v('emp') };
+      o.liq = o.rec - o.imp_v; o.mb = o.liq - o.merc; o.dop = o.pes + o.est + o.adm + o.log + o.com + o.out; o.ro = o.mb - o.dop; o.rp = o.ro - o.fin - o.imp_l; o.gc = o.rp - o.inv - o.emp;
+      return o;
+    };
+    const C = dre(meses, coberto), Cc = temAnt ? dre(meses, ambos) : null, A = temAnt ? dre(msA, ambosA) : null;
+    const lojasFora = [...new Set(meses.flatMap((m) => lojas.filter((l) => !coberto(l, m) && rec.get(l + '|' + m))))].sort((a, c) => ord(a) - ord(c));
+    const semPagas = [...new Set(meses.flatMap((m) => [...new Set(vd.data.filter((r) => r.mes === m && !cob.has(r.loja)).map((r) => r.loja))]))];
+    const perTxt = de === ate ? mesNome(de) : `${mesNome(de)} a ${mesNome(ate)}`;
+    const perAnt = msA.length ? (msA.length > 1 ? `${mesNome(msA[0])} a ${mesNome(msA[msA.length - 1])}` : mesNome(msA[0])) : '';
+    $('#dm-quem').textContent = perTxt;
+    const pctR = (x, o = C) => o.rec > 0 ? x / o.rec : null;
+    const vr = (x, y) => y ? (x - y) / Math.abs(y) : null;
+    const set = (k, t, v) => { const el = $(`#demonstracoes [data-dm="${k}"]`); if (!el) return; el.textContent = t; el.classList.remove('up', 'down'); if (v != null) tone(el, v); };
+    set('rec', money(C.rec)); set('rec_var', A ? `${pct(vr(Cc.rec, A.rec), true)} vs. ${perAnt} (mesmas lojas)` : 'sem ano anterior para comparar', A ? vr(Cc.rec, A.rec) : null);
+    set('mb', pct(pctR(C.mb))); set('mb_sub', `${money(C.mb)} depois de impostos e compras`);
+    set('ro', money(C.ro)); set('ro_sub', `${pct(pctR(C.ro))} da receita (EBITDA gerencial)`);
+    set('rp', money(C.rp)); set('rp_sub', `${pct(pctR(C.rp))} da receita`);
+    set('gc', money(C.gc), C.gc);
+    const nM = meses.length, mcPct = C.rec > 0 ? C.mb / C.rec : null, fixos = C.dop + C.fin + C.imp_l;
+    const pe = mcPct > 0 ? fixos / mcPct : null;
+    set('pe', pe ? money(pe / nM) + '/mês' : '—'); set('pe_sub', pe ? `faturamento que cobre as despesas; no período, ${money(C.rec / nM)}/mês` : '—');
+    $('#dm-headline').textContent = `Resultado de ${money(C.rp)} no período (${pct(pctR(C.rp))} da receita)${A ? `, ${Cc.rp >= A.rp ? 'acima' : 'abaixo'} do mesmo período do ano anterior nas mesmas lojas` : ''}.`;
+    $('#dm-comp').textContent = `Receita de ${money(C.rec)}, margem bruta de caixa de ${pct(pctR(C.mb))} e despesas operacionais de ${pct(pctR(C.dop))} da receita (pessoal ${pct(pctR(C.pes))}, já com as retiradas dos sócios). Depois de investimentos e empréstimos, a geração de caixa foi de ${money(C.gc)}.`;
+    $('#dm-nota').textContent = `Todas as lojas juntas, ${perTxt}, pela data do pagamento.` +
+      (lojasFora.length ? ` Fora em algum mês do período, por não terem contas pagas no ERP nesse mês: ${lojasFora.join(', ')}.` : '') +
+      (semPagas.length ? ` Sem contas pagas no ERP: ${semPagas.join(', ')}.` : '') + (A ? ' *Variação nas mesmas lojas e nos mesmos meses do ano anterior.' : '');
+    const L = [
+      ['rec', 'Receita de vendas', 'tot'], ['imp_v', '(−) Impostos sobre vendas (DAS, ICMS, PIS, COFINS)', 'neg'], ['liq', '= Receita líquida', 'sub'],
+      ['merc', '(−) Compras de mercadoria (no lugar do CMV)', 'neg'], ['mb', '= Margem bruta (caixa)', 'sub'],
+      ['pes', '(−) Pessoal', 'neg'], ['ret', 'das quais: retiradas dos sócios (como salário)', 'det'], ['est', '(−) Estrutura das lojas', 'neg'], ['adm', '(−) Administrativo', 'neg'],
+      ['log', '(−) Logística e veículos', 'neg'], ['com', '(−) Comercial e marketing', 'neg'], ['out', '(−) Outras despesas, taxas e tributos', 'neg'],
+      ['ro', '= Resultado operacional (EBITDA gerencial)', 'sub'], ['fin', '(−) Tarifas, juros e multas', 'neg'], ['imp_l', '(−) Impostos sobre o lucro (IRPJ, CSLL)', 'neg'], ['rp', '= Resultado do período', 'tot'],
+    ];
+    const LF = [['rp', 'Resultado do período', 'sub'], ['inv', '(−) Investimentos em bens (imobilizado, máquinas)', 'neg'], ['emp', '(−) Pagamento de empréstimos', 'neg'], ['gc', '= Geração de caixa do período', 'tot']];
+    const SAI = ['imp_v', 'merc', 'pes', 'ret', 'est', 'adm', 'log', 'com', 'out', 'fin', 'imp_l', 'inv', 'emp'];
+    const BOM = ['rec', 'liq', 'mb', 'ro', 'rp', 'gc'];
+    const fmtV = (k, v) => (v < 0 ? '−' : SAI.includes(k) && v ? '−' : '') + brl.format(Math.abs(v));
+    const tabela = (el, linhas) => {
+      let cols;
+      if (vis === 'mes') cols = [...meses.map((m) => ({ t: MESES[Number(m.slice(5, 7)) - 1] + '/' + m.slice(2, 4), o: dre([m], coberto) })), { t: 'Total', o: C }, { t: '% receita', pct: true }];
+      else cols = [{ t: perTxt, o: C }, { t: '% receita', pct: true }, ...(A ? [{ t: perAnt + '*', o: A }, { t: 'Variação*', varc: true }] : [])];
+      const trh = document.createElement('tr');
+      for (const t of [{ t: '' }, ...cols]) { const th = document.createElement('th'); th.textContent = t.t; if (!t.t) th.className = 'l'; trh.append(th); }
+      el.tHead.replaceChildren(trh);
+      el.tBodies[0].replaceChildren(...linhas.map(([k, nome, tipo]) => {
+        const tr = document.createElement('tr'); tr.className = 'dre-' + tipo;
+        const td0 = document.createElement('td'); td0.className = 'l'; td0.textContent = nome; tr.append(td0);
+        for (const c of cols) {
+          const td = document.createElement('td');
+          if (c.pct) td.textContent = pct(pctR(C[k]));
+          else if (c.varc) { const v = vr(Cc[k], A[k]); td.textContent = v == null ? '—' : pct(v, true); if (v != null && Math.abs(v) > 0.0005) td.className = (v > 0) === BOM.includes(k) ? 'ok' : 'bad'; }
+          else { td.textContent = fmtV(k, c.o[k]); if (BOM.includes(k) && c.o[k] < 0) td.className = 'bad'; }
+          tr.append(td);
+        }
+        return tr;
+      }));
+    };
+    tabela($('#dm-dre'), L); tabela($('#dm-fc'), LF);
+    const ind = [
+      ['Margem bruta (caixa)', (o) => pctR(o.mb, o), true], ['Despesas operacionais', (o) => pctR(o.dop, o), false], ['Pessoal (com retiradas dos sócios)', (o) => pctR(o.pes, o), false],
+      ['Estrutura das lojas', (o) => pctR(o.est, o), false], ['Impostos sobre vendas', (o) => pctR(o.imp_v, o), false],
+      ['Resultado operacional (EBITDA)', (o) => pctR(o.ro, o), true], ['Resultado do período', (o) => pctR(o.rp, o), true],
+    ];
+    const ti = $('#dm-ind'), trh = document.createElement('tr');
+    for (const t of ['', perTxt, ...(A ? [perAnt + '*', 'Diferença'] : [])]) { const th = document.createElement('th'); th.textContent = t; if (!t) th.className = 'l'; trh.append(th); }
+    ti.tHead.replaceChildren(trh);
+    ti.tBodies[0].replaceChildren(...ind.map(([n, f, bom]) => {
+      const tr = document.createElement('tr'), a = f(C), b = A ? f(A) : null, c2 = A ? f(Cc) : null, d = c2 != null && b != null ? c2 - b : null;
+      const cel = [[n, 'l'], [pct(a), ''], ...(A ? [[pct(b), ''], [d == null ? '—' : pp1(d), d == null || Math.abs(d) < 0.0005 ? '' : (d > 0) === bom ? 'ok' : 'bad']] : [])];
+      for (const [t, cl] of cel) { const td = document.createElement('td'); td.textContent = t; if (cl) td.className = cl; tr.append(td); }
+      return tr;
+    }));
+  }
+
   /* ---------- Empresas (cadastro das unidades fiscais) ---------- */
   function renderEmpresas() {
     const cad = dash.data('cadastro');
@@ -3266,6 +3455,7 @@
     if (aba === 'produtos') { renderCusto(); renderMarkup(); renderProdutos(); }
     if (aba === 'gastos') renderGastos();
     if (aba === 'empresas') renderEmpresas();
+    if (aba === 'demonstracoes') renderDemonstracoes();
     if (aba === 'metas') renderMetas();
   }
 
@@ -3292,6 +3482,9 @@
   ao('#cm-per', (v) => ({ cm_per: v }));
   ao('#gs-loja', (v) => ({ gs_loja: v }));
   ao('#gs-ano', (v) => ({ gs_ano: v, gs_de: '', gs_ate: '' }));
+  ao('#dm-ano', (v) => ({ dm_ano: v, dm_de: '', dm_ate: '' }));
+  ao('#dm-de', (v) => ({ dm_de: v }));
+  ao('#dm-ate', (v) => ({ dm_ate: v }));
   ao('#gs-de', (v) => ({ gs_de: v }));
   ao('#gs-ate', (v) => ({ gs_ate: v }));
   ao('#gs-grupo', (v) => ({ gs_grupo: v }));
