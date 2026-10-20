@@ -1339,7 +1339,7 @@
       <div class="card">
         <div class="eyebrow">Próximos 60 dias</div>
         <h2>O que vem pela frente</h2>
-        <p class="nota">Datas do calendário e o que aconteceu nelas no ano passado na L2 (semana do evento contra as 4 semanas anteriores).</p>
+        <p class="nota">Datas do calendário e o que aconteceu nelas no ano passado nas lojas (semana do evento contra as 4 semanas anteriores).</p>
         <div id="lista-cal"></div>
       </div>
       <div class="card">
@@ -1352,7 +1352,7 @@
     <div class="card">
       <h2>Efeito médio por tipo de evento</h2>
       <p class="nota">Média do resultado medido nas observações de cada tipo. Quanto mais registros, mais confiável.</p>
-      <div class="tabwrap"><table class="cartoes" id="tab-tipos"><thead><tr><th class="l">Tipo</th><th>Registros</th><th>Semanas fracas</th><th>Semanas boas</th><th>Efeito médio (L2)</th><th>Ritmo médio das lojas</th></tr></thead><tbody></tbody></table></div>
+      <div class="tabwrap"><table class="cartoes" id="tab-tipos"><thead><tr><th class="l">Tipo</th><th>Registros</th><th>Semanas fracas</th><th>Semanas boas</th><th>Efeito médio nas vendas</th><th>Ritmo médio das lojas</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="card" id="card-ia" hidden>
       <div class="eyebrow">Leitura do Claude</div>
@@ -1455,7 +1455,10 @@
     const D = new Map(); for (const r of diario) D.set(r.data, Number(r.valor));
     // Movimento pelo ERP (relatório 01): pedidos, faturamento e vendas a clientes identificados por loja e mês
     const E = new Map(); for (const r of parseCsv(b.erp_mensal?.csv)) E.set(r.mes + '|' + r.loja, { ped: Number(r.pedidos), val: Number(r.valor), ident: Number(r.identificado) });
-    cacheD = { src: b, V, M, mesesV, mesesM, L, D, E, ultFechado: mesesV[mesesV.length - 1], ultMeta: mesesM[mesesM.length - 1] };
+    // Vendas do dia por loja (relatório 01 de todas as lojas); sem essa base, só a L2
+    const DL = new Map(); for (const r of parseCsv(b.erp_diario?.csv)) { if (!DL.has(r.loja)) DL.set(r.loja, new Map()); DL.get(r.loja).set(r.data, Number(r.valor)); }
+    if (!DL.size && D.size) DL.set('L2', D);
+    cacheD = { src: b, V, M, mesesV, mesesM, L, D, DL, ultFechado: mesesV[mesesV.length - 1], ultMeta: mesesM[mesesM.length - 1], E };
     return cacheD;
   }
 
@@ -1792,18 +1795,29 @@
   });
 
   /* ---------- Observações: leitura do sistema ---------- */
-  function impactoL2(de, ate) {
-    const d = dados(); if (!d.D.size) return null;
+  // Vendas do dia somadas nas lojas escolhidas ("Todas" = todas com vendas diárias)
+  function diaLojas(lojas) {
+    const d = dados(); const todas = !lojas || lojas.includes('Todas');
+    const sel = [...d.DL.keys()].filter((l) => todas || lojas.includes(l));
+    const m = new Map(); for (const l of sel) for (const [s, v] of d.DL.get(l)) m.set(s, (m.get(s) || 0) + v);
+    return { m, sel };
+  }
+  const rotLojas = (sel, todasD) => sel.length === todasD ? 'As lojas venderam' : sel.length === 1 ? 'A ' + sel[0] + ' vendeu' : 'As lojas ' + sel.join(', ') + ' venderam';
+  // Resultado do período: soma dos dias contra a média dos mesmos dias nas 4 semanas anteriores e contra os mesmos dias do ano anterior
+  function impacto(de, ate, lojas) {
+    const d = dados(); if (!d.DL.size) return null;
+    const { m: D, sel } = diaLojas(lojas); if (!D.size) return null;
     let soma = 0, base = 0, anoAnt = 0, nb = 0, n = 0;
     for (let s = de; s <= ate; s = addDia(s, 1)) {
-      if (!d.D.has(s)) continue; n++; soma += d.D.get(s);
-      let b = 0, k = 0; for (let w = 1; w <= 4; w++) { const p = addDia(s, -7 * w); if (d.D.has(p)) { b += d.D.get(p); k++; } }
+      if (!D.has(s)) continue; n++; soma += D.get(s);
+      let b = 0, k = 0; for (let w = 1; w <= 4; w++) { const p = addDia(s, -7 * w); if (D.has(p)) { b += D.get(p); k++; } }
       if (k) { base += b / k; nb++; }
-      const aa = addDia(s, -364); if (d.D.has(aa)) anoAnt += d.D.get(aa);
+      const aa = addDia(s, -364); if (D.has(aa)) anoAnt += D.get(aa);
     }
     if (!n) return null;
-    return { soma, dias: n, vs4: base > 0 ? soma / base - 1 : null, vsAno: anoAnt > 0 ? soma / anoAnt - 1 : null };
+    return { soma, dias: n, vs4: base > 0 ? soma / base - 1 : null, vsAno: anoAnt > 0 ? soma / anoAnt - 1 : null, rot: rotLojas(sel, d.DL.size) };
   }
+  const impactoL2 = (de, ate) => impacto(de, ate, ['Todas']);
   function ritmoLojas(de, ate, lojas) {
     const d = dados(); const meta = (m, l) => d.M.get(m + '|' + l);
     const res = [];
@@ -1823,7 +1837,7 @@
     return { lojas: res, media: pond };
   }
   function leitura(o) {
-    const l2 = (o.lojas || []).some((l) => l === 'Todas' || l === 'L2') ? impactoL2(o.de, o.ate) : null;
+    const l2 = impacto(o.de, o.ate, o.lojas || ['Todas']);
     const rl = ritmoLojas(o.de, o.ate, o.lojas || ['Todas']);
     return { l2, rl };
   }
@@ -1832,7 +1846,7 @@
   }
   function linhaImpacto(li) {
     const p = [];
-    if (li.l2) p.push(`L2 vendeu ${brl.format(li.l2.soma)} em ${li.l2.dias} dia(s): ${pct(li.l2.vs4, true)} contra a média das 4 semanas anteriores${li.l2.vsAno != null ? `, ${pct(li.l2.vsAno, true)} contra os mesmos dias do ano anterior` : ''}.`);
+    if (li.l2) p.push(`${li.l2.rot} ${brl.format(li.l2.soma)} em ${li.l2.dias} dia(s): ${pct(li.l2.vs4, true)} contra a média das 4 semanas anteriores${li.l2.vsAno != null ? `, ${pct(li.l2.vsAno, true)} contra os mesmos dias do ano anterior` : ''}.`);
     if (li.rl) p.push(`Ritmo das lojas no período, pelas leituras: ${pct0(li.rl.media)} do esperado para a meta (${li.rl.lojas.map((r) => `${r.loja} ${pct0(r.ritmo)}`).join(', ')}).`);
     return p;
   }
@@ -1895,12 +1909,12 @@
     const sim = similares(o);
     if (sim.length) {
       const vals = sim.map((s) => s.li.l2?.vs4).filter((v) => v != null);
-      box.append(el('div', null, `Eventos parecidos (${sim.length}): ` + sim.slice(0, 4).map((s) => `${dBR(s.x.de)} ${(s.x.tipos || []).join('/')}${s.li.l2?.vs4 != null ? ` (L2 ${pct(s.li.l2.vs4, true)})` : s.li.rl ? ` (ritmo ${pct0(s.li.rl.media)})` : ''}`).join('; ') + (vals.length ? `. Média na L2: ${pct(vals.reduce((a, b) => a + b, 0) / vals.length, true)}.` : '.')));
+      box.append(el('div', null, `Eventos parecidos (${sim.length}): ` + sim.slice(0, 4).map((s) => `${dBR(s.x.de)} ${(s.x.tipos || []).join('/')}${s.li.l2?.vs4 != null ? ` (vendas ${pct(s.li.l2.vs4, true)})` : s.li.rl ? ` (ritmo ${pct0(s.li.rl.media)})` : ''}`).join('; ') + (vals.length ? `. Média nas vendas: ${pct(vals.reduce((a, b) => a + b, 0) / vals.length, true)}.` : '.')));
     }
     const ano = Number(o.de.slice(0, 4));
     const outros = S.obs.filter((x) => x.id !== o.id && Number(x.de.slice(0, 4)) !== ano && Math.abs(dt(String(ano) + x.de.slice(4)) - dt(o.de)) <= 10 * 864e5);
     if (outros.length) box.append(el('div', null, 'Mesma época em outros anos: ' + outros.map((x) => `${dBR(x.de)} ${(x.tipos || []).join('/')} – ${String(x.texto || '').slice(0, 80)}`).join('; ')));
-    else { const aa = impactoL2(addDia(o.de, -364), addDia(o.ate, -364)); if (aa && aa.vs4 != null) box.append(el('div', null, `Mesmos dias no ano anterior, na L2: ${pct(aa.vs4, true)} contra as 4 semanas anteriores.`)); }
+    else { const aa = impacto(addDia(o.de, -364), addDia(o.ate, -364), o.lojas || ['Todas']); if (aa && aa.vs4 != null) box.append(el('div', null, `Mesmos dias no ano anterior, nas mesmas lojas: ${pct(aa.vs4, true)} contra as 4 semanas anteriores.`)); }
     c.append(box);
     const rod = el('div', 'cab'); rod.append(el('span', 'meta-autor', `Registrada por ${nome(o.autor)} em ${dBR(String(o.criado_em || '').slice(0, 10))}`));
     if (S.podeEscrever !== false && S.db) {
@@ -1942,7 +1956,7 @@
       const ini = addDia(ant, -((dt(ant).getUTCDay() + 6) % 7)); const imp = impactoL2(ini, addDia(ini, 6));
       const obsAnt = S.obs.filter((o) => o.de <= addDia(ant, 3) && o.ate >= addDia(ant, -3));
       const r = el('div', 'evento'); r.append(el('div', 'dt', dBRc(e.d)));
-      const det = el('div', null); det.append(el('div', null, `${e.n}`), el('div', 'det', `${e.t}. ${e.det ? e.det + ' ' : ''}${imp && imp.vs4 != null ? `Na semana de ${dBR(ant)}, a L2 fez ${pct(imp.vs4, true)} contra as 4 semanas anteriores.` : 'Sem vendas diárias da L2 para o ano anterior.'}${obsAnt.length ? ' Observação registrada: ' + obsAnt.map((o) => String(o.texto).slice(0, 80)).join('; ') : ''}`));
+      const det = el('div', null); det.append(el('div', null, `${e.n}`), el('div', 'det', `${e.t}. ${e.det ? e.det + ' ' : ''}${imp && imp.vs4 != null ? `Na semana de ${dBR(ant)}, as lojas fizeram ${pct(imp.vs4, true)} contra as 4 semanas anteriores.` : 'Sem vendas diárias para o ano anterior.'}${obsAnt.length ? ' Observação registrada: ' + obsAnt.map((o) => String(o.texto).slice(0, 80)).join('; ') : ''}`));
       r.append(det); lc.append(r);
     }
     const la = $('#lista-ant'); const janela = [];
@@ -1975,7 +1989,7 @@
     const evs = [...calendario(y), ...calendario(y + 1)].filter((e) => (e.d >= hoje || (e.det && e.d.slice(0, 7) === hoje.slice(0, 7))) && e.d <= fim).map((e) => `${e.d} ${e.n} (${e.t})${e.det ? ": " + e.det : ""}`);
     const obs = S.obs.slice(0, 60).map((o) => { const li = leitura(o); return `- ${o.de} a ${o.ate} | lojas: ${(o.lojas || []).join(',')} | tipos: ${(o.tipos || []).join(',')} | informado por: ${(ORIGENS.find((x) => x[0] === o.origem) || [, 'diretoria'])[1]} | resultado anotado: ${o.efeito} | texto: ${String(o.texto).slice(0, 300)} | medido: ${linhaImpacto(li).join(' ') || 'sem dados'}`; });
     const r = regMes();
-    const prompt = `Você apoia a diretoria comercial do Grupo BIN Embalagens (lojas de embalagens descartáveis e festas em São Paulo). Hoje é ${hoje}.\n\nObservações registradas pela diretoria, com o resultado medido pelo sistema (L2 = loja Guaianases, a única com vendas diárias; "ritmo" vem das leituras de faturamento acumulado contra a meta):\n${obs.join('\n') || '(nenhuma ainda)'}\n\nDatas do calendário nos próximos 60 dias: ${evs.join('; ') || 'nenhuma'}.\n${r && r.status === 'aprovada' ? `Metas aprovadas para ${S.mes}: ${Object.entries(r.lojas).map(([l, v]) => `${l} loja ${v.loja} gerente ${v.gerente}`).join('; ')}.` : ''}\n\nEscreva em português, em texto simples (sem tabelas, sem markdown pesado), no máximo 250 palavras:\n1. Padrões que as observações mostram (por tipo de evento e época do ano), citando os números medidos. Se houver poucos registros, diga isso.\n2. O que esperar nas próximas semanas, com base no calendário e nos registros de anos anteriores.\n3. Até 4 ações de preparo concretas para as lojas (estoque, compras, promoções, ajuste de meta), sem falar de pessoas pelo nome.\nNão invente números que não estão acima.`;
+    const prompt = `Você apoia a diretoria comercial do Grupo BIN Embalagens (lojas de embalagens descartáveis e festas em São Paulo). Hoje é ${hoje}.\n\nObservações registradas pela diretoria, com o resultado medido pelo sistema (vendas diárias de todas as lojas pelo ERP; "ritmo" vem das leituras de faturamento acumulado contra a meta):\n${obs.join('\n') || '(nenhuma ainda)'}\n\nDatas do calendário nos próximos 60 dias: ${evs.join('; ') || 'nenhuma'}.\n${r && r.status === 'aprovada' ? `Metas aprovadas para ${S.mes}: ${Object.entries(r.lojas).map(([l, v]) => `${l} loja ${v.loja} gerente ${v.gerente}`).join('; ')}.` : ''}\n\nEscreva em português, em texto simples (sem tabelas, sem markdown pesado), no máximo 250 palavras:\n1. Padrões que as observações mostram (por tipo de evento e época do ano), citando os números medidos. Se houver poucos registros, diga isso.\n2. O que esperar nas próximas semanas, com base no calendário e nos registros de anos anteriores.\n3. Até 4 ações de preparo concretas para as lojas (estoque, compras, promoções, ajuste de meta), sem falar de pessoas pelo nome.\nNão invente números que não estão acima.`;
     btn.disabled = true; $('#btn-ia-parar').hidden = false; out.textContent = 'Pensando…';
     ctl = new AbortController();
     try { await sample(prompt, { signal: ctl.signal, onText: ({ text }) => { out.textContent = text; }, cache: false }); }
@@ -4241,7 +4255,9 @@
   // gravado só por quem é Editor da pasta BIN Painel (o diretor comercial). No computador, a Central abre em modo leitura.
   const CENTRAL = (() => {
     const VAZIO = () => ({ config: {}, metas_mes: {}, observacoes: {}, nomes: {} });
+    const servidorLocal = () => !window.BIN_WEB && location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname);
     let estado = VAZIO(), podeEscrever = false, carregado = false, erro = null, eu = { id: 'local', name: 'você' }, montada = false;
+    let fimCarga; const pronto = new Promise((r) => { fimCarga = r; });   // a Central só pergunta quem é e se grava depois da primeira leitura
     const ouv = new Map();
     const ouvir = (nome, fn) => { if (!ouv.has(nome)) ouv.set(nome, []); ouv.get(nome).push(fn); };
     const avisarC = (nome) => (ouv.get(nome) || []).forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
@@ -4261,6 +4277,7 @@
         metas: { csv: csv(['mes', 'loja', 'meta_loja', 'meta_gerente'], [...d('metas'), ...d('metas26')]) },
         leituras: { csv: csv(['mes', 'data', 'loja', 'acumulado'], d('leituras')) },
         l2_diario: { csv: csv(['data', 'pedidos', 'valor'], d('l2_diario')) },
+        erp_diario: { csv: csv(['loja', 'data', 'pedidos', 'valor'], d('erp_diario').map((r) => ({ ...r, loja: lojaDe(r) }))) },
         erp_mensal: { csv: csv(['mes', 'loja', 'pedidos', 'valor', 'identificado'], [...erp.values()]) },
       };
     }
@@ -4279,16 +4296,34 @@
           if (r.dados) estado = Object.assign(VAZIO(), r.dados);
           eu = { id: window.BIN_WEB.conta || 'web', name: window.BIN_WEB.nome || window.BIN_WEB.conta || 'você' };
         } catch (e) { erro = 'Não foi possível ler a Central no Google Drive agora.'; console.error(e); }
+      } else if (servidorLocal()) {
+        // Aberto pelo "Abrir painel": o servidor do computador lê e grava o arquivo trancado com a senha guardada
+        try {
+          const r = await (await fetch('/api/central', { cache: 'no-store' })).json();
+          podeEscrever = !!r.podeEscrever; if (r.dados) estado = Object.assign(VAZIO(), r.dados);
+          if (r.senhaErrada) erro = 'A Central no Drive está trancada com outra senha. Rode "Definir senha" de novo com a senha usada no painel.';
+          eu = { id: 'computador', name: 'computador da BIN' };
+        } catch (e) { erro = 'Não foi possível ler a Central pelo "Abrir painel".'; }
       } else {
         try { const j = dash.bruto && dash.bruto('json_central'); if (j) estado = Object.assign(VAZIO(), JSON.parse(j)); } catch (e) { erro = 'Não foi possível ler a cópia da Central.'; }
         podeEscrever = false; eu = { id: 'local', name: 'computador' };
       }
-      carregado = true;
+      carregado = true; fimCarga();
       ['config', 'metas_mes', 'observacoes'].forEach(avisarC);
       statusCentral();
     }
     // Cada gravação relê o arquivo, aplica só a mudança e grava de novo: não apaga o que outra pessoa gravou no meio tempo
     function gravar(nome, muda) {
+      if (servidorLocal() && podeEscrever) return (async () => {
+        const r = await (await fetch('/api/central', { cache: 'no-store' })).json();
+        if (r.senhaErrada) throw Object.assign(new Error('senha diferente'), { code: 'senha' });
+        const e = Object.assign(VAZIO(), r.dados || {});
+        muda(e);
+        e.nomes[eu.id] = eu.name; e.atualizado_em = new Date().toISOString(); e.atualizado_por = eu.id;
+        const g = await fetch('/api/central', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e) });
+        if (!g.ok) throw Object.assign(new Error('falha ' + g.status), { code: 'erro' });
+        estado = e; avisarC(nome);
+      })();
       if (!window.BIN_WEB || !podeEscrever) return Promise.reject(Object.assign(new Error('somente leitura'), { code: 'invalid_argument' }));
       const prep = window.BIN_WEB.prepararGravacao();   // síncrono: a janela do Google abre ainda no toque do botão
       return (async () => {
@@ -4320,8 +4355,8 @@
       },
     };
     const user = {
-      async me() { return { id: eu.id, name: eu.name }; },
-      async can() { return podeEscrever; },
+      async me() { await pronto; return { id: eu.id, name: eu.name }; },
+      async can() { await pronto; return podeEscrever; },
       async profiles(ids) { const o = {}; for (const id of ids) o[id] = { name: estado.nomes[id] || (String(id).includes('@') ? id : '') }; return o; },
     };
     const downloads = { async save({ filename, data }) { const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } };
@@ -4329,15 +4364,17 @@
     function statusCentral() {
       const st = $('#central-status');
       st.textContent = erro ? erro : !carregado ? 'Carregando a Central Comercial…'
-        : podeEscrever ? `Conectado como ${eu.name}: você pode aprovar metas e registrar observações. As gravações ficam trancadas no Google Drive.`
+        : podeEscrever ? (servidorLocal() ? 'Neste computador você pode aprovar metas e registrar observações. As gravações ficam trancadas na pasta BIN Painel do Google Drive e aparecem também no painel pelo link.' : `Conectado como ${eu.name}: você pode aprovar metas e registrar observações. As gravações ficam trancadas no Google Drive.`)
         : window.BIN_WEB ? 'Modo leitura. Aprovar metas e registrar observações é do diretor comercial (Editor da pasta BIN Painel no Google Drive).'
         : 'Modo leitura no computador (cópia da última atualização). Para aprovar ou registrar, use o Painel pelo link, com a conta do diretor comercial.';
     }
     // Ajusta a altura do quadro ao conteúdo da Central
     function ajustar(fr) {
       const doc = fr.contentDocument; if (!doc || !doc.body) return;
-      const h = () => { fr.style.height = Math.max(400, doc.documentElement.scrollHeight) + 'px'; };
-      h(); if (window.ResizeObserver) new ResizeObserver(h).observe(doc.body); else setInterval(h, 1000);
+      // Mede o conteúdo da Central (não a janela do quadro), para o quadro encolher quando a aba é mais curta
+      const h = () => { const w = doc.querySelector('.wrap'); const alt = w ? Math.ceil(w.getBoundingClientRect().height) + 24 : doc.body.scrollHeight; fr.style.height = Math.max(400, alt) + 'px'; };
+      h(); const alvo = doc.querySelector('.wrap') || doc.body; const RO = fr.contentWindow && fr.contentWindow.ResizeObserver;
+      if (RO) new RO(h).observe(alvo); setInterval(h, 1500);   // o observador precisa ser o do próprio quadro; o intervalo cobre o resto
     }
     function render() {
       if (!montada) {
