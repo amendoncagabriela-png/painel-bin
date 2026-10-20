@@ -307,6 +307,8 @@
   #demonstracoes .bd-tablewrap { overflow-x: auto; }
   /* Central Comercial dentro do painel */
   #central-frame { display: block; width: 100%; min-height: 70vh; border: 0; border-radius: var(--cds-radius); background: transparent; }
+  .cm-risco { margin-top: var(--cds-gap-lg); padding-top: var(--cds-gap-md); border-top: 1px dashed var(--color-border-line); }
+  .cm-risco h4 { margin: 0 0 .3rem; font-size: var(--cds-font-size-heading); }
   .bd-mini { margin-top: var(--cds-gap-sm); }
   .emp-resumo { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin: 0 0 var(--cds-gap-md); }
   .emp-chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: .25rem .7rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
@@ -859,6 +861,24 @@
         </table>
       </div>
       <p class="bd-note" id="cm-mais"></p>
+      <div class="cm-risco" id="cm-risco">
+        <h4>Riscos possíveis para revisão <span class="per">| margem fora do padrão do próprio produto</span></h4>
+        <p class="bd-note" id="rk-nota">—</p>
+        <div class="bd-ctl bd-ctl-in">
+          <button type="button" class="bd-btn-atu" id="rk-gerar">Gerar lista de riscos</button>
+          <button type="button" class="bd-chip" id="rk-baixar" hidden>Baixar riscos (CSV)</button>
+        </div>
+        <div id="rk-res" hidden>
+          <div class="emp-resumo" id="rk-resumo"></div>
+          <div class="bd-tablewrap">
+            <table id="tab-risco" class="bd-cards c2">
+              <thead><tr><th class="l">Loja</th><th class="l">Código</th><th class="l">Produto</th><th class="l">Relatório</th><th>Margem no relatório</th><th>Margem nos outros</th><th>Diferença</th><th>Custo unit. · nos outros</th><th>Venda</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="bd-note" id="rk-mais"></p>
+        </div>
+      </div>
     </div>
     <div class="bd-card" id="card-markup">
       <h3><span id="mk-titulo">Markup por loja</span> <span class="per">| mês atual, média do ano e anos anteriores</span></h3>
@@ -1337,9 +1357,9 @@
   <section data-pag="antecipacao" id="antecipacao" hidden>
     <div class="grade2">
       <div class="card">
-        <div class="eyebrow">Próximos 60 dias</div>
+        <div class="eyebrow" id="ant-janela">Mês atual e os 2 próximos</div>
         <h2>O que vem pela frente</h2>
-        <p class="nota">Datas do calendário e o que aconteceu nelas no ano passado nas lojas (semana do evento contra as 4 semanas anteriores).</p>
+        <p class="nota">Feriados nacionais, do estado de São Paulo, da capital e de Guarulhos, e datas comerciais. Para cada uma, o que aconteceu no ano passado nas lojas afetadas (semana do evento contra as 4 semanas anteriores). A janela anda sozinha na virada do mês.</p>
         <div id="lista-cal"></div>
       </div>
       <div class="card">
@@ -1415,8 +1435,16 @@
       { d: `${y}-06-20`, n: 'Festas juninas (junho)', t: 'Data comercial' }, { d: nDow(y, 8, 0, 2), n: 'Dia dos Pais', t: 'Data comercial' }, { d: `${y}-09-07`, n: 'Independência', t: 'Feriado' },
       { d: `${y}-10-01`, n: `Mês de aniversário da BIN (${y - 2015} anos de marca)`, t: 'Data comercial', det: 'Outubro inteiro. Desde 2025 a BIN divulga o aniversário, faz campanhas promocionais e decora as lojas; antes de 2025 o mês não teve ação de aniversário. Prepare estoque e decoração com antecedência.' }, { d: `${y}-10-12`, n: 'Nossa Senhora Aparecida e Dia das Crianças', t: 'Feriado' }, { d: `${y}-11-02`, n: 'Finados', t: 'Feriado' }, { d: `${y}-11-15`, n: 'Proclamação da República', t: 'Feriado' },
       { d: `${y}-11-20`, n: 'Consciência Negra', t: 'Feriado' }, { d: bf, n: 'Black Friday', t: 'Data comercial' }, { d: `${y}-12-25`, n: 'Natal', t: 'Feriado' }, { d: `${y}-12-31`, n: 'Réveillon', t: 'Data comercial' },
-    ];
+      // Estaduais e municipais: lojas na capital (L2, L4, L5, L7/L10, L9) e em Guarulhos (L3, L6, L8)
+      { d: `${y}-01-25`, n: 'Aniversário de São Paulo', t: 'Feriado municipal (capital: L2, L4, L5, L7/L10, L9)' },
+      { d: addDia(p, 60), n: 'Corpus Christi', t: 'Feriado municipal (capital e Guarulhos)' },
+      { d: `${y}-07-09`, n: 'Revolução Constitucionalista', t: 'Feriado estadual (SP)' },
+      { d: `${y}-12-08`, n: 'Imaculada Conceição e aniversário de Guarulhos', t: 'Feriado municipal (Guarulhos: L3, L6, L8)' },
+      { d: `${y}-03-15`, n: 'Dia do Consumidor', t: 'Data comercial' },
+    ].sort((a, b) => a.d.localeCompare(b.d));
   }
+  // Janela da antecipação: o mês atual inteiro e os 2 seguintes (anda sozinha na virada do mês)
+  const janelaAnt = () => { const m0 = hoje.slice(0, 7), m2 = addMes(m0, 2); return { ini: m0 + '-01', fim: `${m2}-${String(diasMes(m2)).padStart(2, '0')}`, m0, m2 }; };
   const util = (s) => dt(s).getUTCDay() !== 0 && !feriados(Number(s.slice(0, 4))).includes(s);
   const diasMes = (m) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).getUTCDate();
   const wd = (m, a, b) => { let c = 0; for (let i = a; i <= b; i++) if (util(`${m}-${String(i).padStart(2, '0')}`)) c++; return c; };
@@ -1947,16 +1975,19 @@
 
   /* ---------- Antecipação ---------- */
   function renderAntecipacao() {
-    const fim = addDia(hoje, 60); const y = Number(hoje.slice(0, 4));
-    const evs = [...calendario(y), ...calendario(y + 1)].filter((e) => (e.d >= hoje || (e.det && e.d.slice(0, 7) === hoje.slice(0, 7))) && e.d <= fim).sort((a, b) => a.d.localeCompare(b.d));
+    const J = janelaAnt(); const fim = J.fim; const y = Number(hoje.slice(0, 4));
+    const evs = [...calendario(y), ...calendario(y + 1)].filter((e) => e.d >= J.ini && e.d <= fim).sort((a, b) => a.d.localeCompare(b.d));
+    $('#ant-janela').textContent = `${cap(mesNome(J.m0))} a ${mesNome(J.m2)}`;
+    // Lojas afetadas: feriado municipal da capital ou de Guarulhos mede só as lojas daquela cidade
+    const lojasEv = (e) => /capital:/.test(e.t) ? ['L2', 'L4', 'L5', 'L7/L10', 'L9'] : /Guarulhos:/.test(e.t) ? ['L3', 'L6', 'L8'] : ['Todas'];
     const lc = $('#lista-cal'); lc.replaceChildren();
-    if (!evs.length) lc.append(el('div', 'vazio', 'Nenhuma data marcada nos próximos 60 dias.'));
+    if (!evs.length) lc.append(el('div', 'vazio', 'Nenhuma data marcada no mês atual e nos 2 próximos.'));
     for (const e of evs) {
-      const ant = e.n.startsWith('Black') ? addDia(nDow(y - 1 + (e.d.slice(0, 4) - y), 11, 4, 4), 1) : e.n === 'Carnaval' || e.n.startsWith('Sexta') || e.n === 'Páscoa' || e.n.startsWith('Dia das M') || e.n.startsWith('Dia dos P') ? calendario(Number(e.d.slice(0, 4)) - 1).find((x) => x.n === e.n).d : String(Number(e.d.slice(0, 4)) - 1) + e.d.slice(4);
-      const ini = addDia(ant, -((dt(ant).getUTCDay() + 6) % 7)); const imp = impactoL2(ini, addDia(ini, 6));
+      const ant = e.n.startsWith('Black') ? addDia(nDow(y - 1 + (e.d.slice(0, 4) - y), 11, 4, 4), 1) : e.n === 'Carnaval' || e.n === 'Corpus Christi' || e.n.startsWith('Sexta') || e.n === 'Páscoa' || e.n.startsWith('Dia das M') || e.n.startsWith('Dia dos P') ? calendario(Number(e.d.slice(0, 4)) - 1).find((x) => x.n === e.n).d : String(Number(e.d.slice(0, 4)) - 1) + e.d.slice(4);
+      const ini = addDia(ant, -((dt(ant).getUTCDay() + 6) % 7)); const imp = impacto(ini, addDia(ini, 6), lojasEv(e));
       const obsAnt = S.obs.filter((o) => o.de <= addDia(ant, 3) && o.ate >= addDia(ant, -3));
-      const r = el('div', 'evento'); r.append(el('div', 'dt', dBRc(e.d)));
-      const det = el('div', null); det.append(el('div', null, `${e.n}`), el('div', 'det', `${e.t}. ${e.det ? e.det + ' ' : ''}${imp && imp.vs4 != null ? `Na semana de ${dBR(ant)}, as lojas fizeram ${pct(imp.vs4, true)} contra as 4 semanas anteriores.` : 'Sem vendas diárias para o ano anterior.'}${obsAnt.length ? ' Observação registrada: ' + obsAnt.map((o) => String(o.texto).slice(0, 80)).join('; ') : ''}`));
+      const r = el('div', 'evento'); r.append(el('div', 'dt', dBRc(e.d) + (e.d < hoje ? ' ✓' : '')));
+      const det = el('div', null); det.append(el('div', null, `${e.n}`), el('div', 'det', `${e.t}. ${e.det ? e.det + ' ' : ''}${imp && imp.vs4 != null ? `Na semana de ${dBR(ant)}, ${lojasEv(e)[0] === 'Todas' ? 'as lojas fizeram' : 'as lojas de ' + lojasEv(e).join(', ') + ' fizeram'} ${pct(imp.vs4, true)} contra as 4 semanas anteriores${imp.vsAno != null ? ` e ${pct(imp.vsAno, true)} sobre os mesmos dias de ${Number(ant.slice(0, 4)) - 1}` : ''}.` : 'Sem vendas diárias para o ano anterior.'}${obsAnt.length ? ' Observação registrada: ' + obsAnt.map((o) => String(o.texto).slice(0, 80)).join('; ') : ''}`));
       r.append(det); lc.append(r);
     }
     const la = $('#lista-ant'); const janela = [];
@@ -1985,7 +2016,7 @@
     const out = $('#ia-out'); const btn = $('#btn-ia');
     const sample = await usar('sample');
     if (!sample) { out.textContent = 'A análise do Claude só funciona com a página aberta no claude.ai.'; return; }
-    const y = Number(hoje.slice(0, 4)); const fim = addDia(hoje, 60);
+    const y = Number(hoje.slice(0, 4)); const fim = janelaAnt().fim;
     const evs = [...calendario(y), ...calendario(y + 1)].filter((e) => (e.d >= hoje || (e.det && e.d.slice(0, 7) === hoje.slice(0, 7))) && e.d <= fim).map((e) => `${e.d} ${e.n} (${e.t})${e.det ? ": " + e.det : ""}`);
     const obs = S.obs.slice(0, 60).map((o) => { const li = leitura(o); return `- ${o.de} a ${o.ate} | lojas: ${(o.lojas || []).join(',')} | tipos: ${(o.tipos || []).join(',')} | informado por: ${(ORIGENS.find((x) => x[0] === o.origem) || [, 'diretoria'])[1]} | resultado anotado: ${o.efeito} | texto: ${String(o.texto).slice(0, 300)} | medido: ${linhaImpacto(li).join(' ') || 'sem dados'}`; });
     const r = regMes();
@@ -4032,7 +4063,10 @@
     const e = grupoErp();
     if (!e) return;
     const nAv = d3.sum(e.g, (r) => r.avisos.filter((s) => !/^Relatório sem data/.test(s)).length);
-    $('#upd-erp').textContent = `Relatórios do ERP: ${dBRy(e.salvo)}`;
+    // Data da última venda lida no relatório de vendas do ERP (01) salvo nas pastas, de qualquer loja
+    const vendasAte = e.g.filter((r) => r.rel === '01').map((r) => r.ate).filter(Boolean).sort().pop();
+    $('#upd-erp').textContent = `Relatórios do ERP: vendas até ${dBRy(vendasAte || e.salvo)}`;
+    $('#upd-erp').title = `Última venda lida no relatório de vendas (01) das pastas. Arquivos salvos até ${dBRy(e.salvo)}.`;
     $('#atu-resumo').textContent = `| arquivos salvos até ${dBRy(e.salvo)} · ${nAv} ${nAv === 1 ? 'aviso' : 'avisos'}`;
     fillTable($('#atu-tab'), e.g, [
       { cls: 'l nm', fmt: (r) => `${r.rel} · ${NOME_REL[r.rel] || ''}` },
@@ -4444,7 +4478,7 @@
     const card = $('#card-custo');
     const nAtual = alertaCusto();
     $('#cm-alerta').hidden = !nAtual;
-    if (!all.length) { $('#cm-titulo').textContent = 'Nenhum produto com custo acima da venda'; $('#cm-nota').textContent = 'Nos relatórios de produtos (02) lidos, nenhum item vendido tem custo maior que a venda.'; $('#cm-resumo').replaceChildren(); fillTable($('#tab-custo'), [], []); $('#cm-baixar').disabled = true; cmLinhas = []; return; }
+    if (!all.length) { $('#cm-titulo').textContent = 'Nenhum produto com custo acima da venda'; $('#cm-nota').textContent = 'Nos relatórios de produtos (02) lidos, nenhum item vendido tem custo maior que a venda.'; $('#cm-resumo').replaceChildren(); fillTable($('#tab-custo'), [], []); $('#cm-baixar').disabled = true; cmLinhas = []; renderRiscos('Todas', 'todos'); return; }
     const prm = P();
     const lojas = [...new Set(all.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
     const loja = prm.cm_loja === 'Todas' || lojas.includes(prm.cm_loja) ? prm.cm_loja : 'Todas';
@@ -4475,6 +4509,7 @@
     $('#cm-mais').textContent = L.length > top.length ? `Mostrando os ${top.length} de maior perda. O relatório completo (${int.format(L.length)} itens) sai no botão "Baixar relatório".` : '';
     $('#cm-baixar').disabled = !L.length;
     card.dataset.n = String(L.length);
+    renderRiscos(loja, per);
   }
   // Planilha para o Excel (separador ; e vírgula decimal), com os itens do filtro escolhido
   function baixarCusto() {
@@ -4491,6 +4526,53 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
   $('#cm-baixar').addEventListener('click', baixarCusto);
+  // Riscos para revisão: produtos cuja margem num relatório ficou muito abaixo ou muito acima da margem do mesmo produto nos outros
+  // relatórios (15 p.p. ou mais; venda de R$ 100 ou mais). Custo ou preço possivelmente desatualizado no cadastro.
+  let rkAberto = false, rkLinhas = [];
+  // Margens fora de -100% a 100% (tampa vendida quase de graça em outro relatório) aparecem como limite, para a leitura não distorcer
+  const pctLim = (v) => v < -1 ? 'abaixo de −100%' : v > 1 ? 'acima de 100%' : pct(v);
+  function renderRiscos(loja, per) {
+    const d = dash.data('erp_risco');
+    const all = d.status === 'ok' ? d.data.map((r) => ({ ...r, loja: lojaDe(r), m: Number(r.margem), mo: Number(r.margem_outros), venda: Number(r.venda), qtd: Number(r.qtd), cu: Number(r.custo_unit), cuo: Number(r.custo_unit_outros), n: Number(r.relatorios_outros) })) : [];
+    const R = all.filter((r) => (loja === 'Todas' || r.loja === loja) && (per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)))
+      .map((r) => ({ ...r, dif: r.m - r.mo, peso: Math.min(1, Math.abs(r.m - r.mo)) * r.venda })).sort((a, c) => c.peso - a.peso);
+    rkLinhas = R;
+    const abaixo = R.filter((r) => r.dif < 0).length, acima = R.length - abaixo;
+    $('#rk-nota').textContent = R.length
+      ? `Podem existir ${int.format(R.length)} itens a revisar neste filtro: ${int.format(abaixo)} com margem muito abaixo da que o mesmo produto teve nos outros relatórios e ${int.format(acima)} muito acima (diferença de 15 pontos ou mais). Toque em "Gerar lista de riscos" para ver quais são.`
+      : 'Nenhum produto com a margem muito fora do padrão dele neste filtro (diferença de 15 pontos ou mais contra os outros relatórios).';
+    $('#rk-gerar').disabled = !R.length;
+    $('#rk-gerar').textContent = rkAberto ? 'Esconder lista' : 'Gerar lista de riscos';
+    $('#rk-baixar').hidden = !rkAberto || !R.length;
+    $('#rk-res').hidden = !rkAberto || !R.length;
+    if (!rkAberto || !R.length) return;
+    const chip = (t, v) => { const s = document.createElement('span'); s.className = 'emp-chip'; s.append(Object.assign(document.createElement('b'), { textContent: v }), document.createTextNode(' ' + t)); return s; };
+    $('#rk-resumo').replaceChildren(chip('itens', int.format(R.length)), chip('com margem muito abaixo', int.format(abaixo)), chip('com margem muito acima', int.format(acima)), chip('em venda nesses relatórios', money(d3.sum(R, (r) => r.venda))));
+    const top = R.slice(0, 20);
+    fillTable($('#tab-risco'), top, [
+      { cls: 'l cod', fmt: (r) => r.loja },
+      { cls: 'l', fmt: (r) => r.codigo },
+      { cls: 'l nm wrap', fmt: (r) => r.descricao },
+      { cls: 'l', fmt: (r) => perCurto(r.per_ini, r.per_fim) },
+      { cls: (r) => r.dif < 0 ? 'bad' : 'ok', fmt: (r) => pctLim(r.m) },
+      { fmt: (r) => `${pctLim(r.mo)} (${r.n} rel.)` },
+      { cls: (r) => r.dif < 0 ? 'bad' : 'ok', fmt: (r) => Math.abs(r.dif) > 1 ? (r.dif > 0 ? '+' : '−') + '100 p.p. ou mais' : pp1(r.dif) },
+      { fmt: (r) => `${brl2.format(r.cu)} · ${brl2.format(r.cuo)}` },
+      { fmt: (r) => brl.format(r.venda) },
+    ]);
+    $('#rk-mais').textContent = `Ordem: maior diferença de margem pesada pela venda. Margem abaixo do normal pode ser custo novo não repassado ao preço ou custo cadastrado errado; acima do normal pode ser custo desatualizado (baixo demais).${R.length > top.length ? ` Mostrando ${top.length} de ${int.format(R.length)}; a lista completa sai em "Baixar riscos".` : ''}`;
+  }
+  $('#rk-gerar').addEventListener('click', () => { rkAberto = !rkAberto; renderCusto(); if (rkAberto) $('#cm-risco').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#rk-baixar').addEventListener('click', () => {
+    if (!rkLinhas.length) return;
+    const n = (v, c = 2) => Number(v).toFixed(c).replace('.', ',');
+    const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+    const cab = ['Loja', 'Relatório de', 'Relatório até', 'Código', 'Produto', 'Família', 'Qtd. vendida', 'Venda', 'Custo', 'Margem no relatório (%)', 'Margem nos outros relatórios (%)', 'Diferença (p.p.)', 'Outros relatórios', 'Custo unitário', 'Custo unitário nos outros', 'Situação'];
+    const lin = rkLinhas.map((r) => [q(r.loja), r.per_ini, r.per_fim, q(r.codigo), q(r.descricao), q(r.familia), n(r.qtd, 3), n(r.venda), n(r.custo), n(r.m * 100, 1), n(r.mo * 100, 1), n(r.dif * 100, 1), r.n, n(r.cu, 4), n(r.cuo, 4), r.dif < 0 ? 'margem muito abaixo' : 'margem muito acima'].join(';'));
+    const blob = new Blob(['﻿' + [cab.join(';'), ...lin].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `riscos_margem_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
 
   /* ---------- Markup (resumo na aba Produtos e markup) ---------- */
   // Mês em curso e média dos meses fechados vêm da planilha Metas_2026; os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
@@ -4544,7 +4626,7 @@
     $('#bd-status').classList.toggle('st-velho', !!quando && (Date.now() - new Date(quando.replace(' ', 'T'))) / 864e5 > 4);
     const a = dash.data('acomp');
     if (a.status === 'ok' && a.data.length) $('#st-leit').textContent = dBRy(a.data.map((r) => r.data).sort().pop());
-    $('#st-erp').textContent = dBRy(metaErp('ultima_data'));
+    { const e = grupoErp(); const v = e ? e.g.filter((r) => r.rel === '01').map((r) => r.ate).filter(Boolean).sort().pop() : null; $('#st-erp').textContent = dBRy(v || metaErp('ultima_data')); }
   }
   const pop = $('#atu-pop'), btnAtu = $('#btn-atu');
   function mostrarPop(partes) {
