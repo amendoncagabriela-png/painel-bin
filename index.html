@@ -2111,8 +2111,9 @@
         <div class="bd-kpi"><span class="lbl">Ponto de equilíbrio</span><span class="ico"><svg><use href="#i-target"/></svg></span><span class="val" data-dm="pe">—</span><span class="sub" data-dm="pe_sub">—</span></div>
       </aside>
       <div class="bd-main">
+        <div id="dm-cmv-nota" hidden></div>
         <div class="bd-card">
-          <h3>DRE gerencial <span class="per" id="dm-dre-sub">| regime de caixa</span></h3>
+          <h3>DRE gerencial <span class="per" id="dm-dre-sub">| CMV do ERP; despesas pela data do pagamento</span></h3>
           <p class="bd-note" id="dm-nota">—</p>
           <div class="bd-tablewrap"><table class="bd-dre" id="dm-dre"><thead></thead><tbody></tbody></table></div>
         </div>
@@ -2128,7 +2129,8 @@
           <summary>Como ler e o que falta <span class="per">| limites desta primeira versão</span></summary>
           <ul class="bd-notes">
             <li>Regime de caixa: as despesas entram pela data do pagamento (contas pagas do ERP, relatório 05), não pela competência. A receita é o faturamento mensal das lojas (planilha VENDAS - EVOLUÇÃO e leituras do mês).</li>
-            <li>Compras de mercadoria fazem o papel do custo da mercadoria vendida (CMV). O CMV correto precisa do estoque do fim de cada mês de todas as lojas (relatório 10) ou do relatório de CMV por loja (03).</li>
+            <li>CMV: custo das mercadorias vendidas de cada pedido, pelo relatório 03 do ERP (Vendas com lucratividade), somado por loja e mês. Onde o 03 ainda não foi salvo, entram as compras de mercadoria pagas, e o aviso no alto diz quais meses.</li>
+            <li>Fluxo de caixa pelo método direto: entradas de vendas (faturamento) menos tudo o que foi pago no período, incluindo as compras de mercadoria. A diferença entre o lucro e o caixa vem principalmente de compras acima ou abaixo do CMV (estoque e prazo com fornecedores), investimentos e empréstimos.</li>
             <li>Pessoal inclui as retiradas dos sócios como salário, até a criação da conta de lucros no ERP.</li>
             <li>Só entram os meses em que cada loja tem contas pagas no ERP (ex.: L2, L5 e L9 só a partir de set/out de 2024); a mesma regra vale para a receita, para não misturar bases. A variação compara as mesmas lojas nos mesmos meses.</li>
             <li>Ainda não dá para montar o balanço patrimonial: faltam os saldos de contas a receber e a pagar em aberto (relatórios 13 e 14), o estoque mensal, o imobilizado e o saldo dos empréstimos, ou o balancete da contabilidade por CNPJ.</li>
@@ -4205,14 +4207,25 @@
     const meses = mesesAno.filter((m) => m >= de && m <= ate);
     const msA = meses.map((m) => addMes(m, -12));
     // Soma de uma linha num conjunto de meses; f decide se a loja-mês entra
-    const soma = (lin, ms, f) => { let s = 0; for (const m of ms) for (const l of lojas) if (f(l, m)) s += lin === 'rec' ? (rec.get(l + '|' + m) || 0) : (desp.get(l + '|' + m + '|' + lin) || 0); return s; };
+    // Custo das mercadorias vendidas (ERP, relatório 03 "Vendas com lucratividade"); onde ainda não há o 03, entram as compras pagas
+    const cmvM = new Map(); const dc = dash.data('erp_cmv');
+    if (dc.status === 'ok') for (const r of dc.data) { const k = lojaDe(r) + '|' + r.mes; cmvM.set(k, (cmvM.get(k) || 0) + Number(r.custo)); }
+    const semCmv = new Set();
+    const val = (lin, l, m) => {
+      if (lin === 'rec') return rec.get(l + '|' + m) || 0;
+      if (lin === 'cmv') { if (cmvM.has(l + '|' + m)) return cmvM.get(l + '|' + m); semCmv.add(l + '|' + m); return desp.get(l + '|' + m + '|merc') || 0; }
+      return desp.get(l + '|' + m + '|' + lin) || 0;
+    };
+    const soma = (lin, ms, f) => { let s = 0; for (const m of ms) for (const l of lojas) if (f(l, m)) s += val(lin, l, m); return s; };
     const ambos = (l, m) => coberto(l, m) && coberto(l, addMes(m, -12));      // mês atual com o mesmo mês do ano anterior coberto
     const ambosA = (l, m) => coberto(l, m) && coberto(l, addMes(m, 12));     // mês do ano anterior com o mês atual coberto
     const temAnt = lojas.some((l) => meses.some((m) => ambos(l, m)));
     const dre = (ms, f) => {
       const v = (lin) => soma(lin, ms, f);
-      const o = { rec: v('rec'), imp_v: v('imp_v'), merc: v('merc'), pes: v('pes'), ret: v('ret'), est: v('est'), adm: v('adm'), log: v('log'), com: v('com'), out: v('out'), fin: v('fin'), imp_l: v('imp_l'), inv: v('inv'), emp: v('emp') };
-      o.liq = o.rec - o.imp_v; o.mb = o.liq - o.merc; o.dop = o.pes + o.est + o.adm + o.log + o.com + o.out; o.ro = o.mb - o.dop; o.rp = o.ro - o.fin - o.imp_l; o.gc = o.rp - o.inv - o.emp;
+      const o = { rec: v('rec'), imp_v: v('imp_v'), cmv: v('cmv'), merc: v('merc'), pes: v('pes'), ret: v('ret'), est: v('est'), adm: v('adm'), log: v('log'), com: v('com'), out: v('out'), fin: v('fin'), imp_l: v('imp_l'), inv: v('inv'), emp: v('emp') };
+      o.liq = o.rec - o.imp_v; o.mb = o.liq - o.cmv; o.dop = o.pes + o.est + o.adm + o.log + o.com + o.out; o.ro = o.mb - o.dop; o.rp = o.ro - o.fin - o.imp_l;
+      // Caixa (método direto): o que entrou de vendas menos o que foi pago, com as compras de mercadoria no lugar do CMV
+      o.cxop = o.rec - o.imp_v - o.merc - o.dop - o.fin - o.imp_l; o.gc = o.cxop - o.inv - o.emp;
       return o;
     };
     const C = dre(meses, coberto), Cc = temAnt ? dre(meses, ambos) : null, A = temAnt ? dre(msA, ambosA) : null;
@@ -4225,7 +4238,7 @@
     const vr = (x, y) => y ? (x - y) / Math.abs(y) : null;
     const set = (k, t, v) => { const el = $(`#demonstracoes [data-dm="${k}"]`); if (!el) return; el.textContent = t; el.classList.remove('up', 'down'); if (v != null) tone(el, v); };
     set('rec', money(C.rec)); set('rec_var', A ? `${pct(vr(Cc.rec, A.rec), true)} vs. ${perAnt} (mesmas lojas)` : 'sem ano anterior para comparar', A ? vr(Cc.rec, A.rec) : null);
-    set('mb', pct(pctR(C.mb))); set('mb_sub', `${money(C.mb)} depois de impostos e compras`);
+    set('mb', pct(pctR(C.mb))); set('mb_sub', `${money(C.mb)} de lucro bruto (receita − impostos − CMV)`);
     set('ro', money(C.ro)); set('ro_sub', `${pct(pctR(C.ro))} da receita (EBITDA gerencial)`);
     set('rp', money(C.rp)); set('rp_sub', `${pct(pctR(C.rp))} da receita`);
     set('gc', money(C.gc), C.gc);
@@ -4233,20 +4246,27 @@
     const pe = mcPct > 0 ? fixos / mcPct : null;
     set('pe', pe ? money(pe / nM) + '/mês' : '—'); set('pe_sub', pe ? `faturamento que cobre as despesas; no período, ${money(C.rec / nM)}/mês` : '—');
     $('#dm-headline').textContent = `Resultado de ${money(C.rp)} no período (${pct(pctR(C.rp))} da receita)${A ? `, ${Cc.rp >= A.rp ? 'acima' : 'abaixo'} do mesmo período do ano anterior nas mesmas lojas` : ''}.`;
-    $('#dm-comp').textContent = `Receita de ${money(C.rec)}, margem bruta de caixa de ${pct(pctR(C.mb))} e despesas operacionais de ${pct(pctR(C.dop))} da receita (pessoal ${pct(pctR(C.pes))}, já com as retiradas dos sócios). Depois de investimentos e empréstimos, a geração de caixa foi de ${money(C.gc)}.`;
+    $('#dm-comp').textContent = `Receita de ${money(C.rec)}, CMV de ${pct(pctR(C.cmv))}, margem bruta de ${pct(pctR(C.mb))} e despesas operacionais de ${pct(pctR(C.dop))} da receita (pessoal ${pct(pctR(C.pes))}, já com as retiradas dos sócios). Depois de investimentos e empréstimos, a geração de caixa foi de ${money(C.gc)}.`;
     $('#dm-nota').textContent = `Todas as lojas juntas, ${perTxt}, pela data do pagamento.` +
       (lojasFora.length ? ` Fora em algum mês do período, por não terem contas pagas no ERP nesse mês: ${lojasFora.join(', ')}.` : '') +
       (semPagas.length ? ` Sem contas pagas no ERP: ${semPagas.join(', ')}.` : '') + (A ? ' *Variação nas mesmas lojas e nos mesmos meses do ano anterior.' : '');
+    // Loja-mês sem o relatório 03 no período escolhido: o CMV dela usa as compras pagas
+    { const faltam = [...semCmv].filter((k) => meses.includes(k.split('|')[1])); const nota = $('#dm-cmv-nota');
+      const porMes = d3.rollups(faltam, (v) => v.map((k) => k.split('|')[0]).sort((a, c) => ord(a) - ord(c)), (k) => k.split('|')[1]).sort((a, c) => a[0].localeCompare(c[0]));
+      nota.hidden = !faltam.length;
+      emDev(nota, !!faltam.length, faltam.length ? `CMV pelo relatório 03 (Vendas com lucratividade) do ERP. Sem o 03 ainda, estes meses usam as compras de mercadoria pagas no lugar do CMV: ${porMes.length > 4 ? `${mesNome(porMes[0][0])} a ${mesNome(porMes[porMes.length - 1][0])}` : porMes.map(([m, ls]) => `${mesNome(m)} (${ls.join(', ')})`).join('; ')}. Salve o 03 desses meses na pasta 03_CMV_por_Loja para o lucro bruto ficar exato.` : ''); }
     const L = [
       ['rec', 'Receita de vendas', 'tot'], ['imp_v', '(−) Impostos sobre vendas (DAS, ICMS, PIS, COFINS)', 'neg'], ['liq', '= Receita líquida', 'sub'],
-      ['merc', '(−) Compras de mercadoria (no lugar do CMV)', 'neg'], ['mb', '= Margem bruta (caixa)', 'sub'],
+      ['cmv', '(−) Custo das mercadorias vendidas (CMV)', 'neg'], ['mb', '= Lucro bruto', 'sub'],
       ['pes', '(−) Pessoal', 'neg'], ['ret', 'das quais: retiradas dos sócios (como salário)', 'det'], ['est', '(−) Estrutura das lojas', 'neg'], ['adm', '(−) Administrativo', 'neg'],
       ['log', '(−) Logística e veículos', 'neg'], ['com', '(−) Comercial e marketing', 'neg'], ['out', '(−) Outras despesas, taxas e tributos', 'neg'],
       ['ro', '= Resultado operacional (EBITDA gerencial)', 'sub'], ['fin', '(−) Tarifas, juros e multas', 'neg'], ['imp_l', '(−) Impostos sobre o lucro (IRPJ, CSLL)', 'neg'], ['rp', '= Resultado do período', 'tot'],
     ];
-    const LF = [['rp', 'Resultado do período', 'sub'], ['inv', '(−) Investimentos em bens (imobilizado, máquinas)', 'neg'], ['emp', '(−) Pagamento de empréstimos', 'neg'], ['gc', '= Geração de caixa do período', 'tot']];
-    const SAI = ['imp_v', 'merc', 'pes', 'ret', 'est', 'adm', 'log', 'com', 'out', 'fin', 'imp_l', 'inv', 'emp'];
-    const BOM = ['rec', 'liq', 'mb', 'ro', 'rp', 'gc'];
+    const LF = [['rec', 'Entradas de vendas (faturamento do período)', 'tot'], ['imp_v', '(−) Impostos sobre vendas pagos', 'neg'], ['merc', '(−) Compras de mercadoria pagas', 'neg'],
+      ['dop', '(−) Despesas operacionais pagas (com pessoal e retiradas)', 'neg'], ['fin', '(−) Tarifas, juros e multas', 'neg'], ['imp_l', '(−) IRPJ e CSLL', 'neg'], ['cxop', '= Caixa das operações', 'sub'],
+      ['inv', '(−) Investimentos em bens (imobilizado, máquinas)', 'neg'], ['emp', '(−) Pagamento de empréstimos', 'neg'], ['gc', '= Geração de caixa do período', 'tot']];
+    const SAI = ['imp_v', 'cmv', 'dop', 'merc', 'pes', 'ret', 'est', 'adm', 'log', 'com', 'out', 'fin', 'imp_l', 'inv', 'emp'];
+    const BOM = ['rec', 'liq', 'mb', 'ro', 'rp', 'cxop', 'gc'];
     const fmtV = (k, v) => (v < 0 ? '−' : SAI.includes(k) && v ? '−' : '') + brl.format(Math.abs(v));
     const tabela = (el, linhas) => {
       let cols;
@@ -4270,7 +4290,7 @@
     };
     tabela($('#dm-dre'), L); tabela($('#dm-fc'), LF);
     const ind = [
-      ['Margem bruta (caixa)', (o) => pctR(o.mb, o), true], ['Despesas operacionais', (o) => pctR(o.dop, o), false], ['Pessoal (com retiradas dos sócios)', (o) => pctR(o.pes, o), false],
+      ['CMV (custo das mercadorias vendidas)', (o) => pctR(o.cmv, o), false], ['Lucro bruto', (o) => pctR(o.mb, o), true], ['Despesas operacionais', (o) => pctR(o.dop, o), false], ['Pessoal (com retiradas dos sócios)', (o) => pctR(o.pes, o), false],
       ['Estrutura das lojas', (o) => pctR(o.est, o), false], ['Impostos sobre vendas', (o) => pctR(o.imp_v, o), false],
       ['Resultado operacional (EBITDA)', (o) => pctR(o.ro, o), true], ['Resultado do período', (o) => pctR(o.rp, o), true],
     ];
