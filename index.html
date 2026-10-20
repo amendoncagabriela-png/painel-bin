@@ -2284,17 +2284,30 @@
 
   /* ---------- Acompanhamento do mês ---------- */
   dash.calc('acomp_base', {
-    inputs: ['leituras', 'metas26'],
+    inputs: ['leituras', 'metas26', 'erp_diario'],
     title: 'Leituras com meta',
-    description: 'Cada leitura do acumulado do mês por loja, com a meta do mês; "Todas" soma as lojas nas datas em que todas foram lidas.',
-    fn: (leituras, metas26) => {
+    description: 'Cada leitura do acumulado do mês por loja, com a meta do mês; "Todas" soma as lojas nas datas em que todas foram lidas. Quando o relatório de vendas do ERP vai além da última leitura da planilha, o acumulado do ERP entra como leitura daquele dia.',
+    fn: (leituras, metas26, erp_diario) => {
       const meta = new Map(metas26.map((m) => [m.mes + '|' + m.loja, m]));
       const out = [];
       for (const l of leituras) {
         const m = meta.get(l.mes + '|' + l.loja);
         if (!m) continue;
         out.push({ mes: l.mes, loja: l.loja, nome: m.nome, dia: Number(l.data.slice(8, 10)), realizado: Number(l.acumulado),
-          markup: l.markup === '' ? null : Number(l.markup), meta_loja: Number(m.meta_loja), meta_gerente: Number(m.meta_gerente) });
+          markup: l.markup === '' ? null : Number(l.markup), meta_loja: Number(m.meta_loja), meta_gerente: Number(m.meta_gerente), fonte: 'planilha' });
+      }
+      // Vendas do ERP (relatório 01, dia a dia): acumulado do mês até o último dia lido, quando passa da última leitura da planilha.
+      // Só entra se o ERP tiver o mês desde o começo (venda nos primeiros dias), para o acumulado não ficar pela metade.
+      const acum = new Map();   // mes|loja -> { dias: Map(dia -> valor) }
+      for (const r of erp_diario) { const k = r.data.slice(0, 7) + '|' + r.loja; if (!acum.has(k)) acum.set(k, new Map()); const d = Number(r.data.slice(8, 10)); acum.get(k).set(d, (acum.get(k).get(d) || 0) + Number(r.valor)); }
+      for (const [k, dias] of acum) {
+        const [mes, loja] = k.split('|'); const m = meta.get(k); if (!m) continue;
+        const ds = [...dias.keys()].sort((a, c) => a - c); if (!ds.length || ds[0] > 3) continue;
+        const ultDia = ds[ds.length - 1];
+        const ultPlan = Math.max(0, ...out.filter((r) => r.mes === mes && r.loja === loja).map((r) => r.dia));
+        if (ultDia <= ultPlan) continue;
+        const tot = ds.reduce((s, d) => s + dias.get(d), 0);
+        out.push({ mes, loja, nome: m.nome, dia: ultDia, realizado: tot, markup: null, meta_loja: Number(m.meta_loja), meta_gerente: Number(m.meta_gerente), fonte: 'erp' });
       }
       for (const mes of [...new Set(out.map((r) => r.mes))]) {
         const rs = out.filter((r) => r.mes === mes);
@@ -2374,7 +2387,7 @@
         const proj = da > 0 ? taxa * dm : null;
         const sem = acomp_periodos.find((p) => p.mes === r.mes && p.loja === r.loja && p.tipo === 'semana' && p.atual);
         return {
-          mes: r.mes, loja: r.loja, nome: r.nome, data: dia(r.mes, r.dia), leituras: qtd.get(r.mes + '|' + r.loja),
+          mes: r.mes, loja: r.loja, nome: r.nome, data: dia(r.mes, r.dia), fonte: r.fonte || "planilha", leituras: qtd.get(r.mes + '|' + r.loja),
           realizado: r.realizado, meta_loja: r.meta_loja, meta_gerente: r.meta_gerente,
           pct_loja: r.realizado / r.meta_loja, pct_gerente: r.realizado / r.meta_gerente,
           dias_mes: dm, dias_ate: da, dias_rest: dr, esperado: esp, ritmo,
@@ -4646,7 +4659,7 @@
     $('#st-quando').textContent = dBRh(quando);
     $('#bd-status').classList.toggle('st-velho', !!quando && (Date.now() - new Date(quando.replace(' ', 'T'))) / 864e5 > 4);
     const a = dash.data('acomp');
-    if (a.status === 'ok' && a.data.length) $('#st-leit').textContent = dBRy(a.data.map((r) => r.data).sort().pop());
+    if (a.status === 'ok' && a.data.length) { const ud = a.data.map((r) => r.data).sort().pop(); $('#st-leit').textContent = dBRy(ud) + (a.data.some((r) => r.data === ud && r.fonte === 'erp') ? ' (vendas do ERP)' : ''); }
     { const e = grupoErp(); const v = e ? e.g.filter((r) => r.rel === '01').map((r) => r.ate).filter(Boolean).sort().pop() : null; $('#st-erp').textContent = dBRy(v || metaErp('ultima_data')); }
   }
   const pop = $('#atu-pop'), btnAtu = $('#btn-atu');
