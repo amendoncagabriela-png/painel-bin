@@ -989,7 +989,7 @@
           </div>
         </div>
         <div class="bd-card" id="gs-socios">
-          <h3><span data-k="t_soc">Retiradas dos sócios</span> <span class="per">| à parte das despesas operacionais</span></h3>
+          <h3><span data-k="t_soc">Retiradas dos sócios</span> <span class="per">| dentro de Pessoal, tratadas como salário</span></h3>
           <p class="bd-note" data-k="n_soc">—</p>
           <div class="bd-chart" id="gs-chart-soc-mes" style="min-height: 200px"></div>
           <p class="bd-note"><span class="bd-legend" style="display:inline-flex;margin:0"><span><i style="background:var(--cds-chart-muted)"></i>pró-labore e despesas pessoais</span><span><i style="background:var(--bin-gold)"></i>antecipação de lucros</span></span></p>
@@ -1147,7 +1147,7 @@
         <li>Mês atual: as leituras são o faturamento acumulado do mês, lançado 2 vezes por semana na aba do mês da "Metas_2026". O esperado de cada dia distribui a meta pelos dias de loja aberta: segunda a sábado, sem os feriados nacionais.</li>
         <li>Ritmo = realizado ÷ esperado na data da leitura. No ritmo: 100% ou mais. Atenção: de 95% a 99%. Abaixo: menos de 95%.</li>
         <li>Raio-X: vem dos pedidos do ERP. O total por mês fica a menos de 1% da "VENDAS - EVOLUÇÃO" na maioria dos meses; em mar/2024 o ERP soma 8,6% a mais que a planilha. Cliente identificado é o pedido com cadastro; o código 133 (VAREJO) é a venda sem cadastro. Nomes de clientes, vendedores e operadores de caixa não entram no painel.</li>
-        <li>Gastos: são as contas pagas do ERP (relatório 05, por fornecedor), de todas as lojas. Como o ERP lança as despesas como "fornecedores" (ex.: "DESPESA COM ALUGUEL"), cada conta vai para um grupo e um subgrupo: Mercadorias para revenda (inclui produtos de limpeza), Pessoal, Impostos, Estrutura das lojas, Investimentos (bens), Logística e veículos, Administrativo, Comercial e marketing, Financeiro e Outras. Despesas operacionais = tudo, menos compras de mercadoria, investimentos e pagamento de empréstimos. Pessoal entra só em totais, sem nomes, pelo CNPJ que pagou: ainda não há rateio pela loja onde cada pessoa trabalha. Retiradas dos sócios ficam num quadro à parte, fora das despesas operacionais: pró-labore (remuneração), antecipação de lucros (por sócio, quando a conta do ERP diz o nome) e despesas pessoais pagas pela empresa (faturas de cartão e compras lançadas como pró-labore). Gasto sobre o faturamento usa as vendas do ERP da mesma loja.</li>
+        <li>Gastos: são as contas pagas do ERP (relatório 05, por fornecedor), de todas as lojas. Como o ERP lança as despesas como "fornecedores" (ex.: "DESPESA COM ALUGUEL"), cada conta vai para um grupo e um subgrupo: Mercadorias para revenda (inclui produtos de limpeza), Pessoal, Impostos, Estrutura das lojas, Investimentos (bens), Logística e veículos, Administrativo, Comercial e marketing, Financeiro e Outras. Despesas operacionais = tudo, menos compras de mercadoria, investimentos e pagamento de empréstimos. Pessoal entra só em totais, sem nomes, pelo CNPJ que pagou: ainda não há rateio pela loja onde cada pessoa trabalha. Retiradas dos sócios entram por enquanto como salário, em Pessoal (no total pago e nas despesas operacionais), até a criação da conta de lucros no ERP; o quadro dos sócios mostra a abertura: pró-labore (remuneração), antecipação de lucros (por sócio, quando a conta do ERP diz o nome) e despesas pessoais pagas pela empresa (faturas de cartão e compras lançadas como pró-labore). Gasto sobre o faturamento usa as vendas do ERP da mesma loja.</li>
         <li>Transferências entre lojas (relatório 12): o relatório é do lado de quem recebe e não traz a loja de origem, então mostra o total recebido por loja, mas não o saldo enviado menos recebido. Estoque do fim do mês (relatório 10): em teste, com janeiro/2024 de algumas lojas; entra no painel quando houver todos os meses.</li>
         <li>Produtos: o relatório de produtos do ERP vem por trimestre (2024 e 2025) ou semestre (2026); a comparação é com o mesmo período do ano anterior. Família = primeira palavra da descrição. Margem = lucro bruto ÷ venda, pelo custo cadastrado no ERP.</li>
         <li>Metas: a meta do gerente de 2025 existe só de setembro a dezembro (Metas_2025), então a comparação com o ano anterior vale para esses meses. O mês em andamento usa a projeção pelo ritmo da última leitura.</li>
@@ -2731,10 +2731,11 @@
     const loja = prm.gs_loja === 'Todas' || disp.includes(prm.gs_loja) ? prm.gs_loja : 'Todas';
     opcoesG($('#gs-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', disp.map((l) => [l, nomeLoja(l)])]], loja);
     const daLoja = (l) => loja === 'Todas' || l === loja;
-    // Pró-labore e retiradas são dos sócios: ficam fora do painel.
     const SOC = pg.data.filter((r) => daLoja(lojaDe(r)) && r.grupo === 'Sócios').map((r) => ({ loja: lojaDe(r), mes: r.mes, tipo: r.subgrupo, socio: r.fornecedor || 'Sem sócio identificado', v: Number(r.valor) }));
-    const G = pg.data.filter((r) => daLoja(lojaDe(r)) && r.grupo !== 'Sócios' && !/pr[óo]-?labore|retirada/i.test(r.grupo))
-      .map((r) => ({ loja: lojaDe(r), mes: r.mes, grupo: r.grupo, sub: r.subgrupo || r.grupo, forn: r.fornecedor, v: Number(r.valor) }));
+    // Retiradas dos sócios (pró-labore, antecipações e despesas pessoais) entram como salário, em Pessoal, até a conta de lucros ser criada no ERP.
+    const RET = 'Retiradas dos sócios (como salário)';
+    const G = pg.data.filter((r) => daLoja(lojaDe(r)))
+      .map((r) => { const soc = r.grupo === 'Sócios' || /pr[óo]-?labore|retirada/i.test(r.grupo); return { loja: lojaDe(r), mes: r.mes, grupo: soc ? 'Pessoal' : r.grupo, sub: soc ? RET : r.subgrupo || r.grupo, forn: soc ? '' : r.fornecedor, v: Number(r.valor) }; });
     const meses = [...new Set(G.map((r) => r.mes))].sort();
     const { ult: ultData, parcial } = ultInfo();
     if (!meses.length) { vazio($('#gs-chart-mes'), 'Sem contas pagas para esta loja.'); return; }
@@ -2833,7 +2834,7 @@
       { fmt: (r) => pct(totPeriodo > 0 ? r.v / totPeriodo : null) },
       { fmt: (r) => pct(r.pf) },
     ], { rowCls: (r) => r.nivel === 'g' ? 'grupo' : 'subg', onClick: (r) => dash.setParams({ gs_grupo: filtro === r.chave ? 'todos' : r.chave }), selected: (r) => filtro === r.chave });
-    // Retiradas dos sócios: à parte, com o enquadramento (pró-labore x antecipação de lucros x despesas pessoais)
+    // Retiradas dos sócios: abertura por sócio e tipo (já somadas em Pessoal), com o enquadramento (pró-labore x antecipação de lucros x despesas pessoais)
     {
       const S = SOC.filter((r) => r.mes >= de && r.mes <= ate), SA = temAnt ? SOC.filter((r) => compL.includes(r.loja) && r.mes >= de0 && r.mes <= ate0) : [];
       const tipoV = (rs, t) => d3.sum(rs.filter((r) => r.tipo === t), (r) => r.v);
@@ -2844,7 +2845,7 @@
       if (socios.length) socios.push({ s: 'Total', pl: tipoV(S, 'Pró-labore'), al: tipoV(S, 'Antecipação de lucros'), dp: tipoV(S, 'Despesas pessoais pagas pela empresa'), t: totS, tot: true });
       const semId = S.filter((r) => r.socio === 'Sem sócio identificado').reduce((s, r) => s + r.v, 0);
       set('t_soc', totS ? `Retiradas dos sócios: ${money(totS)}, ${pct(fat > 0 ? totS / fat : null)} do faturamento` : 'Retiradas dos sócios');
-      set('n_soc', totS ? `Ficam fora das despesas operacionais. O caixa operacional do período (faturamento − compras de mercadoria − despesas operacionais) foi ${money(caixaOp)}; as retiradas equivalem a ${pct(caixaOp > 0 ? totS / caixaOp : null)} dele.${temAnt && totSA > 0 ? ` Nas mesmas lojas, ${pct(vr(d3.sum(S.filter((r) => compL.includes(r.loja)), (r) => r.v), totSA), true)} sobre o ano anterior.` : ''}${semId > 0 ? ` ${money(semId)} (${pct0(semId / totS)}) estão na conta genérica de pró-labore, sem sócio identificado.` : ''}` : 'Sem retiradas no período.');
+      set('n_soc', totS ? `Por enquanto entram no total pago e nas despesas operacionais como salário (Pessoal), até a criação da conta de lucros no ERP. Aqui, a abertura por sócio e por tipo de lançamento; o caixa operacional do período, já com elas, foi ${money(caixaOp)}.${temAnt && totSA > 0 ? ` Nas mesmas lojas, ${pct(vr(d3.sum(S.filter((r) => compL.includes(r.loja)), (r) => r.v), totSA), true)} sobre o ano anterior.` : ''}${semId > 0 ? ` ${money(semId)} (${pct0(semId / totS)}) estão na conta genérica de pró-labore, sem sócio identificado.` : ''}` : 'Sem retiradas no período.');
       const mesesS = mesesSel;
       drawCols($('#gs-chart-soc-mes'), mesesS.map((m) => { const v = S.filter((r) => r.mes === m); const al = tipoV(v, 'Antecipação de lucros'); return { key: m, label: MESES[Number(m.slice(5, 7)) - 1] + (mesesS.length > 12 || m.slice(5) === '01' ? '/' + m.slice(2, 4) : ''), value: d3.sum(v, (r) => r.v) - al, value2: al, color: MUTED, color2: GOLD, alpha: m === parcial ? 0.55 : 1, v }; }),
         { h: 200, fmtLabel: mil, tip: (r) => ({ title: mesTxt(r.key), lines: d3.rollups(r.v, (x) => d3.sum(x, (y) => y.v), (y) => y.socio).sort((a, c) => c[1] - a[1]).map(([s, x]) => ({ text: `${s}  ${brl.format(x)}` })) }) });
@@ -2902,7 +2903,7 @@
       evid2: subiu && subiu.dif > 0 ? `${subiu.rot} subiu ${money(subiu.dif)}${subiu.a > 0 ? ` (${pct(subiu.vc / subiu.a - 1, true)})` : ''} sobre o mesmo período do ano anterior.` : temAnt ? 'Nenhum gasto subiu em relação ao ano anterior.' : '—',
       evid3: temAnt ? `Despesas operacionais ${pct(vD, true)} contra faturamento ${pct(vF, true)}; compras de mercadoria somam ${pct(fat > 0 ? merc / fat : null)} do faturamento.` : `Despesas operacionais: ${money(desp)}, ${pct(fat > 0 ? desp / fat : null)} do faturamento.`,
       onde_agir: ganhou && ganhou.pfC - ganhou.pfA > 0.001 ? `Rever ${ganhou.rot.toLowerCase()}: passou de ${pct(ganhou.pfA)} para ${pct(ganhou.pfC)} do faturamento nas mesmas lojas. Toque no grupo para ver os subgrupos.` : temAnt ? 'Nenhum grupo de despesa operacional ganhou peso sobre o faturamento.' : 'Escolha um período com o ano anterior na base para comparar.',
-      ressalva: `Contas pagas pela data do pagamento, não pela competência. Pessoal aparece pelo CNPJ que pagou, não pela loja onde a pessoa trabalha; retiradas dos sócios ficam fora. Investimentos, pagamento de empréstimos e retiradas dos sócios não entram nas despesas operacionais.${parcial && ate >= parcial ? ` ${mesNome(parcial)} vai só até ${dBR(ultData)}.` : ''}`,
+      ressalva: `Contas pagas pela data do pagamento, não pela competência. Pessoal aparece pelo CNPJ que pagou, não pela loja onde a pessoa trabalha; retiradas dos sócios entram como salário (Pessoal) até a criação da conta de lucros. Investimentos, pagamento de empréstimos e retiradas dos sócios não entram nas despesas operacionais.${parcial && ate >= parcial ? ` ${mesNome(parcial)} vai só até ${dBR(ultData)}.` : ''}`,
     };
     $$('#hero-gs [data-k]').forEach((el) => { el.textContent = story[el.dataset.k] || '—'; });
   }
