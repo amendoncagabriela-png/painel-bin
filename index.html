@@ -4493,7 +4493,7 @@
     { id: 'BING', nome: 'BIN Guarulhos Centro', lojas: ['L6', 'L7/L10'], regime: 'Simples' },
     { id: 'MN', nome: 'M N Embalagens', lojas: ['L8'], regime: 'Presumido' },
   ];
-  const ftNome = (r) => r.loja === 'Todas' ? 'Todas as empresas' : `${r.nome} · ${r.lojas.map((l) => nomeLoja(l)).join(' + ')}`;
+  const ftNome = (r) => r.loja === "Todas" ? "Todas as empresas" : `${r.lojas.join(" + ")} · ${r.nome}`;
   const ftSit = (c) => c == null ? 'Sem dados' : c >= 1 ? 'Coberto' : c >= 0.9 ? 'Atenção' : 'Risco';
   const ftCls = (c) => c == null ? '' : c >= 1 ? 'ok' : c >= 0.9 ? 'mid' : 'bad';
   function renderFaturamento() {
@@ -4536,7 +4536,7 @@
     kp('cob_sub', `notas ÷ cartão e Pix · ${ftSit(sel.cob).toLowerCase()}`);
     kp('gap', sel.gap ? money(sel.gap) : sel.gap === 0 ? 'Nada' : '—'); kp('gap_sub', sel.gap ? 'em notas, para igualar o cartão e o Pix' : sel.gap === 0 ? 'as notas já cobrem' : 'sem os dois relatórios');
     $('#ft-tit-lojas').textContent = risco.length ? `${risco.map((r) => r.nome).join(", ")} abaixo de 100% de cobertura` : "Todas as empresas com as notas cobrindo o cartão e o Pix";
-    drawHBars($('#ft-chart'), ok.slice().sort((a, b) => a.cob - b.cob).map((r) => ({ key: r.loja, label: estreito() ? r.lojas.join("+") : `${r.nome} (${r.lojas.join(" + ")})`, value: r.cob, bold: r.loja === loja,
+    drawHBars($('#ft-chart'), ok.slice().sort((a, b) => a.cob - b.cob).map((r) => ({ key: r.loja, label: estreito() ? r.lojas.join("+") : ftNome(r), value: r.cob, bold: r.loja === loja,
       color: r.cob < 0.9 ? BAD : r.cob < 1 ? 'var(--color-warn)' : r.loja === loja ? GOLD : MUTED })), { refLine: 1, refLabel: '100% = notas cobrem', minHi: 1.2, onClick: (r) => dash.setParams({ ft_loja: r.key }) });
     const lista = loja === 'Todas' ? [...rows, tot] : rows.filter((r) => r.loja === loja);
     const nm = ftNome;
