@@ -290,6 +290,15 @@
   /* Selo "Em desenvolvimento": telas e quadros que ainda têm dados de uma loja só */
   .bd-dev-faixa { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: 0 0 var(--cds-gap-sm); padding: .55rem .8rem; border-radius: var(--cds-radius); background: rgba(242,195,107,.16); border: 1px solid #E0A83A; color: var(--color-fg); font-size: var(--cds-font-size-caption); line-height: 1.45; }
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
+  .bd-info { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--bin-gold); background: transparent; color: var(--bin-gold); font: italic 700 .9rem/1 Georgia, serif; cursor: pointer; }
+  .bd-info:hover, .bd-info:focus-visible { background: var(--bin-gold); color: #111; }
+  td.ic, th.ic { width: 2.2rem; text-align: center; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .bd-dlg { max-width: min(36rem, calc(100vw - 2rem)); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: 1rem 1.2rem; }
+  .bd-dlg::backdrop { background: rgba(0,0,0,.55); }
+  .bd-dlg h3 { margin: 0 0 .6rem; font-size: var(--cds-font-size-heading); }
+  .bd-dlg p { margin: 0 0 .6rem; line-height: 1.5; }
+  .bd-dlg button.fechar { margin-top: .4rem; }
   .bd-dev { display: inline-block; background: #F2C36B; color: #191919; font-weight: 800; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: .2rem .6rem; border-radius: 999px; white-space: nowrap; }
   /* Sinal de atenção: custo acima da venda no mês corrente */
   .alerta { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; margin-right: .45rem; border-radius: 50%; background: var(--color-bad); color: #fff; font-weight: 800; font-size: .85rem; vertical-align: .1em; box-shadow: 0 0 0 3px rgba(196,48,43,.18); }
@@ -2203,7 +2212,7 @@
           <p class="bd-note" id="ft-proj-nota">—</p>
           <div class="bd-tablewrap">
             <table id="ft-proj-tab" class="bd-cards">
-              <thead><tr><th class="l">Empresa (lojas)</th><th>Vira nota (hoje · cobrindo)</th><th id="ft-pj-a">Este ano</th><th id="ft-pj-b">Este ano, cobrindo</th><th id="ft-pj-c">Próximo ano</th><th id="ft-pj-d">Próximo ano, cobrindo</th><th class="l">Leitura</th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th>Vira nota (hoje · cobrindo)</th><th id="ft-pj-a">Este ano</th><th id="ft-pj-b">Este ano, cobrindo</th><th id="ft-pj-c">Próximo ano</th><th id="ft-pj-d">Próximo ano, cobrindo</th><th class="ic"><span class="sr">Leitura</span></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -2215,13 +2224,14 @@
           <p class="bd-note" id="ft-2027-nota">—</p>
           <div class="bd-tablewrap">
             <table id="ft-2027-tab" class="bd-cards">
-              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Regime</th><th>2026 (hoje)</th><th id="ft-27-a">2027</th><th id="ft-27-b">2027, IBS e CBS fora do DAS</th><th class="l">Leitura</th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Regime 2027</th><th>2026 (hoje)</th><th id="ft-27-a">2027 no DAS</th><th>2027 híbrido, transferências com nota</th><th>2027 híbrido, transferências sem nota</th><th class="ic"><span class="sr">Leitura</span></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
           <h3 style="margin-top: var(--cds-gap-md)">Informativos <span class="per" id="ft-info-per">| consulta semanal</span></h3>
           <ul class="bd-notes" id="ft-info"></ul>
         </div>
+        <dialog class="bd-dlg" id="ft-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
         <details class="bd-card" id="ft-nf">
           <summary>Outras leituras <span class="per">| vendas do sistema e notas</span></summary>
           <div class="bd-tablewrap">
@@ -4590,13 +4600,13 @@
     const agreg = fat * (e.venda03 > 0 ? Math.max(0, 1 - e.custo03 / e.venda03) : 0.33);   // valor agregado (venda − custo do 03)
     const P = (k, pad) => { const r = (dash.data('reforma_param').data || []).find((x) => x.chave === k); return r && r.valor !== '' && !isNaN(Number(r.valor)) ? Number(r.valor) : pad; };
     const cbs = P('cbs_ref_2027', 0.0921) - P('cbs_reducao_2027', 0.001), ibs = P('ibs_2027', 0.001);
-    let v, rbtU = null;
+    let v, rbtU = null, pcU = null;
     if (e.regime === 'Simples') {
       const pj = ftProjecao(e, "atual"), rbt = pj && pj.rbt12(pj.mes) > 0 ? pj.rbt12(pj.mes) : ftRbt12(fat, e.de, e.ate), f = SN_ANEXO1.find((x) => rbt <= x[0]) || SN_ANEXO1[5];
       const ef = rbt <= 180000 ? f[1] : (rbt * f[1] - f[2]) / rbt;
       // Venda com ICMS por substituição (CFOP 540x) paga o DAS sem a parcela do ICMS
       v = (fat - st) * ef + st * ef * (1 - f[3]);
-      rbtU = rbt;
+      rbtU = rbt; pcU = f[4];
       // 2027 com IBS e CBS fora do DAS: sai do DAS a parcela da CBS (antes PIS/Cofins) e a CBS e o IBS são pagos à parte, com crédito das compras
       if (cenario === 'fora') v = v * (1 - f[4]) + agreg * (cbs + ibs);
     } else if (e.regime === 'Presumido') {
@@ -4605,7 +4615,7 @@
     } else {   // Lucro Real: PIS/Cofins não cumulativos sobre o valor agregado; IRPJ e CSLL dependem do lucro contábil
       v = agreg * (cenario === '2027' ? cbs + ibs : 0.0925);
     }
-    return { v, aliq: v / fat, rbt: e.regime === "Simples" ? rbtU : null };
+    return { v, aliq: v / fat, rbt: e.regime === "Simples" ? rbtU : null, pc: pcU };
   }
   const FT_REG = { Simples: 'Simples (DAS)', Presumido: 'Lucro Presumido', Real: 'Lucro Real' };
   function renderImpostos(rows, loja) {
@@ -4627,29 +4637,83 @@
       { fmt: (l) => brl.format(l.tot ? l.hoje : l.hoje.v) },
       { cls: (l) => l.cobrir ? "bad" : "", fmt: (l) => l.tot ? (l.cobrir ? "+ " + brl.format(l.cobrir) : "—") : l.cobrir ? "+ " + brl.format(l.cobrir.v - l.hoje.v) + (l.cobrir.rbt > 4800000 ? " · receita de 12 meses acima de R$ 4,8 mi" : l.cobrir.rbt > 3600000 ? " · receita de 12 meses acima de R$ 3,6 mi: ICMS fora do DAS (não incluso)" : "") : "—" },
     ], tt);
-    // 2027
+    // 2027: regime de cada empresa e crédito das transferências entre lojas do grupo
     const par = (dash.data('reforma_param').data || []);
     const pv = (k) => (par.find((x) => x.chave === k) || {}).valor || '';
     const cbsRef = Number(pv('cbs_ref_2027')) || 0.0921, oficial = pv('cbs_oficial') === 'sim';
-    $('#ft-27-a').textContent = '2027 (como fica)';
-    $('#ft-2027-nota').textContent = `CBS de ${pct(cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001))} em 2027 (${oficial ? 'alíquota fixada pelo Senado' : `referência ${pct(cbsRef)} ainda em projeção; o Senado fixa até 15/12/2026`}) e IBS de teste de 0,1%, sobre a venda menos o custo das mercadorias, com crédito das compras. `
-      + 'No Simples, a tabela do DAS não muda em 2027 (a CBS ocupa o lugar de PIS e Cofins); a coluna "fora do DAS" mostra o custo de recolher IBS e CBS por fora, opção que dá crédito cheio aos clientes empresas. Mesmo período e mesmas notas da provisão acima.';
+    const t27 = cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001) + (Number(pv('ibs_2027')) || 0.001);
+    const hib = pv('hibrido_2027').split(',').map((s) => s.trim()).filter(Boolean);
+    const ddd = (id) => { const x = dash.data(id); return x.status === 'ok' ? x.data : []; };
+    for (const l of linhas) {
+      const e = l.e, mes = e.ate.slice(0, 7);
+      const k = e.venda03 > 0 ? e.custo03 / e.venda03 : 0.67;
+      // parcela do custo das vendas que chega por transferência de outra loja do grupo (relatório 12, mês das notas)
+      const tr = ddd('erp_transf').filter((r) => e.lojas.includes(r.loja) && r.mes === mes).reduce((s, r) => s + Number(r.valor), 0);
+      const cm = ddd('erp_cmv_diario').filter((r) => e.lojas.includes(r.loja) && r.data.slice(0, 7) === mes).reduce((s, r) => s + Number(r.custo), 0);
+      const sT = cm > 0 ? Math.min(1, tr / cm) : 0;
+      const compras = e.vendas * k;                 // entradas que dão crédito: o custo de tudo o que foi vendido no período
+      const deb = e.fat * t27, debCob = (e.fat + (e.gap || 0)) * t27;
+      const credCom = compras * t27, credSem = compras * (1 - sT) * t27;
+      Object.assign(l, { k, sT, compras, deb, debCob, credCom, credSem, hib: e.regime === 'Simples' && hib.includes(e.loja) });
+      if (e.regime === 'Simples') {
+        const dasSemCbs = l.hoje.v * (1 - (l.hoje.pc || 0.155));
+        l.hCom = dasSemCbs + Math.max(0, deb - credCom); l.hSem = dasSemCbs + Math.max(0, deb - credSem);
+        l.sobra = Math.max(0, credCom - deb);
+      }
+    }
+    const tot27 = (f) => linhas.reduce((s, l) => s + (f(l) || 0), 0);
+    const tRow = { tot: true, hoje: tot27((l) => l.hoje.v), a27: tot27((l) => l.e.regime === 'Simples' ? (l.hib ? l.hCom : l.a27.v) : l.a27.v), dentro: tot27((l) => l.a27.v),
+      hCom: tot27((l) => l.e.regime === 'Simples' ? l.hCom : l.a27.v), hSem: tot27((l) => l.e.regime === 'Simples' ? l.hSem : l.a27.v) };
+    $('#ft-27-a').textContent = '2027 no DAS';
+    $('#ft-2027-nota').textContent = `CBS de ${pct(cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001))} (${oficial ? 'fixada pelo Senado' : `referência de ${pct(cbsRef)} ainda em projeção; o Senado fixa até 15/12/2026`}) e IBS de teste de 0,1% em 2027. `
+      + `Empresas no Simples híbrido (${hib.length ? linhas.filter((l) => l.hib).map((l) => l.e.lojas.join('+')).join(', ') : 'nenhuma informada'}): o DAS perde a parcela da CBS e a empresa paga CBS e IBS sobre as notas de venda, com crédito do que comprou. `
+      + 'Com nota de compra e venda nas transferências entre lojas do grupo, a loja toma crédito também sobre a mercadoria que veio de outra loja; sem nota, só sobre as compras de fornecedores. Toque no ícone ⓘ de cada empresa para a leitura dela.';
     const prazo = pv('prazo_regime_regular'), hoje = new Date().toISOString().slice(0, 10), al = $('#ft-alerta');
-    const temSimples = linhas.some((l) => l.e.regime === 'Simples');
+    const temSimples = linhas.some((l) => l.e.regime === 'Simples' && !l.hib);
     al.hidden = !(prazo && hoje <= prazo && temSimples);
     if (!al.hidden) { const dd = ftDias(hoje, prazo) - 1;
       al.replaceChildren(Object.assign(document.createElement('span'), { className: 'bd-dev', textContent: dd <= 0 ? 'Prazo hoje' : `Faltam ${dd} dias` }),
-        document.createTextNode(`Até ${dBRy(prazo)}, cada empresa do Simples escolhe se recolhe IBS e CBS de jan a jun/2027 dentro do DAS ou pelo regime regular (Portal do Simples Nacional). Decidir com a contabilidade.`)); }
-    fillTable($('#ft-2027-tab'), [...linhas, ...(linhas.length > 1 ? [totRow] : [])], [
-      { cls: 'l nm', fmt: (l) => l.tot ? 'Total' : ftNome(l.e) },
-      { cls: 'l', fmt: (l) => l.tot ? '' : FT_REG[l.e.regime] },
-      { fmt: (l) => l.tot ? brl.format(l.hoje) : `${brl.format(l.hoje.v)} (${pct(l.hoje.aliq)})` },
-      { fmt: (l) => l.tot ? brl.format(l.a27) : `${brl.format(l.a27.v)} (${pct(l.a27.aliq)})` },
-      { fmt: (l) => l.tot ? '' : l.f27 ? `${brl.format(l.f27.v)} (${pct(l.f27.aliq)})` : '—' },
-      { cls: 'l', fmt: (l) => l.tot ? '' : l.e.regime === 'Simples'
-        ? (l.f27.v > l.a27.v ? `Por fora custa ${money(l.f27.v - l.a27.v)} a mais no período; vale se os clientes empresas pedirem crédito` : `Por fora custa ${money(l.a27.v - l.f27.v)} a menos no período`)
-        : (l.a27.v > l.hoje.v ? `Sobe ${money(l.a27.v - l.hoje.v)} no período: CBS sobre o valor agregado no lugar de PIS e Cofins` : `Cai ${money(l.hoje.v - l.a27.v)} no período com o crédito das compras`) },
+        document.createTextNode(`Até ${dBRy(prazo)}, a empresa do Simples que ainda não optou pode escolher recolher IBS e CBS de jan a jun/2027 pelo regime regular (Simples híbrido), no Portal do Simples Nacional.`)); }
+    const vp = (v, base) => `${brl.format(v)} (${pct(base > 0 ? v / base : null)})`;
+    fillTable($('#ft-2027-tab'), [...linhas, ...(linhas.length > 1 ? [tRow] : [])], [
+      { cls: 'l nm', fmt: (l) => l.tot ? 'Total (regime de cada empresa)' : ftNome(l.e) },
+      { cls: 'l', fmt: (l) => l.tot ? '' : l.e.regime === 'Simples' ? (l.hib ? 'Simples híbrido' : 'Simples (DAS)') : FT_REG[l.e.regime] },
+      { fmt: (l) => l.tot ? brl.format(l.hoje) : vp(l.hoje.v, l.e.fat) },
+      { cls: (l) => !l.tot && l.e.regime === 'Simples' && !l.hib ? 'sel' : '', fmt: (l) => l.tot ? brl.format(l.dentro) : l.e.regime === 'Simples' ? vp(l.a27.v, l.e.fat) : `${vp(l.a27.v, l.e.fat)} · regime atual` },
+      { cls: (l) => !l.tot && l.hib ? 'sel' : '', fmt: (l) => l.tot ? brl.format(l.hCom) : l.e.regime === 'Simples' ? vp(l.hCom, l.e.fat) + (l.sobra > 1 ? ' ⚠' : '') : '—' },
+      { fmt: (l) => l.tot ? brl.format(l.hSem) : l.e.regime === 'Simples' ? vp(l.hSem, l.e.fat) : '—' },
+      { cls: 'ic', fmt: () => '' },
     ], tt);
+    // Ícone ⓘ: leitura de cada empresa numa janela
+    const dlg = $('#ft-dlg');
+    [...$('#ft-2027-tab').tBodies[0].rows].forEach((tr, i) => {
+      const l = [...linhas, ...(linhas.length > 1 ? [tRow] : [])][i]; if (!l || l.tot) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bd-info'; b.textContent = 'i'; b.title = 'Leitura da empresa'; b.setAttribute('aria-label', 'Leitura de ' + ftNome(l.e));
+      b.addEventListener('click', () => abrirLeitura(l));
+      tr.cells[tr.cells.length - 1].replaceChildren(b);
+    });
+    function abrirLeitura(l) {
+      const e = l.e, p = [];
+      if (e.regime === 'Simples') {
+        p.push(l.hib ? 'Optou pelo Simples híbrido em 2027: IBS e CBS fora do DAS, pagos sobre as notas de venda com crédito das compras.' : 'Segue com IBS e CBS dentro do DAS em 2027: a tabela não muda e não há crédito das compras.');
+        p.push(`Hoje ${pct0(e.vendas > 0 ? e.fat / e.vendas : null)} das vendas do sistema saem em nota. No período, as notas somam ${brl.format(e.fat)} e o custo das mercadorias vendidas (todas as vendas) é de ${brl.format(l.compras)}.`);
+        if (l.sT > 0) p.push(`Cerca de ${pct0(l.sT)} desse custo chega por transferência de outras lojas do grupo. Com nota de compra e venda nas transferências, o crédito de CBS e IBS sobe de ${brl.format(l.credSem)} para ${brl.format(l.credCom)} no período, e o imposto do híbrido cai de ${brl.format(l.hSem)} para ${brl.format(l.hCom)}.`);
+        if (l.sobra > 1) p.push(`Atenção: o crédito das entradas (${brl.format(l.credCom)}) passa do débito das notas de venda (${brl.format(l.deb)}): sobra crédito de ${brl.format(l.sobra)} no período. Entradas com nota muito maiores que as saídas com nota acumulam crédito e chamam a atenção da fiscalização. Com as notas cobrindo o cartão e o Pix, o débito sobe para ${brl.format(l.debCob)}${l.debCob >= l.credCom ? ' e o crédito é todo usado' : ''}.`);
+        p.push(l.hib ? `Comparado a ficar no DAS (${brl.format(l.a27.v)}), o híbrido ${l.hCom > l.a27.v ? `custa ${brl.format(l.hCom - l.a27.v)} a mais` : `custa ${brl.format(l.a27.v - l.hCom)} a menos`} no período, com as transferências com nota. A vantagem do híbrido é dar crédito integral a quem compra da empresa (outras lojas do grupo e clientes empresas).`
+          : `No híbrido, com as transferências com nota, o imposto do período seria de ${brl.format(l.hCom)}, contra ${brl.format(l.a27.v)} no DAS.`);
+      } else if (e.regime === 'Real') {
+        p.push('Lucro Real: em 2027 PIS e Cofins dão lugar à CBS, com crédito das compras; IRPJ e CSLL seguem iguais.');
+        p.push('É a principal fornecedora das outras lojas. Com nota de venda nas transferências, a CBS que ela destaca vira crédito integral nas lojas do Simples híbrido: para o grupo, o imposto fica na venda ao cliente final. O preço das transferências entre empresas do grupo precisa ser compatível com o de mercado.');
+        p.push(`Estimativa de CBS e IBS no período: ${brl.format(l.a27.v)} (sobre a venda menos o custo das mercadorias).`);
+      } else {
+        p.push('Lucro Presumido: em 2027 PIS e Cofins (3,65% sobre a receita) dão lugar à CBS sobre a venda com crédito das compras; IRPJ e CSLL seguem pela presunção.');
+        p.push(`Estimativa do período: ${brl.format(l.a27.v)}, contra ${brl.format(l.hoje.v)} hoje. Compras de outras lojas do grupo com nota também dão crédito.`);
+      }
+      if (prazo && hoje <= prazo && e.regime === 'Simples' && !l.hib) p.push(`Prazo: até ${dBRy(prazo)} para optar pelo híbrido no 1º semestre de 2027.`);
+      dlg.querySelector('h3').textContent = ftNome(e);
+      dlg.querySelector('.txt').replaceChildren(...p.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    }
     const info = (dash.data('reforma_info').data || []).slice().sort((a, b) => a.data.localeCompare(b.data));
     const atu = par.map((x) => x.atualizado_em).filter(Boolean).sort().pop();
     $('#ft-info-per').textContent = `| consulta semanal${atu ? ', última em ' + dBRy(atu) : ''}`;
@@ -4719,10 +4783,23 @@
       { cls: 'l nm', fmt: (l) => ftNome(l.e) },
       { fmt: (l) => `${pct0(l.at.r)} · ${pct0(l.cb.r)}` },
       cel('at', ano), cel('cb', ano), cel('at', ano + 1), cel('cb', ano + 1),
-      { cls: 'l', fmt: (l) => { const pior = [[l.at, ano], [l.cb, ano], [l.at, ano + 1], [l.cb, ano + 1]].map(([p, a]) => ({ a, p, s: ftSitSimples(p, a) }));
-        const ruim = pior.filter((x) => x.s.sev > 0).sort((x, y) => y.s.sev - x.s.sev || x.a - y.a)[0];
-        return ruim ? `${ruim.a}${ruim.p === l.cb ? ' cobrindo' : ''}: ${ruim.s.txt}` : 'Sem risco nos dois anos'; } },
+      { cls: 'ic', fmt: () => '' },
     ]);
+    // Ícone ⓘ: leitura dos limites de cada empresa nos quatro cenários
+    const cen = [['at', ano, `${ano}, ritmo atual`], ['cb', ano, `${ano}, cobrindo o cartão e o Pix desde ${MESES[Number(L[0].at.mes.slice(5, 7)) - 1]}`], ['at', ano + 1, `${ano + 1}, ritmo atual`], ['cb', ano + 1, `${ano + 1}, cobrindo o cartão e o Pix o ano todo`]];
+    [...$('#ft-proj-tab').tBodies[0].rows].forEach((tr, i) => {
+      const l = L[i]; if (!l) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bd-info'; b.textContent = 'i'; b.title = 'Leitura da empresa'; b.setAttribute('aria-label', 'Leitura de ' + ftNome(l.e));
+      b.addEventListener('click', () => {
+        const dlg = $('#ft-dlg'), p = cen.map(([k, a, nome]) => `${nome}: ${money(l[k].total(a))} em notas. ${ftSitSimples(l[k], a).txt}.`);
+        p.unshift(`Hoje ${pct0(l.at.r)} das vendas do sistema saem em nota; cobrindo o cartão e o Pix, seriam ${pct0(l.cb.r)}. Crescimento de vendas do ano: ${pct(l.at.g - 1, true)}.`);
+        p.push('Limites do Simples por empresa (matriz e filiais juntas): R$ 3,6 mi (acima, o ICMS sai do DAS) e R$ 4,8 mi (acima, a empresa sai do Simples). Passando em até 20%, vale no ano seguinte; acima de 20%, no mês seguinte. Também conta a receita global das empresas em que um mesmo sócio tem mais de 10%.');
+        dlg.querySelector('h3').textContent = ftNome(l.e);
+        dlg.querySelector('.txt').replaceChildren(...p.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
+        if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      });
+      tr.cells[tr.cells.length - 1].replaceChildren(b);
+    });
     const riscos = L.filter((l) => [[l.at, ano], [l.cb, ano], [l.at, ano + 1], [l.cb, ano + 1]].some(([p, a]) => p.total(a) > SN_LIM.sub));
     $('#ft-proj-tit').textContent = riscos.length ? `${riscos.map((l) => l.e.lojas.join('+')).join(', ')} com risco de passar do sublimite ou do teto` : 'Nenhuma empresa do Simples perto dos limites';
     $('#ft-proj-nota').textContent = `Notas de venda projetadas por empresa (matriz e filiais juntas). A coluna "Vira nota" é a parcela das vendas do sistema que hoje sai em nota e a que sairia cobrindo o cartão e o Pix, medidas no período lido (${dBR(simples[0].de)} a ${dBR(simples[0].ate)}). `
