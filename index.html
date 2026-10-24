@@ -582,7 +582,7 @@
         <div class="bd-grid2">
           <div class="bd-card" id="card-ritmo-lojas">
             <h3><span data-source="historia_mes" data-field="titulo_lojas">Ritmo por loja</span> <span class="per">| ritmo vs. esperado</span></h3>
-            <p class="bd-note">Em vermelho, as lojas abaixo do ritmo da meta da loja. Toque numa barra para ver a loja.</p>
+            <p class="bd-note">Em vermelho, as lojas abaixo do ritmo da meta da loja. Toque numa barra para ver a empresa.</p>
             <div class="bd-chart" id="chart-ritmo" data-source="acomp" style="min-height: 200px"></div>
           </div>
           <div class="bd-card" id="card-cenarios">
@@ -2149,7 +2149,7 @@
   <section class="bd-page" data-page="faturamento" id="faturamento" hidden>
     <div class="bd-ctl">
       <label class="bd-f"><span>Mês</span><select id="ft-mes" aria-label="Mês"></select></label>
-      <label class="bd-f"><span>Loja</span><select id="ft-loja" aria-label="Loja"></select></label>
+      <label class="bd-f"><span>Empresa</span><select id="ft-loja" aria-label="Empresa"></select></label>
     </div>
     <div class="bd-hero">
       <div class="bd-eyebrow">Notas fiscais x cartão e Pix · <span id="ft-quem"></span></div>
@@ -2166,15 +2166,15 @@
       </aside>
       <div class="bd-main">
         <div class="bd-card" id="ft-card-lojas">
-          <h3><span id="ft-tit-lojas">Cobertura por loja</span> <span class="per">| notas de venda ÷ cartão e Pix</span></h3>
-          <p class="bd-note">Abaixo de 100%, passou mais no cartão e no Pix do que foi faturado em nota: é a diferença que o Fisco enxerga pelas informações das operadoras. Toque numa barra para ver a loja.</p>
+          <h3><span id="ft-tit-lojas">Cobertura por empresa</span> <span class="per">| notas de venda ÷ cartão e Pix</span></h3>
+          <p class="bd-note">Abaixo de 100%, passou mais no cartão e no Pix do que foi faturado em nota: é a diferença que o Fisco enxerga pelas informações das operadoras. Toque numa barra para ver a empresa.</p>
           <div class="bd-chart" id="ft-chart" style="min-height: 180px"></div>
         </div>
         <div class="bd-card">
           <h3>Resumo das lojas <span class="per" id="ft-per">| período lido</span></h3>
           <div class="bd-tablewrap">
             <table id="ft-tab" class="bd-cards">
-              <thead><tr><th class="l">Loja</th><th>Período</th><th>Notas de venda</th><th>Cartão e Pix</th><th>Cobertura</th><th>Faturar para cobrir</th><th class="l">Situação</th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th>Período</th><th>Notas de venda</th><th>Cartão e Pix</th><th>Cobertura</th><th>Faturar para cobrir</th><th class="l">Situação</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -2183,7 +2183,7 @@
           <h3>Cartão e Pix por modalidade <span class="per">| valor bruto e taxas da Rede</span></h3>
           <div class="bd-tablewrap">
             <table id="ft-mod" class="bd-cards">
-              <thead><tr><th class="l">Loja</th><th>Débito</th><th>Crédito</th><th>Pix</th><th>Total</th><th>Taxas</th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th>Débito</th><th>Crédito</th><th>Pix</th><th>Total</th><th>Taxas</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -2192,7 +2192,7 @@
           <summary>Outras leituras <span class="per">| vendas do sistema e notas</span></summary>
           <div class="bd-tablewrap">
             <table id="ft-tab-nf" class="bd-cards">
-              <thead><tr><th class="l">Loja</th><th>Vendas no sistema</th><th>Com nota</th><th>Sem nota</th><th>% sem nota</th><th>Outras saídas em nota</th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th>Vendas no sistema</th><th>Com nota</th><th>Sem nota</th><th>% sem nota</th><th>Outras saídas em nota</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -2203,6 +2203,7 @@
           <ul class="bd-notes">
             <li>Notas de venda: relatório 07 do ERP (Nota Fiscal por CFOP, sintético), saídas com CFOP de venda (5101 a 5123, 6101 a 6123, 5401 a 5405, 6401 a 6405, 5929 e 6929). Devoluções e transferências ficam fora.</li>
             <li>Cartão e Pix: extrato de vendas da Rede (pasta 08), só transações aprovadas (cartão) e pagas (Pix), pelo valor bruto. A loja vem do CNPJ do estabelecimento; a M N soma na L8 desde 2026 e a maquininha da matriz da BIN Guarulhos Centro, em São Miguel (L7/L10).</li>
+            <li>Leitura por empresa, como é feita a apuração: as notas da matriz e das filiais juntas (M S = L5 + L9; BIN Guarulhos Centro = matriz e filial de São Miguel), contra a maquininha e o Pix da matriz, que recebe por todas as lojas.</li>
             <li>Os dois lados usam o mesmo período: o das notas (o relatório 07 traz o período no cabeçalho); o cartão e as vendas do sistema são cortados nas mesmas datas.</li>
             <li>Cobertura de 100% ou mais: as notas cobrem o que entrou por meios eletrônicos. Entre 90% e 100%, atenção; abaixo de 90%, risco.</li>
             <li>Lojas sem extrato da Rede ou sem relatório 07 no mês aparecem como "sem dados" e ficam fora do total.</li>
@@ -4442,8 +4443,31 @@
         };
       }).map((r) => ({ ...r, ok: r.temNf && r.temCar && r.ele > 0, cob: r.temNf && r.ele > 0 ? r.fat / r.ele : null, gap: r.temNf && r.temCar ? Math.max(0, r.ele - r.fat) : null }));
     };
-    return { meses, porLoja };
+    // A apuração é por empresa: matriz e filiais juntas, com a maquininha e a conta só da matriz recebendo por todas as lojas
+    const porEmpresa = (mes) => {
+      const ls = porLoja(mes);
+      return FT_EMP.map((e) => {
+        const g = ls.filter((r) => e.lojas.includes(r.loja)); if (!g.length) return null;
+        const s = (f) => g.reduce((t, r) => t + (r[f] || 0), 0);
+        const mod = {}; for (const k of ['Débito', 'Crédito', 'Pix', 'Outros']) mod[k] = g.reduce((t, r) => t + r.mod[k], 0);
+        const o = { loja: e.id, nome: e.nome, lojas: g.map((r) => r.loja), semNf: g.filter((r) => !r.temNf).map((r) => r.loja),
+          de: g.map((r) => r.de).sort()[0], ate: g.map((r) => r.ate).filter(Boolean).sort().pop(), carAte: g.map((r) => r.carAte).filter(Boolean).sort().pop() || null,
+          temNf: g.some((r) => r.temNf), temCar: g.some((r) => r.temCar), fat: s('fat'), outras: s('outras'), ele: s('ele'), taxas: s('taxas'), vendas: s('vendas'), mod };
+        o.ok = o.temNf && o.temCar && o.ele > 0; o.cob = o.temNf && o.ele > 0 ? o.fat / o.ele : null; o.gap = o.temNf && o.temCar ? Math.max(0, o.ele - o.fat) : null;
+        return o;
+      }).filter(Boolean);
+    };
+    return { meses, porLoja, porEmpresa };
   }
+  const FT_EMP = [
+    { id: 'BIN', nome: 'BIN Embalagens', lojas: ['L2'] },
+    { id: 'MEND', nome: 'Mendonça Embalagens', lojas: ['L3'] },
+    { id: 'QUIN', nome: 'Quinteiro Embalagens', lojas: ['L4'] },
+    { id: 'MS', nome: 'M S Embalagens', lojas: ['L5', 'L9'] },
+    { id: 'BING', nome: 'BIN Guarulhos Centro', lojas: ['L6', 'L7/L10'] },
+    { id: 'MN', nome: 'M N Embalagens', lojas: ['L8'] },
+  ];
+  const ftNome = (r) => r.loja === 'Todas' ? 'Todas as empresas' : `${r.nome} · ${r.lojas.map((l) => nomeLoja(l)).join(' + ')}`;
   const ftSit = (c) => c == null ? 'Sem dados' : c >= 1 ? 'Coberto' : c >= 0.9 ? 'Atenção' : 'Risco';
   const ftCls = (c) => c == null ? '' : c >= 1 ? 'ok' : c >= 0.9 ? 'mid' : 'bad';
   function renderFaturamento() {
@@ -4456,9 +4480,9 @@
     const prm = P();
     const mes = B.meses.includes(prm.ft_mes) ? prm.ft_mes : B.meses[B.meses.length - 1];
     opcoes($('#ft-mes'), [...B.meses].reverse().map((m) => [m, mesNome(m) + (m === MES_CORRENTE ? ' (em curso)' : '')]), mes);
-    const rows = B.porLoja(mes);
+    const rows = B.porEmpresa(mes);
     const loja = rows.some((r) => r.loja === prm.ft_loja) ? prm.ft_loja : 'Todas';
-    opcoesG($('#ft-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', rows.map((r) => [r.loja, nomeLoja(r.loja)])]], loja);
+    opcoesG($("#ft-loja"), [[null, [["Todas", "Todas as empresas"]]], ["Empresas", rows.map((r) => [r.loja, ftNome(r)])]], loja);
     const ok = rows.filter((r) => r.ok);
     const soma = (f) => ok.reduce((s, r) => s + (r[f] || 0), 0);
     const tot = { loja: 'Todas', ok: true, temNf: true, temCar: true, fat: soma('fat'), ele: soma('ele'), gap: soma('gap'), vendas: soma('vendas'), outras: soma('outras'), taxas: soma('taxas'),
@@ -4466,32 +4490,32 @@
     tot.cob = tot.ele > 0 ? tot.fat / tot.ele : null;
     const sel = loja === 'Todas' ? tot : rows.find((r) => r.loja === loja);
     const risco = ok.filter((r) => r.cob < 1).sort((a, b) => a.cob - b.cob);
-    $('#ft-quem').textContent = `${mesNome(mes)}${mes === MES_CORRENTE ? ' (em curso)' : ''} · ${nomeLoja(loja)}`;
-    const semDados = rows.filter((r) => !r.ok).map((r) => `${r.loja} (${!r.temCar ? 'sem extrato da Rede' : 'sem notas do 07'})`);
+    $('#ft-quem').textContent = `${mesNome(mes)}${mes === MES_CORRENTE ? ' (em curso)' : ''} · ${loja === "Todas" ? "Todas as empresas" : ftNome(sel)}`;
+    const semDados = rows.filter((r) => !r.ok).map((r) => `${r.nome} (${!r.temCar ? "sem extrato da Rede" : "sem notas do 07"})`);
     if (loja === 'Todas') {
-      $('#ft-headline').textContent = risco.length === 0 ? `As notas de venda cobrem o cartão e o Pix em todas as ${ok.length} lojas lidas.`
-        : `${risco.length} de ${ok.length} lojas com notas abaixo do que passou no cartão e no Pix: faltam ${money(tot.gap)} em notas para cobrir.`;
-      $('#ft-comp').textContent = (risco.length ? `A maior diferença é da ${nomeLoja(risco[0].loja)}, com ${pct0(risco[0].cob)} de cobertura (${money(risco[0].gap)}). ` : '')
+      $('#ft-headline').textContent = risco.length === 0 ? `As notas de venda cobrem o cartão e o Pix em todas as ${ok.length} empresas lidas.`
+        : `${risco.length} de ${ok.length} empresas com notas abaixo do que passou no cartão e no Pix: faltam ${money(tot.gap)} em notas para cobrir.`;
+      $('#ft-comp').textContent = (risco.length ? `A maior diferença é da ${risco[0].nome} (${risco[0].lojas.join(" + ")}), com ${pct0(risco[0].cob)} de cobertura (${money(risco[0].gap)}). ` : '')
         + (semDados.length ? `Sem os dois relatórios no mês: ${semDados.join(', ')}.` : '');
     } else {
-      $('#ft-headline').textContent = !sel.ok ? `${nomeLoja(loja)}: ${!sel.temCar ? 'sem extrato da Rede' : 'sem relatório de notas (07)'} neste mês.`
-        : sel.cob >= 1 ? `${nomeLoja(loja)}: as notas cobrem o cartão e o Pix (${pct0(sel.cob)}).`
-        : `${nomeLoja(loja)}: notas em ${pct0(sel.cob)} do cartão e do Pix; faltam ${money(sel.gap)} em notas para cobrir.`;
-      $('#ft-comp').textContent = sel.ok ? `Período de ${dBR(sel.de)} a ${dBR(sel.ate)}${sel.carAte && sel.carAte < sel.ate ? `; o extrato da Rede vai só até ${dBR(sel.carAte)}` : ''}.` : '';
+      $('#ft-headline').textContent = !sel.ok ? `${ftNome(sel)}: ${!sel.temCar ? 'sem extrato da Rede' : 'sem relatório de notas (07)'} neste mês.`
+        : sel.cob >= 1 ? `${ftNome(sel)}: as notas cobrem o cartão e o Pix (${pct0(sel.cob)}).`
+        : `${ftNome(sel)}: notas em ${pct0(sel.cob)} do cartão e do Pix; faltam ${money(sel.gap)} em notas para cobrir.`;
+      $('#ft-comp').textContent = sel.ok ? `Período de ${dBR(sel.de)} a ${dBR(sel.ate)}${sel.carAte && sel.carAte < sel.ate ? `; o extrato da Rede vai só até ${dBR(sel.carAte)}` : ''}${sel.lojas.length > 1 ? `. Notas de ${sel.lojas.join(" + ")} juntas, contra a maquininha e o Pix da matriz` : ""}${sel.semNf.length ? `; sem relatório 07 da ${sel.semNf.join(", ")}` : ""}.` : '';
     }
     const kp = (k, v) => { const el = $(`#faturamento [data-ft="${k}"]`); if (el) el.textContent = v; };
-    kp('fat', sel.temNf ? money(sel.fat) : '—'); kp('fat_sub', loja === 'Todas' ? `${ok.length} lojas com os dois relatórios` : sel.temNf ? `de ${dBR(sel.de)} a ${dBR(sel.ate)}` : 'sem relatório 07');
+    kp('fat', sel.temNf ? money(sel.fat) : '—'); kp('fat_sub', loja === 'Todas' ? `${ok.length} empresas com os dois relatórios` : sel.temNf ? `de ${dBR(sel.de)} a ${dBR(sel.ate)}` : 'sem relatório 07');
     kp('ele', sel.temCar ? money(sel.ele) : '—'); kp('ele_sub', sel.ele > 0 ? `débito ${pct0(sel.mod['Débito'] / sel.ele)} · crédito ${pct0(sel.mod['Crédito'] / sel.ele)} · Pix ${pct0(sel.mod['Pix'] / sel.ele)}` : 'sem extrato da Rede');
     kp('cob', pct0(sel.cob)); const ce = $('#faturamento [data-ft="cob"]'); ce.classList.remove('up', 'mid', 'down'); if (sel.cob != null) ce.classList.add(sel.cob >= 1 ? 'up' : sel.cob >= 0.9 ? 'mid' : 'down');
     kp('cob_sub', `notas ÷ cartão e Pix · ${ftSit(sel.cob).toLowerCase()}`);
     kp('gap', sel.gap ? money(sel.gap) : sel.gap === 0 ? 'Nada' : '—'); kp('gap_sub', sel.gap ? 'em notas, para igualar o cartão e o Pix' : sel.gap === 0 ? 'as notas já cobrem' : 'sem os dois relatórios');
-    $('#ft-tit-lojas').textContent = risco.length ? `${risco.map((r) => r.loja).join(', ')} abaixo de 100% de cobertura` : 'Todas as lojas com as notas cobrindo o cartão e o Pix';
-    drawHBars($('#ft-chart'), ok.slice().sort((a, b) => a.cob - b.cob).map((r) => ({ key: r.loja, label: estreito() ? r.loja : nomeLoja(r.loja), value: r.cob, bold: r.loja === loja,
+    $('#ft-tit-lojas').textContent = risco.length ? `${risco.map((r) => r.nome).join(", ")} abaixo de 100% de cobertura` : "Todas as empresas com as notas cobrindo o cartão e o Pix";
+    drawHBars($('#ft-chart'), ok.slice().sort((a, b) => a.cob - b.cob).map((r) => ({ key: r.loja, label: estreito() ? r.lojas.join("+") : `${r.nome} (${r.lojas.join(" + ")})`, value: r.cob, bold: r.loja === loja,
       color: r.cob < 0.9 ? BAD : r.cob < 1 ? 'var(--color-warn)' : r.loja === loja ? GOLD : MUTED })), { refLine: 1, refLabel: '100% = notas cobrem', minHi: 1.2, onClick: (r) => dash.setParams({ ft_loja: r.key }) });
     const lista = loja === 'Todas' ? [...rows, tot] : rows.filter((r) => r.loja === loja);
-    const nm = (r) => nomeLoja(r.loja);
+    const nm = ftNome;
     const tt = { rowCls: (r) => r.loja === 'Todas' ? 'tot' : '' };
-    $('#ft-per').textContent = `| ${mesNome(mes)}, no período das notas de cada loja`;
+    $('#ft-per').textContent = `| ${mesNome(mes)}, por empresa (matriz e filiais juntas), no período das notas`;
     fillTable($('#ft-tab'), lista, [
       { cls: 'l nm', fmt: nm },
       { fmt: (r) => r.loja === 'Todas' ? '' : `${dBR(r.de)} a ${dBR(r.ate)}` },
@@ -4499,7 +4523,7 @@
       { fmt: (r) => r.temCar ? brl.format(r.ele) : '—' },
       { cls: (r) => ftCls(r.cob), fmt: (r) => pct0(r.cob) },
       { cls: (r) => r.gap > 0 ? 'bad' : '', fmt: (r) => r.gap > 0 ? brl.format(r.gap) : '—' },
-      { cls: 'l', fmt: (r) => !r.ok ? (!r.temCar ? 'Sem extrato da Rede' : 'Sem notas (07)') : ftSit(r.cob) },
+      { cls: "l", fmt: (r) => !r.ok ? (!r.temCar ? "Sem extrato da Rede" : "Sem notas (07)") : ftSit(r.cob) + (r.semNf && r.semNf.length ? ` (sem 07 da ${r.semNf.join(", ")})` : "") },
     ], tt);
     fillTable($('#ft-mod'), lista.filter((r) => r.temCar), [
       { cls: 'l nm', fmt: nm },
