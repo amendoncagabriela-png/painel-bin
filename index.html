@@ -100,8 +100,11 @@
       calc: (id, def) => { calcs[id] = def; },
       onData: (fn) => { ouvintes.push(fn); fn(); },
       params: () => Object.assign({}, params),
-      setParams: (p) => { params = Object.assign({}, params, p); try { sessionStorage.setItem('bin_params', JSON.stringify(params)); } catch (e) {} avisar(); },
-      resetParams: () => { params = { loja: 'Todas', mes: '' }; avisar(); },
+      setParams: (p) => {
+        // Cálculos que dependem de um filtro (def.params) são refeitos quando ele muda
+        const refaz = Object.keys(p).some((k) => p[k] !== params[k] && Object.values(calcs).some((c) => (c.params || []).includes(k)));
+        params = Object.assign({}, params, p); if (refaz) for (const k of Object.keys(cache)) if (calcs[k]) delete cache[k]; try { sessionStorage.setItem('bin_params', JSON.stringify(params)); } catch (e) {} avisar(); },
+      resetParams: () => { params = { loja: "Todas", mes: "" }; for (const k of Object.keys(cache)) if (calcs[k]) delete cache[k]; avisar(); },
       setLink: (name) => { try { history.replaceState(null, '', '#' + name); } catch (e) { location.hash = name; } },
       refresh: () => {},
       colors: ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)', 'var(--c7)', 'var(--c8)'],
@@ -471,7 +474,7 @@
 
 <div class="bd">
   <div class="bd-status" id="bd-status" role="status">
-    <span class="st-txt"><b><span class="st-lbl">Dados atualizados em</span><span class="st-lbl-c">Atualizado em</span> <span id="st-quando">—</span></b><span class="st-det"> · leituras até <span id="st-leit">—</span> · ERP até <span id="st-erp">—</span></span></span>
+    <span class="st-txt"><b><span class="st-lbl">Dados atualizados em</span><span class="st-lbl-c">Atualizado em</span> <span id="st-quando">—</span></b><span class="st-det"> · mês atual até <span id="st-leit">—</span> · ERP até <span id="st-erp">—</span></span></span>
     <button class="bd-btn-atu" id="btn-atu" type="button" aria-expanded="false" aria-controls="atu-pop">Atualizar dados</button>
   </div>
   <div class="bd-atu-pop" id="atu-pop" hidden></div>
@@ -509,6 +512,7 @@
     <div class="bd-ctl">
       <label class="bd-f"><span>Mês</span><select id="sel-mes" aria-label="Mês"></select></label>
       <label class="bd-f"><span>Loja</span><select id="sel-loja" aria-label="Loja"></select></label>
+      <label class="bd-f"><span>Ler até</span><select id="sel-ate" aria-label="Ler até o dia"></select></label>
     </div>
 
     <div class="bd-hero" id="hero-mes" data-story="historia_mes">
@@ -570,7 +574,7 @@
 
         <div class="bd-card" id="card-curva">
           <h3><span data-source="historia_mes" data-field="titulo_curva">Acumulado do mês contra a meta</span> <span class="per">| acumulado diário</span></h3>
-          <p class="bd-note">Pontos são as leituras. As linhas mostram onde o acumulado deveria estar a cada dia para bater a meta da loja e a do gerente.</p>
+          <p class="bd-note">Pontos são o acumulado de cada dia com venda (relatório 01 do ERP). As linhas mostram onde o acumulado deveria estar a cada dia para bater a meta da loja e a do gerente.</p>
           <div class="bd-chart" id="chart-curva" data-source="acomp_curva"></div>
         </div>
 
@@ -890,7 +894,7 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="bd-legend"><span>Mês atual e média do ano: markup da planilha Metas_2026. Anos anteriores: ERP, lucro ÷ custo dos produtos vendidos (relatório 02), só onde há 6 meses ou mais de relatório. O ERP usa o custo cadastrado no sistema e fica abaixo da planilha: compare cada coluna com ela mesma, não uma com a outra.</span></div>
+      <div class="bd-legend"><span>Mês atual e média do ano: markup do relatório de lucratividade do ERP (03), venda ÷ custo, sem o uso da loja; meses sem 03, da antiga planilha Metas_2026. Anos anteriores: ERP, lucro ÷ custo dos produtos vendidos (relatório 02), só onde há 6 meses ou mais de relatório. O relatório de produtos usa o custo cadastrado e fica abaixo do 03: compare cada coluna com ela mesma, não uma com a outra.</span></div>
     </div>
     <div class="bd-layout">
       <aside class="bd-rail" aria-label="Indicadores de produtos">
@@ -2128,7 +2132,7 @@
         <details class="bd-card">
           <summary>Como ler e o que falta <span class="per">| limites desta primeira versão</span></summary>
           <ul class="bd-notes">
-            <li>Regime de caixa: as despesas entram pela data do pagamento (contas pagas do ERP, relatório 05), não pela competência. A receita é o faturamento mensal das lojas (planilha VENDAS - EVOLUÇÃO e leituras do mês).</li>
+            <li>Regime de caixa: as despesas entram pela data do pagamento (contas pagas do ERP, relatório 05), não pela competência. A receita é o faturamento mensal das lojas (planilha VENDAS - EVOLUÇÃO e vendas do mês no ERP).</li>
             <li>CMV: custo das mercadorias vendidas de cada pedido, pelo relatório 03 do ERP (Vendas com lucratividade), somado por loja e mês. Onde o 03 ainda não foi salvo, entram as compras de mercadoria pagas, e o aviso no alto diz quais meses.</li>
             <li>Fluxo de caixa pelo método direto: entradas de vendas (faturamento) menos tudo o que foi pago no período, incluindo as compras de mercadoria. A diferença entre o lucro e o caixa vem principalmente de compras acima ou abaixo do CMV (estoque e prazo com fornecedores), investimentos e empréstimos.</li>
             <li>Pessoal inclui as retiradas dos sócios como salário, até a criação da conta de lucros no ERP.</li>
@@ -2256,8 +2260,8 @@
   <details class="bd-card bd-sobre" id="sobre">
     <summary>Sobre os dados e a atualização <span class="per">| fontes e como ler</span></summary>
       <ul class="bd-notes">
-        <li>Fontes: "VENDAS - EVOLUÇÃO" (faturamento mensal por loja), "Metas_2025" (metas de set a dez/2025), "Metas_2026" (metas, markup e as leituras de cada mês) e os relatórios do ERP Futura (vendas, formas de pagamento, produtos e contas pagas). Hoje o ERP chega só da L2; as abas Raio-X, Produtos e Gastos já têm a caixa de loja e passam a mostrar as outras unidades quando os relatórios delas forem extraídos.</li>
-        <li>Mês atual: as leituras são o faturamento acumulado do mês, lançado 2 vezes por semana na aba do mês da "Metas_2026". O esperado de cada dia distribui a meta pelos dias de loja aberta: segunda a sábado, sem os feriados nacionais.</li>
+        <li>Fontes: "VENDAS - EVOLUÇÃO" (faturamento mensal por loja), "Metas_2025" (metas de set a dez/2025), "Metas_2026" (metas, markup e leituras até out/2026, quando foi descontinuada), as metas aprovadas na Central Comercial e os relatórios do ERP Futura (vendas, lucratividade, formas de pagamento, produtos e contas pagas). Pedidos para o cliente USO LOJA (CONSUMO) não contam como venda em nenhuma análise. Hoje o ERP chega só da L2; as abas Raio-X, Produtos e Gastos já têm a caixa de loja e passam a mostrar as outras unidades quando os relatórios delas forem extraídos.</li>
+        <li>Mês atual: o realizado é o acumulado do mês no relatório de vendas do ERP (01), dia a dia, e o markup, venda ÷ custo no relatório de lucratividade (03); a meta é a aprovada na Central Comercial (ou a do histórico). Em "Ler até" dá para escolher o dia da leitura, inclusive no meio de uma semana ainda não fechada: semana, quinzena, ritmo e projeção passam a valer até esse dia. O esperado de cada dia distribui a meta pelos dias de loja aberta: segunda a sábado, sem os feriados nacionais.</li>
         <li>Ritmo = realizado ÷ esperado na data da leitura. No ritmo: 100% ou mais. Atenção: de 95% a 99%. Abaixo: menos de 95%.</li>
         <li>Raio-X: vem dos pedidos do ERP. O total por mês fica a menos de 1% da "VENDAS - EVOLUÇÃO" na maioria dos meses; em mar/2024 o ERP soma 8,6% a mais que a planilha. Cliente identificado é o pedido com cadastro; o código 133 (VAREJO) é a venda sem cadastro. Nomes de clientes, vendedores e operadores de caixa não entram no painel.</li>
         <li>Gastos: são as contas pagas do ERP (relatório 05, por fornecedor), de todas as lojas. Como o ERP lança as despesas como "fornecedores" (ex.: "DESPESA COM ALUGUEL"), cada conta vai para um grupo e um subgrupo: Mercadorias para revenda (inclui produtos de limpeza), Pessoal, Impostos, Estrutura das lojas, Investimentos (bens), Logística e veículos, Administrativo, Comercial e marketing, Financeiro e Outras. Despesas operacionais = tudo, menos compras de mercadoria, investimentos e pagamento de empréstimos. Pessoal entra só em totais, sem nomes, pelo CNPJ que pagou: ainda não há rateio pela loja onde cada pessoa trabalha. Retiradas dos sócios entram por enquanto como salário, em Pessoal (no total pago e nas despesas operacionais), até a criação da conta de lucros no ERP; o quadro dos sócios mostra a abertura: pró-labore (remuneração), antecipação de lucros (por sócio, quando a conta do ERP diz o nome) e despesas pessoais pagas pela empresa (faturas de cartão e compras lançadas como pró-labore). Gasto sobre o faturamento usa as vendas do ERP da mesma loja.</li>
@@ -2284,43 +2288,53 @@
 
   /* ---------- Acompanhamento do mês ---------- */
   dash.calc('acomp_base', {
-    inputs: ['leituras', 'metas26', 'erp_diario'],
+    inputs: ['metas26', 'erp_diario', 'erp_cmv_diario'],
+    params: ['mes_ate'],
     title: 'Leituras com meta',
-    description: 'Cada leitura do acumulado do mês por loja, com a meta do mês; "Todas" soma as lojas nas datas em que todas foram lidas. Quando o relatório de vendas do ERP vai além da última leitura da planilha, o acumulado do ERP entra como leitura daquele dia.',
-    fn: (leituras, metas26, erp_diario) => {
-      const meta = new Map(metas26.map((m) => [m.mes + '|' + m.loja, m]));
+    description: 'Uma leitura por dia com venda: o acumulado do mês por loja no relatório de vendas do ERP (01), sem os pedidos de uso da loja, com o markup acumulado do relatório de lucratividade (03) e a meta do mês (aprovada na Central Comercial ou a do histórico). "Todas" soma as lojas até o último dia lido de todas. "Ler até" corta o mês escolhido num dia, para ler uma semana ainda não fechada.',
+    fn: (metas26, erp_diario, erp_cmv_diario) => {
+      const NOMES = { L2: 'Guaianases', L3: 'Pimentas', L4: 'São Mateus', L5: 'Itaim', L6: 'C. Guarulhos', 'L7/L10': 'São Miguel', L8: 'Taboão', L9: 'Tiradentes' };
+      // Metas: as aprovadas na Central Comercial valem sobre as do histórico (antiga planilha Metas_2026)
+      const meta = new Map(metas26.map((m) => [m.mes + '|' + m.loja, { loja: Number(m.meta_loja), gerente: Number(m.meta_gerente), markup: m.markup === '' ? null : Number(m.markup) }]));
+      try {
+        const c = JSON.parse((dash.bruto && dash.bruto('json_central')) || '{}');
+        for (const [mes, d] of Object.entries(c.metas_mes || {})) if (d && d.status === 'aprovada') for (const [loja, v] of Object.entries(d.lojas || {}))
+          if (v && v.loja > 0) meta.set(mes + '|' + loja, { ...(meta.get(mes + '|' + loja) || {}), loja: Number(v.loja), gerente: Number(v.gerente) || Number(v.loja) });
+      } catch (e) { /* sem cópia da Central: fica o histórico */ }
+      // Corte "Ler até" (só no mês dele)
+      const ate = (dash.params().mes_ate || '');
+      const corta = (mes, d) => ate && ate.slice(0, 7) === mes && d > Number(ate.slice(8, 10));
+      const porDia = (rows, f) => { const m = new Map(); for (const r of rows) { const k = r.data.slice(0, 7) + '|' + r.loja, d = Number(r.data.slice(8, 10)); if (corta(k.slice(0, 7), d)) continue;
+        if (!m.has(k)) m.set(k, new Map()); const dm = m.get(k), o = dm.get(d) || {}; f(o, r); dm.set(d, o); } return m; };
+      const vendas = porDia(erp_diario, (o, r) => { o.v = (o.v || 0) + Number(r.valor); });
+      const lucr = porDia(erp_cmv_diario, (o, r) => { o.c = (o.c || 0) + Number(r.custo); o.v = (o.v || 0) + Number(r.venda); });
       const out = [];
-      for (const l of leituras) {
-        const m = meta.get(l.mes + '|' + l.loja);
-        if (!m) continue;
-        out.push({ mes: l.mes, loja: l.loja, nome: m.nome, dia: Number(l.data.slice(8, 10)), realizado: Number(l.acumulado),
-          markup: l.markup === '' ? null : Number(l.markup), meta_loja: Number(m.meta_loja), meta_gerente: Number(m.meta_gerente), fonte: 'planilha' });
+      for (const [k, dias] of vendas) {
+        const [mes, loja] = k.split('|'); const m = meta.get(k); if (!m || !(m.loja > 0)) continue;
+        const ds = [...dias.keys()].sort((a, c) => a - c); if (!ds.length || ds[0] > 3) continue;   // o ERP precisa ter o mês desde o começo
+        const lm = lucr.get(k), dl = lm ? [...lm.keys()].sort((a, c) => a - c) : [];
+        let tot = 0, cc = 0, cv = 0, j = 0;
+        for (const d of ds) {
+          tot += dias.get(d).v;
+          while (j < dl.length && dl[j] <= d) { cc += lm.get(dl[j]).c; cv += lm.get(dl[j]).v; j++; }
+          // markup acumulado do 03 até o dia; sem 03 no mês, o markup do histórico
+          const mk = cc > 0 ? cv / cc - 1 : (dl.length ? null : m.markup ?? null);
+          out.push({ mes, loja, nome: NOMES[loja] || loja, dia: d, realizado: tot, markup: mk, venda03: cv, custo03: cc, meta_loja: m.loja, meta_gerente: m.gerente || m.loja, fonte: 'erp' });
+        }
       }
-      // Vendas do ERP (relatório 01, dia a dia): acumulado do mês até o último dia lido, quando passa da última leitura da planilha.
-      // Só entra se o ERP tiver o mês desde o começo (venda nos primeiros dias), para o acumulado não ficar pela metade.
-      const acum = new Map();   // mes|loja -> { dias: Map(dia -> valor) }
-      for (const r of erp_diario) { const k = r.data.slice(0, 7) + '|' + r.loja; if (!acum.has(k)) acum.set(k, new Map()); const d = Number(r.data.slice(8, 10)); acum.get(k).set(d, (acum.get(k).get(d) || 0) + Number(r.valor)); }
-      for (const [k, dias] of acum) {
-        const [mes, loja] = k.split('|'); const m = meta.get(k); if (!m) continue;
-        const ds = [...dias.keys()].sort((a, c) => a - c); if (!ds.length || ds[0] > 3) continue;
-        const ultDia = ds[ds.length - 1];
-        const ultPlan = Math.max(0, ...out.filter((r) => r.mes === mes && r.loja === loja).map((r) => r.dia));
-        if (ultDia <= ultPlan) continue;
-        const tot = ds.reduce((s, d) => s + dias.get(d), 0);
-        out.push({ mes, loja, nome: m.nome, dia: ultDia, realizado: tot, markup: null, meta_loja: Number(m.meta_loja), meta_gerente: Number(m.meta_gerente), fonte: 'erp' });
-      }
+      // "Todas": soma das lojas até o último dia em que todas têm leitura (o acumulado de cada loja segue igual nos dias sem venda)
       for (const mes of [...new Set(out.map((r) => r.mes))]) {
         const rs = out.filter((r) => r.mes === mes);
         const lojas = [...new Set(rs.map((r) => r.loja))];
-        const ml = lojas.reduce((s, l) => s + rs.find((r) => r.loja === l).meta_loja, 0);
-        const mg = lojas.reduce((s, l) => s + rs.find((r) => r.loja === l).meta_gerente, 0);
-        for (const dia of [...new Set(rs.map((r) => r.dia))]) {
-          const ds = rs.filter((r) => r.dia === dia);
-          if (ds.length !== lojas.length) continue;
-          const tot = ds.reduce((s, r) => s + r.realizado, 0);
-          const comMk = ds.filter((r) => r.markup != null);
-          const mk = comMk.length === ds.length ? comMk.reduce((s, r) => s + r.markup * r.realizado, 0) / tot : null;
-          out.push({ mes, loja: 'Todas', nome: 'Todas as lojas', dia, realizado: tot, markup: mk, meta_loja: ml, meta_gerente: mg });
+        const por = new Map(lojas.map((l) => [l, rs.filter((r) => r.loja === l)]));
+        const fim = Math.min(...lojas.map((l) => por.get(l)[por.get(l).length - 1].dia));
+        const ml = lojas.reduce((s, l) => s + por.get(l)[0].meta_loja, 0), mg = lojas.reduce((s, l) => s + por.get(l)[0].meta_gerente, 0);
+        for (const dia of [...new Set(rs.map((r) => r.dia))].filter((d) => d <= fim).sort((a, c) => a - c)) {
+          let tot = 0, cc = 0, cv = 0, mkH = 0, comMk = 0;
+          for (const l of lojas) { const q = por.get(l).filter((r) => r.dia <= dia).pop(); if (!q) continue;
+            tot += q.realizado; cc += q.custo03; cv += q.venda03; if (q.markup != null) { mkH += q.markup * q.realizado; comMk++; } }
+          const mk = cc > 0 ? cv / cc - 1 : comMk === lojas.length && tot > 0 ? mkH / tot : null;
+          out.push({ mes, loja: 'Todas', nome: 'Todas as lojas', dia, realizado: tot, markup: mk, venda03: cv, custo03: cc, meta_loja: ml, meta_gerente: mg, fonte: 'erp' });
         }
       }
       return out.sort((a, b) => a.mes.localeCompare(b.mes) || a.loja.localeCompare(b.loja) || a.dia - b.dia);
@@ -2330,7 +2344,7 @@
   dash.calc('acomp_periodos', {
     inputs: ['acomp_base'],
     title: 'Semanas, quinzenas e mês',
-    description: 'Realizado em cada período (diferença entre leituras) contra a meta da loja distribuída pelos dias de loja aberta (seg a sáb, sem feriados nacionais).',
+    description: 'Realizado em cada período (diferença entre o acumulado no fim e no começo dele; a semana em andamento vai até o último dia lido ou o "Ler até") contra a meta da loja distribuída pelos dias de loja aberta (seg a sáb, sem feriados nacionais).',
     fn: (acomp_base) => {
       const FER = ['01-01', '04-03', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25'];
       const dia = (mes, n) => mes + '-' + String(n).padStart(2, '0');
@@ -2353,7 +2367,7 @@
           const f = cum(p.fim);
           if (f.d < p.ini) continue;
           const b = cum(p.ini - 1);
-          const ef = b.d + 1;
+          const ef = Math.max(p.ini, b.d + 1);
           const dt = wd(mes, ef, p.fim) || 1;
           const metaP = ml * dt / DM;
           const esp = ml * wd(mes, ef, f.d) / DM;
@@ -2496,8 +2510,8 @@
         else if (r.proj_pct_gerente < 1) onde = `${Quem} precisa de ${rs(r.falta_dia_gerente)} por dia nos ${r.dias_rest} dias restantes para chegar à meta do gerente.`;
         else onde = `${todas ? 'Lojas no ritmo e projeção' : 'Projeção'} acima da meta do gerente. Foco em manter o ritmo até o fim do mês.`;
         const ressalva = fechado
-          ? 'Valores da última leitura do mês. O fechamento oficial está na planilha de vendas.'
-          : `A projeção supõe que o ritmo das ${r.leituras} leituras do mês se mantém. Com ${r.dias_rest} dias pela frente, feriados e campanhas podem mudar o fechamento.`;
+          ? 'Valores do relatório de vendas do ERP (01), sem o uso da loja. O fechamento oficial está na planilha de vendas.'
+          : `A projeção supõe que o ritmo dos ${r.leituras} dias de venda lidos se mantém. Com ${r.dias_rest} dias pela frente, feriados e campanhas podem mudar o fechamento.`;
         const d = Math.round((r.ritmo - 1) * 100);
         const titulo_curva = fechado ? `${Mes} fechou em ${pc(r.pct_loja)} da meta da loja`
           : d === 0 ? 'Acumulado na linha da meta da loja'
@@ -2774,22 +2788,26 @@
   });
 
   dash.calc('markup_2026', {
-    inputs: ['metas26'],
+    inputs: ['metas26', 'erp_cmv_diario'],
     title: 'Markup mensal 2026',
-    description: 'Markup de cada loja por mês, na última leitura do mês; a média é simples, entre os meses lidos.',
-    fn: (metas26) => {
+    description: 'Markup de cada loja por mês: venda sobre custo no relatório de lucratividade do ERP (03), sem o uso da loja; nos meses sem 03, o da antiga planilha Metas_2026. A média é simples, entre os meses lidos.',
+    fn: (metas26, erp_cmv_diario) => {
       const K = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-      const by = new Map();
+      const by = new Map(), ult = new Map();
       for (const m of metas26) {
         const o = by.get(m.loja) || { loja: m.loja, nome: m.nome };
         for (const k of K) if (!(k in o)) o[k] = null;
-        if (m.markup !== '') o[K[Number(m.mes.slice(5, 7)) - 1]] = Number(m.markup);
+        if (m.markup !== '') { o[K[Number(m.mes.slice(5, 7)) - 1]] = Number(m.markup); if (m.markup_ate > (ult.get(m.loja) || '')) ult.set(m.loja, m.markup_ate); }
         by.set(m.loja, o);
       }
+      const r03 = new Map();   // loja|mês -> custo, venda e último dia do 03
+      for (const r of erp_cmv_diario) { if (r.data.slice(0, 4) !== '2026' || !by.has(r.loja)) continue;
+        const k = r.loja + '|' + r.data.slice(5, 7), a = r03.get(k) || { c: 0, v: 0, ate: '' }; a.c += Number(r.custo); a.v += Number(r.venda); if (r.data > a.ate) a.ate = r.data; r03.set(k, a); }
+      for (const [k, a] of r03) { const [loja, mm] = k.split('|'); if (a.c <= 0) continue;
+        by.get(loja)[K[Number(mm) - 1]] = a.v / a.c - 1; if (a.ate > (ult.get(loja) || '')) ult.set(loja, a.ate); }
       return [...by.values()].map((o) => {
         const v = K.map((k) => o[k]).filter((x) => x != null);
-        const ult = metas26.filter((m) => m.loja === o.loja && m.markup !== '').map((m) => m.markup_ate).sort().pop() || null;
-        return { ...o, media: v.length ? v.reduce((s, x) => s + x, 0) / v.length : null, ultima_leitura: ult };
+        return { ...o, media: v.length ? v.reduce((s, x) => s + x, 0) / v.length : null, ultima_leitura: ult.get(o.loja) || null };
       });
     },
   });
@@ -3226,6 +3244,16 @@
     opcoes(sel, [...meses].reverse().map((m) => [m, mesNome(m) + (m === MES_CORRENTE ? ' (em curso)' : '')]), mes);
     const lojasMes = daMes.slice().sort((p, q) => ord(p.loja) - ord(q.loja)).map((r) => r.loja);
     opcoesG($('#sel-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', lojasMes.filter((l) => l !== 'Todas').map((l) => [l, nomeLoja(l)])]], loja);
+    // Ler até: qualquer dia com venda no mês (relatório 01), para ler uma semana ainda não fechada
+    {
+      const ed = dash.data('erp_diario');
+      const ds = ed.status === 'ok' ? [...new Set(ed.data.filter((r) => r.data.slice(0, 7) === mes).map((r) => r.data))].sort().reverse() : [];
+      const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+      const dw = (s) => new Date(s + 'T12:00:00Z').getUTCDay();
+      const ate = prm.mes_ate && prm.mes_ate.slice(0, 7) === mes && ds.includes(prm.mes_ate) ? prm.mes_ate : '';
+      opcoes($('#sel-ate'), [['', ds.length ? `Último dia lido (${dBR(ds[0])})` : 'Último dia lido'],
+        ...ds.slice(1).map((d) => [d, `${SEM[dw(d)]} ${dBR(d)}${dw(d) === 6 ? ' · semana fechada' : dw(d) === 0 ? '' : ' · semana em andamento'}`])], ate);
+    }
 
     const h = dash.data('historia_mes');
     $('#hero-mes-quem').textContent = `${mesNome(mes)}${mes === MES_CORRENTE ? ' (em curso)' : ''} · ${loja === 'Todas' ? 'Todas as lojas' : loja + ' ' + row.nome}`;
@@ -3257,7 +3285,7 @@
       if (!r) { card.querySelector('.when').textContent = ''; pl.hidden = true; card.querySelectorAll('[data-source]').forEach((e) => { e.textContent = '—'; }); continue; }
       const w = `mes=${enc(mes)}&loja=${enc(loja)}&id=${enc(r.id)}`;
       card.querySelectorAll('[data-source="acomp_periodos"]').forEach((e) => { e.dataset.where = w; });
-      card.querySelector('.when').textContent = `${dBR(r.inicio)} a ${dBR(r.fim)}` + (r.completo ? ' · fechado' : ` · até ${dBR(r.ate)}`);
+      card.querySelector('.when').textContent = `${dBR(r.inicio)} a ${dBR(r.fim)}` + (r.completo ? ' · fechado' : ` · em andamento, até ${dBR(r.ate)}`);
       card.querySelector('.v-real').textContent = brl.format(r.realizado);
       card.querySelector('.v-meta').textContent = brl.format(r.meta_loja);
       card.querySelector('.v-pct').textContent = pct0(r.pct) + ' da meta';
@@ -4343,7 +4371,11 @@
       return {
         vendas: { csv: csv(['mes', 'loja', 'faturamento'], d('vendas')) },
         metas: { csv: csv(['mes', 'loja', 'meta_loja', 'meta_gerente'], [...d('metas'), ...d('metas26')]) },
-        leituras: { csv: csv(['mes', 'data', 'loja', 'acumulado'], d('leituras')) },
+        // Leituras: o acumulado do mês em cada dia com venda no relatório 01 (a planilha Metas_2026 foi descontinuada)
+        leituras: { csv: csv(['mes', 'data', 'loja', 'acumulado'], (() => { const ac = new Map();
+          return d('erp_diario').map((r) => ({ ...r, loja: lojaDe(r) })).sort((a, b) => a.loja.localeCompare(b.loja) || a.data.localeCompare(b.data)).map((r) => {
+            const k = r.loja + '|' + r.data.slice(0, 7); ac.set(k, (ac.get(k) || 0) + Number(r.valor));
+            return { mes: r.data.slice(0, 7), data: r.data, loja: r.loja, acumulado: Math.round(ac.get(k) * 100) / 100 }; }); })()) },
         l2_diario: { csv: csv(['data', 'pedidos', 'valor'], d('l2_diario')) },
         erp_diario: { csv: csv(['loja', 'data', 'pedidos', 'valor'], d('erp_diario').map((r) => ({ ...r, loja: lojaDe(r) }))) },
         erp_mensal: { csv: csv(['mes', 'loja', 'pedidos', 'valor', 'identificado'], [...erp.values()]) },
@@ -4609,10 +4641,10 @@
   });
 
   /* ---------- Markup (resumo na aba Produtos e markup) ---------- */
-  // Mês em curso e média dos meses fechados vêm da planilha Metas_2026; os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
+  // Mês em curso e média dos meses fechados vêm do relatório 03 (antes de out/2026, da antiga planilha Metas_2026); os anos anteriores, do relatório de produtos do ERP (lucro ÷ custo).
   function renderMarkup() {
     const mk = dash.data('markup_2026');
-    if (mk.status !== 'ok' || !mk.data.length) { $('#markup-nota').textContent = 'Sem leituras de markup na planilha Metas_2026.'; return; }
+    if (mk.status !== 'ok' || !mk.data.length) { $('#markup-nota').textContent = 'Sem markup no relatório de lucratividade (03) do ERP.'; return; }
     const atual = K.filter((k) => mk.data.some((r) => r[k] != null)).pop();
     const iA = K.indexOf(atual), fech = K.slice(0, iA);
     const ultLeit = mk.data.map((r) => r.ultima_leitura).filter(Boolean).sort().pop();
@@ -4659,7 +4691,7 @@
     $('#st-quando').textContent = dBRh(quando);
     $('#bd-status').classList.toggle('st-velho', !!quando && (Date.now() - new Date(quando.replace(' ', 'T'))) / 864e5 > 4);
     const a = dash.data('acomp');
-    if (a.status === 'ok' && a.data.length) { const ud = a.data.map((r) => r.data).sort().pop(); $('#st-leit').textContent = dBRy(ud) + (a.data.some((r) => r.data === ud && r.fonte === 'erp') ? ' (vendas do ERP)' : ''); }
+    if (a.status === 'ok' && a.data.length) { const ud = a.data.map((r) => r.data).sort().pop(); $("#st-leit").textContent = dBRy(ud) + (P().mes_ate && P().mes_ate.slice(0, 7) === ud.slice(0, 7) ? " (lido até o dia escolhido)" : ""); }
     { const e = grupoErp(); const v = e ? e.g.filter((r) => r.rel === '01').map((r) => r.ate).filter(Boolean).sort().pop() : null; $('#st-erp').textContent = dBRy(v || metaErp('ultima_data')); }
   }
   const pop = $('#atu-pop'), btnAtu = $('#btn-atu');
@@ -4748,7 +4780,8 @@
   }
 
   const ao = (id, f) => $(id).addEventListener('change', (e) => dash.setParams(f(e.target.value)));
-  ao('#sel-mes', (v) => ({ mes: v }));
+  ao('#sel-mes', (v) => ({ mes: v, mes_ate: '' }));
+  ao('#sel-ate', (v) => ({ mes_ate: v }));
   ao('#sel-loja', (v) => ({ loja: v }));
   ao('#ano-ano', (v) => ({ ano_ano: v, ano_ate: '' }));
   ao('#ano-ate', (v) => ({ ano_ate: v }));
