@@ -4312,7 +4312,7 @@
     const tabela = (el, linhas) => {
       let cols;
       if (vis === 'mes') cols = [...meses.map((m) => ({ t: MESES[Number(m.slice(5, 7)) - 1] + '/' + m.slice(2, 4), o: dre([m], coberto) })), { t: 'Total', o: C }, { t: '% receita', pct: true }];
-      else cols = [{ t: perTxt, o: C }, { t: '% receita', pct: true }, ...(A ? [{ t: perAnt + '*', o: A }, { t: 'Variação*', varc: true }] : [])];
+      else cols = [{ t: perTxt, o: C }, { t: '% receita', pct: true }, ...(A ? [{ t: perAnt + '*', o: A }, { t: '% receita*', pct: true, o: A }, { t: 'Variação*', varc: true }] : [])];
       const trh = document.createElement('tr');
       for (const t of [{ t: '' }, ...cols]) { const th = document.createElement('th'); th.textContent = t.t; if (!t.t) th.className = 'l'; trh.append(th); }
       el.tHead.replaceChildren(trh);
@@ -4321,7 +4321,7 @@
         const td0 = document.createElement('td'); td0.className = 'l'; td0.textContent = nome; tr.append(td0);
         for (const c of cols) {
           const td = document.createElement('td');
-          if (c.pct) td.textContent = pct(pctR(C[k]));
+          if (c.pct) td.textContent = pct(c.o ? pctR(c.o[k], c.o) : pctR(C[k]));
           else if (c.varc) { const v = vr(Cc[k], A[k]); td.textContent = v == null ? '—' : pct(v, true); if (v != null && Math.abs(v) > 0.0005) td.className = (v > 0) === BOM.includes(k) ? 'ok' : 'bad'; }
           else { td.textContent = fmtV(k, c.o[k]); if (BOM.includes(k) && c.o[k] < 0) td.className = 'bad'; }
           tr.append(td);
