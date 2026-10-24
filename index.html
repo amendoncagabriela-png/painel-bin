@@ -2188,6 +2188,29 @@
             </table>
           </div>
         </div>
+        <div class="bd-card" id="ft-imp">
+          <h3>Provisão de impostos <span class="per" id="ft-imp-per">| por empresa, matriz e filiais juntas</span></h3>
+          <p class="bd-note" id="ft-imp-nota">—</p>
+          <div class="bd-tablewrap">
+            <table id="ft-imp-tab" class="bd-cards">
+              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Regime</th><th>Notas de venda</th><th>Alíquota efetiva</th><th>Provisão</th><th>Se faturar para cobrir</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bd-card" id="ft-2027">
+          <h3>2027: reforma tributária <span class="per">| leitura da provisão com o que está aprovado</span></h3>
+          <div id="ft-alerta" class="bd-dev-faixa" role="note" hidden></div>
+          <p class="bd-note" id="ft-2027-nota">—</p>
+          <div class="bd-tablewrap">
+            <table id="ft-2027-tab" class="bd-cards">
+              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Regime</th><th>2026 (hoje)</th><th id="ft-27-a">2027</th><th id="ft-27-b">2027, IBS e CBS fora do DAS</th><th class="l">Leitura</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <h3 style="margin-top: var(--cds-gap-md)">Informativos <span class="per" id="ft-info-per">| consulta semanal</span></h3>
+          <ul class="bd-notes" id="ft-info"></ul>
+        </div>
         <details class="bd-card" id="ft-nf">
           <summary>Outras leituras <span class="per">| vendas do sistema e notas</span></summary>
           <div class="bd-tablewrap">
@@ -4418,7 +4441,7 @@
   /* ---------- Financeiro > Faturado x cartão: notas de venda (07) contra cartão e Pix (08, Rede) ---------- */
   function ftBase() {
     const d = (id) => { const x = dash.data(id); return x.status === 'ok' ? x.data : []; };
-    const fat = d('erp_faturado'), car = d('erp_cartao'), ven = d('erp_diario');
+    const fat = d('erp_faturado'), car = d('erp_cartao'), ven = d('erp_diario'), c03 = d('erp_cmv_diario');
     const meses = [...new Set([...fat.map((r) => r.ini.slice(0, 7)), ...car.map((r) => r.data.slice(0, 7))])].sort();
     // Período de cada loja no mês: o mais longo do relatório 07; sem 07, do dia 1 ao último dia do extrato
     const porLoja = (mes) => {
@@ -4440,6 +4463,9 @@
           outras: nf.filter((r) => r.tipo !== 'venda').reduce((s, r) => s + Number(r.valor), 0),
           ele, mod: m, taxas: ele - liq,
           vendas: ven.filter((r) => r.loja === loja && dentro(r.data)).reduce((s, r) => s + Number(r.valor), 0),
+          st: nf.filter((r) => r.tipo === 'venda' && /^[56]40[1-5]$/.test(r.cfop)).reduce((s, r) => s + Number(r.valor), 0),
+          custo03: c03.filter((r) => r.loja === loja && dentro(r.data)).reduce((s, r) => s + Number(r.custo), 0),
+          venda03: c03.filter((r) => r.loja === loja && dentro(r.data)).reduce((s, r) => s + Number(r.venda), 0),
         };
       }).map((r) => ({ ...r, ok: r.temNf && r.temCar && r.ele > 0, cob: r.temNf && r.ele > 0 ? r.fat / r.ele : null, gap: r.temNf && r.temCar ? Math.max(0, r.ele - r.fat) : null }));
     };
@@ -4452,7 +4478,7 @@
         const mod = {}; for (const k of ['Débito', 'Crédito', 'Pix', 'Outros']) mod[k] = g.reduce((t, r) => t + r.mod[k], 0);
         const o = { loja: e.id, nome: e.nome, lojas: g.map((r) => r.loja), semNf: g.filter((r) => !r.temNf).map((r) => r.loja),
           de: g.map((r) => r.de).sort()[0], ate: g.map((r) => r.ate).filter(Boolean).sort().pop(), carAte: g.map((r) => r.carAte).filter(Boolean).sort().pop() || null,
-          temNf: g.some((r) => r.temNf), temCar: g.some((r) => r.temCar), fat: s('fat'), outras: s('outras'), ele: s('ele'), taxas: s('taxas'), vendas: s('vendas'), mod };
+          regime: e.regime, temNf: g.some((r) => r.temNf), temCar: g.some((r) => r.temCar), st: s('st'), custo03: s('custo03'), venda03: s('venda03'), fat: s('fat'), outras: s('outras'), ele: s('ele'), taxas: s('taxas'), vendas: s('vendas'), mod };
         o.ok = o.temNf && o.temCar && o.ele > 0; o.cob = o.temNf && o.ele > 0 ? o.fat / o.ele : null; o.gap = o.temNf && o.temCar ? Math.max(0, o.ele - o.fat) : null;
         return o;
       }).filter(Boolean);
@@ -4460,12 +4486,12 @@
     return { meses, porLoja, porEmpresa };
   }
   const FT_EMP = [
-    { id: 'BIN', nome: 'BIN Embalagens', lojas: ['L2'] },
-    { id: 'MEND', nome: 'Mendonça Embalagens', lojas: ['L3'] },
-    { id: 'QUIN', nome: 'Quinteiro Embalagens', lojas: ['L4'] },
-    { id: 'MS', nome: 'M S Embalagens', lojas: ['L5', 'L9'] },
-    { id: 'BING', nome: 'BIN Guarulhos Centro', lojas: ['L6', 'L7/L10'] },
-    { id: 'MN', nome: 'M N Embalagens', lojas: ['L8'] },
+    { id: 'BIN', nome: 'BIN Embalagens', lojas: ['L2'], regime: 'Simples' },
+    { id: 'MEND', nome: 'Mendonça Embalagens', lojas: ['L3'], regime: 'Real' },
+    { id: 'QUIN', nome: 'Quinteiro Embalagens', lojas: ['L4'], regime: 'Simples' },
+    { id: 'MS', nome: 'M S Embalagens', lojas: ['L5', 'L9'], regime: 'Simples' },
+    { id: 'BING', nome: 'BIN Guarulhos Centro', lojas: ['L6', 'L7/L10'], regime: 'Simples' },
+    { id: 'MN', nome: 'M N Embalagens', lojas: ['L8'], regime: 'Presumido' },
   ];
   const ftNome = (r) => r.loja === 'Todas' ? 'Todas as empresas' : `${r.nome} · ${r.lojas.map((l) => nomeLoja(l)).join(' + ')}`;
   const ftSit = (c) => c == null ? 'Sem dados' : c >= 1 ? 'Coberto' : c >= 0.9 ? 'Atenção' : 'Risco';
@@ -4536,6 +4562,90 @@
       { fmt: (r) => brl.format(Math.max(0, r.vendas - r.fat)) }, { fmt: (r) => pct0(r.vendas > 0 ? Math.max(0, r.vendas - r.fat) / r.vendas : null) },
       { fmt: (r) => brl.format(r.outras) },
     ], tt);
+    renderImpostos(rows, loja);
+  }
+
+  /* Provisão de impostos por empresa (matriz e filiais juntas, como na apuração) */
+  // Simples Nacional, Anexo I (comércio): limite da faixa, alíquota nominal, parcela a deduzir, parcela do ICMS e de PIS/Cofins no DAS
+  const SN_ANEXO1 = [[180000, 0.04, 0, 0.34, 0.155], [360000, 0.073, 5940, 0.34, 0.155], [720000, 0.095, 13860, 0.335, 0.155],
+    [1800000, 0.107, 22500, 0.335, 0.155], [3600000, 0.143, 87300, 0.335, 0.155], [4800000, 0.19, 378000, 0, 0.344]];
+  const ftDias = (de, ate) => Math.round((new Date(ate + 'T12:00:00Z') - new Date(de + 'T12:00:00Z')) / 864e5) + 1;
+  // Receita dos últimos 12 meses (RBT12): enquanto não há 12 meses do relatório 07, o ritmo das notas do período levado a um ano
+  const ftRbt12 = (fat, de, ate) => fat / ftDias(de, ate) * 365;
+  function ftImposto(e, fat, cenario) {
+    if (!(fat > 0)) return { v: 0, aliq: null };
+    const dias = ftDias(e.de, e.ate), st = Math.min(e.st, fat);
+    const agreg = fat * (e.venda03 > 0 ? Math.max(0, 1 - e.custo03 / e.venda03) : 0.33);   // valor agregado (venda − custo do 03)
+    const P = (k, pad) => { const r = (dash.data('reforma_param').data || []).find((x) => x.chave === k); return r && r.valor !== '' && !isNaN(Number(r.valor)) ? Number(r.valor) : pad; };
+    const cbs = P('cbs_ref_2027', 0.0921) - P('cbs_reducao_2027', 0.001), ibs = P('ibs_2027', 0.001);
+    let v;
+    if (e.regime === 'Simples') {
+      const rbt = ftRbt12(fat, e.de, e.ate), f = SN_ANEXO1.find((x) => rbt <= x[0]) || SN_ANEXO1[5];
+      const ef = rbt <= 180000 ? f[1] : (rbt * f[1] - f[2]) / rbt;
+      // Venda com ICMS por substituição (CFOP 540x) paga o DAS sem a parcela do ICMS
+      v = (fat - st) * ef + st * ef * (1 - f[3]);
+      // 2027 com IBS e CBS fora do DAS: sai do DAS a parcela da CBS (antes PIS/Cofins) e a CBS e o IBS são pagos à parte, com crédito das compras
+      if (cenario === 'fora') v = v * (1 - f[4]) + agreg * (cbs + ibs);
+    } else if (e.regime === 'Presumido') {
+      const irpjCsll = fat * (0.08 * 0.15 + 0.12 * 0.09) + Math.max(0, fat * 0.08 - 20000 * dias / 30) * 0.10;
+      v = irpjCsll + (cenario === '2027' ? agreg * (cbs + ibs) : fat * (0.0065 + 0.03));
+    } else {   // Lucro Real: PIS/Cofins não cumulativos sobre o valor agregado; IRPJ e CSLL dependem do lucro contábil
+      v = agreg * (cenario === '2027' ? cbs + ibs : 0.0925);
+    }
+    return { v, aliq: v / fat, rbt: e.regime === "Simples" ? ftRbt12(fat, e.de, e.ate) : null };
+  }
+  const FT_REG = { Simples: 'Simples (DAS)', Presumido: 'Lucro Presumido', Real: 'Lucro Real' };
+  function renderImpostos(rows, loja) {
+    const lista = rows.filter((r) => r.temNf && (loja === 'Todas' || r.loja === loja));
+    const linhas = lista.map((e) => ({ e, hoje: ftImposto(e, e.fat), cobrir: e.gap > 0 ? ftImposto(e, e.fat + e.gap) : null,
+      a27: ftImposto(e, e.fat, e.regime === 'Simples' ? 'dentro' : '2027'), f27: e.regime === 'Simples' ? ftImposto(e, e.fat, 'fora') : null }));
+    const tot = (f) => linhas.reduce((s, l) => s + (f(l) || 0), 0);
+    const totRow = { tot: true, fat: tot((l) => l.e.fat), hoje: tot((l) => l.hoje.v), cobrir: tot((l) => l.cobrir ? l.cobrir.v - l.hoje.v : 0), a27: tot((l) => l.a27.v) };
+    const tt = { rowCls: (r) => r.tot ? 'tot' : '' };
+    const de = lista.map((e) => e.de).sort()[0], ate = lista.map((e) => e.ate).sort().pop();
+    $('#ft-imp-per').textContent = de ? `| ${dBR(de)} a ${dBR(ate)}, por empresa (matriz e filiais juntas)` : '| por empresa';
+    $('#ft-imp-nota').textContent = 'Simples: DAS pela tabela do comércio (Anexo I) com a receita de 12 meses estimada pelo ritmo das notas do período, sem a parcela do ICMS nas vendas com substituição tributária (CFOP 540x). '
+      + 'Lucro Presumido: PIS, Cofins, IRPJ e CSLL (com o adicional do IRPJ). Lucro Real: PIS e Cofins sobre a venda menos o custo das mercadorias (relatório 03); IRPJ e CSLL dependem do balancete. ICMS de Presumido e Real fora da conta. "Se faturar para cobrir" é o imposto a mais se as notas chegarem ao cartão e ao Pix.';
+    fillTable($('#ft-imp-tab'), [...linhas, ...(linhas.length > 1 ? [totRow] : [])], [
+      { cls: 'l nm', fmt: (l) => l.tot ? 'Total' : ftNome(l.e) },
+      { cls: 'l', fmt: (l) => l.tot ? '' : FT_REG[l.e.regime] },
+      { fmt: (l) => brl.format(l.tot ? l.fat : l.e.fat) },
+      { fmt: (l) => l.tot ? pct(l.fat > 0 ? l.hoje / l.fat : null) : pct(l.hoje.aliq) },
+      { fmt: (l) => brl.format(l.tot ? l.hoje : l.hoje.v) },
+      { cls: (l) => l.cobrir ? "bad" : "", fmt: (l) => l.tot ? (l.cobrir ? "+ " + brl.format(l.cobrir) : "—") : l.cobrir ? "+ " + brl.format(l.cobrir.v - l.hoje.v) + (l.cobrir.rbt > 4800000 ? " · passaria de R$ 4,8 mi no ano: sai do Simples" : l.cobrir.rbt > 3600000 ? " · passaria de R$ 3,6 mi no ano: ICMS sai do DAS (não incluso)" : "") : "—" },
+    ], tt);
+    // 2027
+    const par = (dash.data('reforma_param').data || []);
+    const pv = (k) => (par.find((x) => x.chave === k) || {}).valor || '';
+    const cbsRef = Number(pv('cbs_ref_2027')) || 0.0921, oficial = pv('cbs_oficial') === 'sim';
+    $('#ft-27-a').textContent = '2027 (como fica)';
+    $('#ft-2027-nota').textContent = `CBS de ${pct(cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001))} em 2027 (${oficial ? 'alíquota fixada pelo Senado' : `referência ${pct(cbsRef)} ainda em projeção; o Senado fixa até 15/12/2026`}) e IBS de teste de 0,1%, sobre a venda menos o custo das mercadorias, com crédito das compras. `
+      + 'No Simples, a tabela do DAS não muda em 2027 (a CBS ocupa o lugar de PIS e Cofins); a coluna "fora do DAS" mostra o custo de recolher IBS e CBS por fora, opção que dá crédito cheio aos clientes empresas. Mesmo período e mesmas notas da provisão acima.';
+    const prazo = pv('prazo_regime_regular'), hoje = new Date().toISOString().slice(0, 10), al = $('#ft-alerta');
+    const temSimples = linhas.some((l) => l.e.regime === 'Simples');
+    al.hidden = !(prazo && hoje <= prazo && temSimples);
+    if (!al.hidden) { const dd = ftDias(hoje, prazo) - 1;
+      al.replaceChildren(Object.assign(document.createElement('span'), { className: 'bd-dev', textContent: dd <= 0 ? 'Prazo hoje' : `Faltam ${dd} dias` }),
+        document.createTextNode(`Até ${dBRy(prazo)}, cada empresa do Simples escolhe se recolhe IBS e CBS de jan a jun/2027 dentro do DAS ou pelo regime regular (Portal do Simples Nacional). Decidir com a contabilidade.`)); }
+    fillTable($('#ft-2027-tab'), [...linhas, ...(linhas.length > 1 ? [totRow] : [])], [
+      { cls: 'l nm', fmt: (l) => l.tot ? 'Total' : ftNome(l.e) },
+      { cls: 'l', fmt: (l) => l.tot ? '' : FT_REG[l.e.regime] },
+      { fmt: (l) => l.tot ? brl.format(l.hoje) : `${brl.format(l.hoje.v)} (${pct(l.hoje.aliq)})` },
+      { fmt: (l) => l.tot ? brl.format(l.a27) : `${brl.format(l.a27.v)} (${pct(l.a27.aliq)})` },
+      { fmt: (l) => l.tot ? '' : l.f27 ? `${brl.format(l.f27.v)} (${pct(l.f27.aliq)})` : '—' },
+      { cls: 'l', fmt: (l) => l.tot ? '' : l.e.regime === 'Simples'
+        ? (l.f27.v > l.a27.v ? `Por fora custa ${money(l.f27.v - l.a27.v)} a mais no período; vale se os clientes empresas pedirem crédito` : `Por fora custa ${money(l.a27.v - l.f27.v)} a menos no período`)
+        : (l.a27.v > l.hoje.v ? `Sobe ${money(l.a27.v - l.hoje.v)} no período: CBS sobre o valor agregado no lugar de PIS e Cofins` : `Cai ${money(l.hoje.v - l.a27.v)} no período com o crédito das compras`) },
+    ], tt);
+    const info = (dash.data('reforma_info').data || []).slice().sort((a, b) => a.data.localeCompare(b.data));
+    const atu = par.map((x) => x.atualizado_em).filter(Boolean).sort().pop();
+    $('#ft-info-per').textContent = `| consulta semanal${atu ? ', última em ' + dBRy(atu) : ''}`;
+    $('#ft-info').replaceChildren(...info.map((i) => {
+      const li = document.createElement('li'), b = document.createElement('b');
+      b.textContent = i.titulo + '. '; li.append(b, document.createTextNode(i.texto + ' '));
+      if (/^https:\/\//.test(i.fonte)) { const a = document.createElement('a'); a.href = i.fonte; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Fonte'; li.append(a); }
+      return li;
+    }));
   }
 
   /* ---------- Central Comercial (Comercial > Central): a Central roda isolada num quadro e usa esta ponte no lugar do banco do Claude ---------- */
