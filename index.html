@@ -382,8 +382,8 @@
   .bd-bar { display: flex; align-items: center; justify-content: flex-end; gap: var(--cds-gap-sm); }
   .bd-bar i { display: block; height: .5rem; border-radius: 4px; min-width: 2px; }
   .bd-bar span { min-width: 3.2em; }
-  .bd td.ok { color: var(--color-ok); } .bd td.warn { color: var(--color-warn); } .bd td.bad { color: var(--color-bad); }
-  .bd td.ok, .bd td.warn, .bd td.bad { font-weight: 700; }
+  .bd td.ok { color: var(--color-ok); } .bd td.warn, .bd td.mid { color: var(--color-warn); } .bd td.bad { color: var(--color-bad); }
+  .bd td.ok, .bd td.warn, .bd td.mid, .bd td.bad { font-weight: 700; }
   .bd-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-sm); }
   .bd-legend .ok { color: var(--color-ok); } .bd-legend .warn { color: var(--color-warn); } .bd-legend .bad { color: var(--color-bad); }
   .bd-legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; vertical-align: -1px; margin-right: .3rem; }
@@ -502,6 +502,7 @@
   <div class="bd-areas" role="group" aria-label="Área">
     <button class="bd-area" type="button" data-area="com" aria-pressed="true">Comercial</button>
     <button class="bd-area" type="button" data-area="fin" aria-pressed="false">Financeiro</button>
+    <button class="bd-area" type="button" data-area="rel" aria-pressed="false">Relatórios</button>
   </div>
   <nav class="bd-tabs" role="tablist" aria-label="Seções do painel">
     <button class="bd-tab" role="tab" data-area="com" data-tab="mes" id="aba-mes" aria-selected="true"><svg><use href="#i-pace"/></svg><span class="longo">Mês atual</span><span class="curto">Mês</span></button>
@@ -513,6 +514,7 @@
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="demonstracoes" id="aba-demonstracoes" aria-selected="false" hidden><svg><use href="#i-flag"/></svg><span class="longo">Demonstrações</span><span class="curto">DRE</span></button>
+    <button class="bd-tab" role="tab" data-area="rel" data-tab="relatorios" id="aba-relatorios" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Acompanhamento</span><span class="curto">Envio</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="faturamento" id="aba-faturamento" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Faturado x cartão</span><span class="curto">Faturado</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="empresas" id="aba-empresas" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Empresas</span><span class="curto">Empresas</span></button>
   </nav>
@@ -2257,6 +2259,45 @@
     </div>
   </section>
 
+  <!-- ===================== RELATÓRIOS (acompanhamento da rotina de envio) ===================== -->
+  <section class="bd-page" data-page="relatorios" id="relatorios" hidden>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Acompanhamento dos relatórios · <span id="rl-quem"></span></div>
+      <h2 class="bd-headline" id="rl-headline">—</h2>
+      <p class="bd-comp" id="rl-comp">—</p>
+    </div>
+    <div class="bd-layout">
+      <aside class="bd-rail" aria-label="Situação dos relatórios">
+        <div class="bd-goldline"></div>
+        <div class="bd-kpi"><span class="lbl">Em dia</span><span class="ico"><svg><use href="#i-doc"/></svg></span><span class="val" data-rl="ok">—</span><span class="sub" data-rl="ok_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Atrasados</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-rl="bad">—</span><span class="sub" data-rl="bad_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Leitura esperada</span><span class="ico"><svg><use href="#i-cal"/></svg></span><span class="val" data-rl="esp">—</span><span class="sub" data-rl="esp_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Próxima subida</span><span class="ico"><svg><use href="#i-pace"/></svg></span><span class="val" data-rl="prox">—</span><span class="sub" data-rl="prox_sub">—</span></div>
+      </aside>
+      <div class="bd-main">
+        <div class="bd-card">
+          <h3>Pendências <span class="per" id="rl-pend-per">| o que falta subir</span></h3>
+          <ul class="bd-notes" id="rl-pend"></ul>
+        </div>
+        <div class="bd-card">
+          <h3>Relatórios por loja <span class="per">| até que dia os dados vão</span></h3>
+          <p class="bd-note">Verde: em dia. Amarelo: sobe hoje. Vermelho: atrasado ou sem arquivo. A data é o último dia com dados lidos do relatório; ao tocar, mostra quando o arquivo foi salvo.</p>
+          <div class="bd-tablewrap"><table id="rl-tab" class="bd-cards"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <details class="bd-card">
+          <summary>Rotina e como ler <span class="per">| calendário de envio</span></summary>
+          <ul class="bd-notes">
+            <li>Semanais (01, 03, 05, 06, 07, 08, 12, 13 e 14): sobem toda segunda, com os dados até o sábado anterior, e toda quinta, com os dados até a quarta anterior. De segunda a quarta a leitura esperada é a do último sábado; de quinta a domingo, a da última quarta.</li>
+            <li>Mensais (02 produtos e 10 estoque): esperado o mês anterior fechado.</li>
+            <li>Extrato da Rede (08): a L9 recebe pela maquininha da matriz da M S (L5).</li>
+            <li>Os arquivos podem ser salvos com o nome padrão do ERP: a loja e o período são lidos do cabeçalho do relatório. Se o nome do arquivo trouxer outra loja, vale o cabeçalho e aparece um aviso nas pendências.</li>
+            <li>Os relatórios ficam na pasta Extracoes_ERP do Google Drive; o painel se atualiza sozinho alguns minutos depois que os arquivos param de chegar.</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <!-- ===================== EMPRESAS ===================== -->
   <section class="bd-page" data-page="empresas" id="empresas" hidden>
     <div class="bd-hero">
@@ -3107,7 +3148,7 @@
   /* ---------- Abas ---------- */
   let aba = 'mes';
   // Duas áreas: Comercial (Mês, Ano, Lojas, Raio-X, Metas) e Financeiro (Produtos e markup, Gastos). Cada área lembra a última aba aberta.
-  const ultAba = { com: 'mes', fin: 'produtos' };
+  const ultAba = { com: "mes", fin: "produtos", rel: "relatorios" };
   const areaDe = (id) => { const b = $$('.bd-tab').find((x) => x.dataset.tab === id); return b ? b.dataset.area : 'com'; };
   function showTab(id, push) {
     if (!$$('.bd-page').some((p) => p.dataset.page === id)) return;
@@ -4811,6 +4852,112 @@
     $('#ft-proj-glob').textContent = `Atenção à receita global: o Simples também soma a receita das empresas em que um mesmo sócio tem mais de 10% do capital (LC 123, art. 3º, § 4º). As notas projetadas de ${ano} de todas as empresas lidas somam ${money(tg)}${tg > SN_LIM.teto ? ', acima de R$ 4,8 mi' : ''}. Conferir com a contabilidade o quadro societário de cada CNPJ do Simples.`;
   }
 
+  /* ---------- Relatórios: acompanhamento da rotina de envio (segunda: até o sábado; quinta: até a quarta) ---------- */
+  const RL_REL = [
+    { rel: '01', nome: 'Vendas (resumo)', cad: 'sem' }, { rel: '03', nome: 'Lucratividade (custo)', cad: 'sem' }, { rel: '06', nome: 'Formas de pagamento', cad: 'sem' },
+    { rel: '07', nome: 'Notas fiscais (CFOP)', cad: 'sem' }, { rel: '08', nome: 'Cartão e Pix (Rede)', cad: 'sem' }, { rel: '05', nome: 'Contas pagas', cad: 'sem', util: true },
+    { rel: '13', nome: 'Contas a receber em aberto', cad: 'sem' }, { rel: '14', nome: 'Contas a pagar em aberto', cad: 'sem' },
+    { rel: '12', nome: 'Transferências', cad: 'sem', todas: true }, { rel: '02', nome: 'Produtos', cad: 'mes' }, { rel: '10', nome: 'Estoque', cad: 'mes' },
+  ];
+  const RL_LOJAS = ['L2', 'L3', 'L4', 'L5', 'L7/L10', 'L8', 'L9'];
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const addD = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+  const dowS = (s) => new Date(s + 'T12:00:00Z').getUTCDay();
+  const SEM3 = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  // Leitura esperada hoje: de segunda a quarta, o último sábado; de quinta a domingo, a última quarta
+  function rlEsperada(hoje) {
+    const w = dowS(hoje);
+    const esp = w >= 1 && w <= 3 ? addD(hoje, -(w + 1)) : addD(hoje, -((w + 7 - 3) % 7));
+    const ant = dowS(esp) === 6 ? addD(esp, -3) : addD(esp, -4);   // a leitura anterior (quarta antes do sábado, sábado antes da quarta)
+    const prox = w === 1 || w === 4 ? hoje : addD(hoje, w < 4 ? 4 - w : (8 - w) % 7 || 7);
+    const proxAte = dowS(prox) === 1 ? addD(prox, -2) : addD(prox, -1);
+    return { esp, ant, diaSubida: w === 1 || w === 4, prox, proxAte };
+  }
+  function renderRelatorios() {
+    const inv = dash.data('erp_arquivos'); if (inv.status !== 'ok') return;
+    const hoje = iso(new Date(Date.now() - new Date().getTimezoneOffset() * 6e4));
+    const E = rlEsperada(hoje);
+    const mesAnt = (() => { const d = new Date(hoje + 'T12:00:00Z'); d.setUTCDate(0); return iso(d).slice(0, 7); })();
+    // último dia com dados e último arquivo salvo por relatório e loja; avisos dos arquivos salvos nos últimos 7 dias
+    const ult = new Map(), avisos = [];
+    for (const r of inv.data) {
+      let ate = r.dados_ate || (r.periodo_fim ? (r.ate_dia ? `${r.periodo_fim}-${String(r.ate_dia).padStart(2, '0')}` : r.periodo_fim) : '');
+      // relatório semanal sem data por linha: vale o dia anterior ao salvamento, sem passar do período do nome
+      if (ate.length === 7 && RL_REL.some((x) => x.rel === r.relatorio && x.cad === 'sem') && r.salvo_em) ate = [addD(r.salvo_em, -1), addD(ate + '-01', 40).slice(0, 7) + '-01'].sort()[0];
+      for (const lj of String(r.loja || '').split(',').map((s) => s.trim()).filter(Boolean)) {
+        const k = r.relatorio + '|' + lj, o = ult.get(k) || { ate: '', salvo: '' };
+        if (ate > o.ate) o.ate = ate; if (r.salvo_em > o.salvo) o.salvo = r.salvo_em; ult.set(k, o);
+      }
+      if (r.salvo_em >= addD(hoje, -7) && /cabeçalho|exportada duas vezes|não reconhecid|vazio/i.test(r.aviso || ''))
+        avisos.push(`${r.relatorio} · ${r.loja || 'loja ?'} · ${r.arquivo.split('/').pop()}: ${r.aviso.split(' | ').filter((a) => /cabeçalho|duas vezes|reconhecid|vazio/i.test(a)).join(' ')}`);
+    }
+    const cel = (R, lj) => {
+      if (R.rel === '08' && lj === 'L9') return { st: 'na', txt: 'pela L5' };
+      const o = ult.get(R.rel + '|' + (R.todas ? 'Todas' : lj));
+      if (!o || !o.ate) return { st: 'bad', txt: 'Sem arquivo', o };
+      if (R.cad === 'mes') { const m = o.ate.slice(0, 7); return { st: m >= mesAnt ? 'ok' : 'bad', txt: o.ate.length > 7 ? dBRy(o.ate) : mesNome(m), o }; }
+      // contas pagas: sem pagamento no sábado, vale a sexta
+      const ut = (s) => R.util && dowS(s) === 6 ? addD(s, -1) : s, esp = ut(E.esp);
+      const st = o.ate >= esp ? 'ok' : E.diaSubida && o.ate >= ut(E.ant) ? 'mid' : 'bad';
+      return { st, txt: dBR(o.ate), o, atraso: st === 'bad' ? Math.round((new Date(esp) - new Date(o.ate)) / 864e5) : 0 };
+    };
+    const linhas = RL_REL.map((R) => ({ R, c: (R.todas ? ['Todas'] : RL_LOJAS).map((lj) => ({ lj, ...cel(R, lj) })) }));
+    const todas = linhas.flatMap((l) => l.c.filter((c) => c.st !== 'na').map((c) => ({ ...c, R: l.R })));
+    const sem = todas.filter((c) => c.R.cad === 'sem'), mens = todas.filter((c) => c.R.cad === 'mes');
+    const nOk = sem.filter((c) => c.st === 'ok').length, nBad = sem.filter((c) => c.st === 'bad'), nMid = sem.filter((c) => c.st === 'mid');
+    const mensBad = mens.filter((c) => c.st === 'bad');
+    $('#rl-quem').textContent = `hoje, ${SEM3[dowS(hoje)]} ${dBRy(hoje)}`;
+    $('#rl-headline').textContent = nBad.length === 0 && nMid.length === 0 ? `Relatórios semanais em dia para a leitura de ${SEM3[dowS(E.esp)]} ${dBR(E.esp)}.`
+      : `${nOk} de ${sem.length} relatórios semanais em dia para a leitura de ${SEM3[dowS(E.esp)]} ${dBR(E.esp)}${nBad.length ? `; ${nBad.length} atrasados` : ''}${nMid.length ? `; ${nMid.length} sobem hoje` : ''}.`;
+    const porRel = [...new Set(nBad.map((c) => c.R.rel))];
+    $('#rl-comp').textContent = (porRel.length ? `Atrasados: ${porRel.map((r) => r + ' ' + RL_REL.find((x) => x.rel === r).nome).join(', ')}. ` : '')
+      + `Próxima subida: ${SEM3[dowS(E.prox)]} ${dBR(E.prox)}, com os dados até ${SEM3[dowS(E.proxAte)]} ${dBR(E.proxAte)}.`
+      + (mensBad.length ? ` Mensais pendentes: ${[...new Set(mensBad.map((c) => c.R.rel + ' ' + c.R.nome))].join(', ')}.` : '');
+    const kp = (k, v) => { const el = $(`#relatorios [data-rl="${k}"]`); if (el) el.textContent = v; };
+    kp('ok', `${nOk} de ${sem.length}`); kp('ok_sub', 'semanais, relatório × loja');
+    kp('bad', String(nBad.length)); kp('bad_sub', nMid.length ? `e ${nMid.length} sobem hoje` : nBad.length ? 'ver pendências' : 'nada atrasado');
+    $('#relatorios [data-rl="bad"]').className = 'val ' + (nBad.length ? 'down' : 'up');
+    kp('esp', `${SEM3[dowS(E.esp)]} ${dBR(E.esp)}`); kp('esp_sub', 'dados até este dia (semanais)');
+    kp('prox', `${SEM3[dowS(E.prox)]} ${dBR(E.prox)}`); kp('prox_sub', `com os dados até ${SEM3[dowS(E.proxAte)]} ${dBR(E.proxAte)}`);
+    // Pendências: avisos dos arquivos novos primeiro, depois os semanais atrasados (agrupados por relatório) e os mensais
+    const itens = [];
+    for (const a of avisos) itens.push(['⚠ ', a]);
+    for (const r of porRel) {
+      const cs = nBad.filter((c) => c.R.rel === r), R = cs[0].R;
+      const det = cs.map((c) => `${c.lj === 'Todas' ? 'todas' : c.lj} ${!c.o || !c.o.ate ? 'sem arquivo' : 'até ' + dBR(c.o.ate)}`).join(', ');
+      itens.push([`${r} ${R.nome}: `, `esperado até ${dBR(E.esp)} · ${det}.`]);
+    }
+    if (nMid.length) itens.push(['Sobem hoje: ', [...new Set(nMid.map((c) => c.R.rel + ' ' + c.R.nome))].join(', ') + '.']);
+    for (const r of [...new Set(mensBad.map((c) => c.R.rel))]) {
+      const cs = mensBad.filter((c) => c.R.rel === r);
+      itens.push([`${r} ${cs[0].R.nome} (mensal): `, `esperado ${mesNome(mesAnt)} · ${cs.map((c) => `${c.lj} ${!c.o || !c.o.ate ? 'sem arquivo' : c.txt}`).join(', ')}.`]);
+    }
+    $('#rl-pend-per').textContent = itens.length ? `| ${nBad.length} atrasados${avisos.length ? `, ${avisos.length} avisos de arquivo` : ''}` : '| nada pendente';
+    $('#rl-pend').replaceChildren(...(itens.length ? itens : [[null, 'Nenhuma pendência: todos os relatórios chegaram até a leitura esperada.']]).map(([b, t]) => {
+      const li = document.createElement('li'); if (b) li.append(Object.assign(document.createElement('b'), { textContent: b })); li.append(document.createTextNode(t)); return li;
+    }));
+    // Tabela relatório × loja
+    const t = $('#rl-tab'), trh = document.createElement('tr');
+    for (const h of ['Relatório', ...RL_LOJAS]) { const th = document.createElement('th'); th.textContent = h; if (h === 'Relatório') th.className = 'l'; trh.append(th); }
+    t.tHead.replaceChildren(trh);
+    const marca = { ok: '● ', mid: '◐ ', bad: '○ ', na: '' };
+    t.tBodies[0].replaceChildren(...linhas.map(({ R, c }) => {
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td'); td0.className = 'l nm'; td0.textContent = `${R.rel} · ${R.nome}${R.cad === 'mes' ? ' (mensal)' : ''}`; tr.append(td0);
+      c.forEach((x, i) => {
+        const td = document.createElement('td'); td.dataset.label = R.todas ? 'Todas as lojas' : RL_LOJAS[i];
+        if (R.todas) { td.colSpan = RL_LOJAS.length; td.style.textAlign = 'center'; }
+        td.className = { ok: 'ok', mid: 'mid', bad: 'bad', na: '' }[x.st];
+        td.textContent = marca[x.st] + x.txt + (R.todas ? ' · um arquivo para todas as lojas' : '');
+        if (x.o && x.o.salvo) td.title = `Arquivo salvo em ${dBRy(x.o.salvo)}`;
+        tr.append(td);
+      });
+      return tr;
+    }));
+    // alerta na área quando há semanal atrasado
+    const ar = $('.bd-area[data-area="rel"]'); if (ar) { ar.classList.toggle('com-alerta', nBad.length > 0); if (nBad.length) ar.title = `${nBad.length} relatórios atrasados`; else ar.removeAttribute('title'); }
+  }
+
   /* ---------- Central Comercial (Comercial > Central): a Central roda isolada num quadro e usa esta ponte no lugar do banco do Claude ---------- */
   // Bases: as mesmas do painel. Metas aprovadas, observações e parâmetros: arquivo trancado no Google Drive (central_bin.enc.json),
   // gravado só por quem é Editor da pasta BIN Painel (o diretor comercial). No computador, a Central abre em modo leitura.
@@ -5242,6 +5389,7 @@
     if (aba === 'central') renderCentral();
     if (aba === 'demonstracoes') renderDemonstracoes();
     if (aba === 'faturamento') renderFaturamento();
+    renderRelatorios();   // sempre: mantém o alerta da área Relatórios
     if (aba === 'metas') renderMetas();
   }
 
