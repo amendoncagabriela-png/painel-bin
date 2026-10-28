@@ -147,6 +147,11 @@
   .gt-link { appearance: none; border: 0; background: none; padding: .35rem 0; color: #FAF4B4; font: .92rem Arial, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 44px; }
   .gt-nota { margin: 0; color: #8f897f; font-size: .8rem; line-height: 1.45; }
   #web-novo { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 90; max-width: min(92vw, 30rem); background: #191919; color: #FAF4B4; border: 1px solid #AF6839; border-radius: 10px; padding: .7rem 1rem; font: 600 .9rem Arial, sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  .gt-lembrar { display: flex; align-items: center; gap: .5rem; margin: .7rem 0 .2rem; color: #d9d2c5; font: 600 .9rem Arial, sans-serif; cursor: pointer; }
+  .gt-lembrar input { width: 1.15rem; height: 1.15rem; accent-color: #AF6839; }
+  #web-renovar { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 89; display: flex; align-items: center; gap: .6rem; max-width: min(92vw, 26rem); background: #191919; color: #d9d2c5; border: 1px solid #AF6839; border-radius: 10px; padding: .5rem .6rem .5rem .9rem; font: 600 .82rem Arial, sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  #web-renovar button { border: 0; border-radius: 8px; background: #AF6839; color: #fff; font: 700 .85rem Arial, sans-serif; padding: .5rem .8rem; cursor: pointer; white-space: nowrap; }
+  #web-renovar .x { background: transparent; color: #8f897f; padding: .3rem .4rem; }
   .web-sair { display: flex; justify-content: center; max-width: 78rem; margin: 1rem auto 0; }
   .web-sair button { appearance: none; border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg); border-radius: 8px; min-height: 44px; padding: .5rem 1.1rem; font: 600 .9rem Arial, sans-serif; cursor: pointer; }
 </style>
@@ -170,6 +175,7 @@
       <input type="text" name="username" autocomplete="username" value="painel-bin" aria-hidden="true" tabindex="-1" style="position:absolute;opacity:0;height:0;width:0;pointer-events:none">
       <label for="gt-pw">Senha do painel</label>
       <div class="gt-pw"><input id="gt-pw" name="password" type="password" autocomplete="current-password" required><button type="button" id="gt-ver" aria-pressed="false">Mostrar</button></div>
+      <label class="gt-lembrar"><input type="checkbox" id="gt-lembrar" checked> Manter conectado neste aparelho</label>
       <button class="gt-btn" id="gt-abrir" type="submit">Abrir painel</button>
     </form>
 
@@ -5343,7 +5349,7 @@
     if (window.BIN_WEB) {
       mostrarPop([`Este painel mostra os dados atualizados em ${$('#st-quando').textContent}.`,
         'Atualização automática: quando chega relatório ou planilha nova nas pastas do Google Drive, o computador da BIN relê tudo sozinho e troca o arquivo trancado. Este painel confere a cada 5 minutos (e quando você volta para ele) e troca os números sem precisar recarregar.',
-        'Toque em "Buscar versão nova" para carregar o arquivo mais recente do Drive.',
+        'Toque em "Buscar versão nova" para conferir agora. O aparelho fica conectado (sem pedir e-mail nem senha) até você tocar em "Sair"; se o acesso do Google vencer, aparece um botão para renovar com um toque, sem fechar o painel.',
         botoes(botao('Buscar versão nova', () => window.BIN_WEB.recarregar(), true), botao('Fechar', fecharPop))]);
       return;
     }
@@ -5449,10 +5455,54 @@
     function passo(nome) { $('gt-entrar').hidden = nome !== 'entrar'; $('gt-senha').hidden = nome !== 'senha'; $('gt-trocar').hidden = !token; if (nome === 'senha') setTimeout(() => $('gt-pw').focus(), 50); }
     const dBR = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) + (s.length > 10 ? ' às ' + s.slice(11, 16) : '') : '—';
 
-    // Token só nesta aba (sessionStorage) e só até expirar (1 hora): recarregar a página não pede o Google de novo.
-    function guardarToken(t, seg) { token = t; try { sessionStorage.setItem('bin_tk', JSON.stringify({ t, ate: Date.now() + (seg - 60) * 1000 })); } catch (e) {} }
-    function tokenGuardado() { try { const o = JSON.parse(sessionStorage.getItem('bin_tk') || 'null'); return o && o.ate > Date.now() ? o.t : null; } catch (e) { return null; } }
-    function esquecerToken() { token = null; try { sessionStorage.removeItem('bin_tk'); } catch (e) {} }
+    // Acesso do Google guardado no aparelho só até expirar (1 hora): sair da tela ou recarregar não pede o Google de novo.
+    function guardarToken(t, seg) { token = t; try { localStorage.setItem('bin_tk', JSON.stringify({ t, ate: Date.now() + (seg - 60) * 1000 })); } catch (e) {} esconderRenovar(); }
+    function tokenGuardado() { try { const o = JSON.parse(localStorage.getItem('bin_tk') || sessionStorage.getItem('bin_tk') || 'null'); return o && o.ate > Date.now() ? o.t : null; } catch (e) { return null; } }
+    function esquecerToken() { token = null; try { localStorage.removeItem('bin_tk'); sessionStorage.removeItem('bin_tk'); } catch (e) {} }
+
+    // Sessão lembrada neste aparelho ("Manter conectado"): a senha fica cifrada com uma chave do próprio navegador que não pode ser
+    // copiada (AES-GCM não exportável, no IndexedDB), junto com a última versão dos dados (que já é trancada). Reabrir o painel não
+    // pede nada; só "Sair" apaga a sessão. Vale por 30 dias sem uso e renova a cada abertura.
+    const SESSAO_DIAS = 30;
+    const idb = (() => {
+      let p = null;
+      const abrirDb = () => p || (p = new Promise((ok, falha) => { const r = indexedDB.open('bin_painel', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => falha(r.error); }));
+      const op = (modo, fn) => abrirDb().then((db) => new Promise((ok, falha) => { const tx = db.transaction('kv', modo), q = fn(tx.objectStore('kv')); tx.oncomplete = () => ok(q && q.result); tx.onerror = () => falha(tx.error); }));
+      return { get: (k) => op('readonly', (s) => s.get(k)).catch(() => null), set: (k, v) => op('readwrite', (s) => s.put(v, k)).catch(() => null), del: (k) => op('readwrite', (s) => s.delete(k)).catch(() => null) };
+    })();
+    async function chaveAparelho() {
+      let k = await idb.get('chave');
+      if (!k) { k = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); await idb.set('chave', k); }
+      return k;
+    }
+    async function lembrar(senha) {
+      try { const k = await chaveAparelho(), iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, new TextEncoder().encode(senha));
+        await idb.set('sessao', { iv, ct: new Uint8Array(ct), conta, nome: nomeConta, ate: Date.now() + SESSAO_DIAS * 864e5 }); } catch (e) {}
+    }
+    async function sessaoLembrada() {
+      try { const s = await idb.get('sessao'), k = await idb.get('chave'); if (!s || !k || s.ate < Date.now()) return null;
+        return { s, senha: new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: s.iv }, k, s.ct)) }; } catch (e) { return null; }
+    }
+    const guardarDados = (env, versao) => { if (lembrando()) idb.set('dados', { env, versao }); };
+    async function esquecerSessao() { await idb.del('sessao'); await idb.del('dados'); }
+    let lembrarSessao = true;
+    const lembrando = () => lembrarSessao;
+
+    // Faixa discreta quando o acesso do Google expira: o painel continua aberto; um toque renova e busca os dados novos.
+    function mostrarRenovar(txt) {
+      let b = document.getElementById('web-renovar');
+      if (!b) {
+        b = document.createElement('div'); b.id = 'web-renovar'; b.setAttribute('role', 'status');
+        const t = document.createElement('span'), ok = document.createElement('button'), x = document.createElement('button');
+        ok.type = 'button'; ok.textContent = 'Buscar dados novos'; ok.addEventListener('click', () => pedirToken(false, true));
+        x.type = 'button'; x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Fechar'); x.addEventListener('click', () => { b.hidden = true; });
+        b.append(t, ok, x); document.body.append(b);
+      }
+      b.firstChild.textContent = txt || `Dados de ${dBR(window.dash && window.dash.geradoEm)}.`;
+      b.hidden = false;
+    }
+    function esconderRenovar() { const b = document.getElementById('web-renovar'); if (b) b.hidden = true; }
 
     async function api(url) {
       const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
@@ -5462,15 +5512,19 @@
     }
 
     let cliente = null;
-    function pedirToken(trocar) {
+    // so = só renovar o acesso com o painel aberto (sem abrir a tela de entrada): depois confere se há dados novos
+    let depoisDoToken = null;
+    function pedirToken(trocar, so) {
+      depoisDoToken = so && montado ? () => conferirNovidade(true) : null;
       if (!CFG.CLIENT_ID || /COLE_AQUI/.test(CFG.CLIENT_ID)) { aviso('O acesso pelo Google ainda não foi configurado (falta o CLIENT_ID no config.js). Use "Abrir arquivo do aparelho".', true); return; }
       if (!window.google || !google.accounts || !google.accounts.oauth2) { aviso('Carregando o login do Google… tente de novo em alguns segundos. Sem internet, o painel não abre.', true); return; }
       if (!cliente) cliente = google.accounts.oauth2.initTokenClient({
         client_id: CFG.CLIENT_ID, scope: ESCOPO,
-        callback: (r) => { if (r.error) { aviso('O Google não liberou o acesso (' + r.error + ').', true); return; } guardarToken(r.access_token, Number(r.expires_in) || 3600); buscar(); },
-        error_callback: (e) => { aviso(e && e.type === 'popup_closed' ? 'A janela do Google foi fechada antes de terminar.' : 'Não foi possível abrir o login do Google. Se o navegador bloqueou a janela, permita e toque de novo.', true); },
+        callback: (r) => { if (r.error) { aviso('O Google não liberou o acesso (' + r.error + ').', true); if (montado) mostrarRenovar('O Google não liberou o acesso agora.'); return; }
+          guardarToken(r.access_token, Number(r.expires_in) || 3600); const f = depoisDoToken; depoisDoToken = null; if (f) f(); else buscar(); },
+        error_callback: (e) => { if (montado && depoisDoToken) { depoisDoToken = null; mostrarRenovar('A janela do Google foi fechada. Os dados continuam os mesmos.'); return; } aviso(e && e.type === 'popup_closed' ? 'A janela do Google foi fechada antes de terminar.' : 'Não foi possível abrir o login do Google. Se o navegador bloqueou a janela, permita e toque de novo.', true); },
       });
-      cliente.requestAccessToken({ prompt: trocar ? 'select_account' : '' });
+      cliente.requestAccessToken({ prompt: trocar ? 'select_account' : '', login_hint: !trocar && conta ? conta : undefined });
     }
 
     async function buscar() {
@@ -5529,7 +5583,13 @@
       let dados = null;
       try { dados = await destrancar(envelope, senha); } catch (e) { dados = null; }
       $('gt-abrir').disabled = false;
-      if (!dados) { senhaSessao = null; passo('senha'); aviso('Senha incorreta.', true); $('gt-pw').select(); return; }
+      if (!dados) {
+        const lembrada = senhaSessao && senha === senhaSessao;
+        senhaSessao = null; if (lembrada) esquecerSessao();
+        passo('senha'); aviso(lembrada ? 'A senha do painel mudou: digite a senha nova.' : 'Senha incorreta.', true); $('gt-pw').select(); return;
+      }
+      lembrarSessao = $('gt-lembrar') ? $('gt-lembrar').checked : true;
+      if (lembrarSessao) { lembrar(senha); guardarDados(envelope, versaoBaixada); } else esquecerSessao();
       senhaSessao = senha; envelope = null; versaoCarregada = versaoBaixada;
       if (troca && montado) { window.dash.__trocar(dados); fechar(); return; }
       montar(dados);
@@ -5593,22 +5653,26 @@
       if (!t) { t = document.createElement('div'); t.id = 'web-novo'; t.setAttribute('role', 'status'); document.body.append(t); }
       t.textContent = txt; t.hidden = false; clearTimeout(t._tm); t._tm = setTimeout(() => { t.hidden = true; }, 8000);
     }
-    async function conferirNovidade() {
-      if (conferindo || !montado || !token || !senhaSessao || document.hidden) return;
+    // forcado = pedido pelo botão (mostra o resultado mesmo sem novidade)
+    async function conferirNovidade(forcado) {
+      if (conferindo || !montado || !senhaSessao || (document.hidden && !forcado)) return;
+      if (!token) { token = tokenGuardado(); if (!token) { mostrarRenovar(); return; } }
       conferindo = true;
       try {
         let q = `name = '${CFG.ARQUIVO.replace(/'/g, "\'")}' and trashed = false`;
         if (CFG.PASTA_ID) q += ` and '${CFG.PASTA_ID}' in parents`;
         const l = await (await api('https://www.googleapis.com/drive/v3/files?' + new URLSearchParams({ q, orderBy: 'modifiedTime desc', pageSize: '1', fields: 'files(id,modifiedTime)', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' }))).json();
         const f = (l.files || [])[0];
-        if (!f || (versaoCarregada && f.modifiedTime <= versaoCarregada)) return;
+        esconderRenovar();
+        if (!f || (versaoCarregada && f.modifiedTime <= versaoCarregada)) { if (forcado) avisoNovo(`O painel já está com os dados mais recentes (${dBR(window.dash && window.dash.geradoEm)}).`); return; }
+        if (forcado) avisoNovo('Baixando os dados novos…');
         const env = await (await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`)).json();
         const dados = await destrancar(env, senhaSessao);
-        if (!dados) return;
-        versaoCarregada = f.modifiedTime;
+        if (!dados) { avisoNovo('A senha do painel mudou: toque em Sair e entre com a senha nova.'); return; }
+        versaoCarregada = f.modifiedTime; guardarDados(env, f.modifiedTime);
         window.dash.__trocar(dados);
         avisoNovo(`Dados atualizados agora (versão de ${dBR(dados.gerado_em || '')}).`);
-      } catch (e) { if (e.codigo === 401) avisoNovo('O acesso do Google expirou: toque em Atualizar dados › Buscar versão nova para continuar recebendo os dados novos.'); }
+      } catch (e) { if (e.codigo === 401) mostrarRenovar('O acesso do Google expirou. Os dados continuam na tela.'); else if (forcado) avisoNovo('Não foi possível ler o Google Drive agora. Confira a internet.'); }
       finally { conferindo = false; }
     }
     setInterval(conferirNovidade, 5 * 60 * 1000);
@@ -5649,14 +5713,16 @@
         if (!r.ok) throw Object.assign(new Error('Drive ' + r.status), { code: 'erro' });
         return true;
       },
+      // Botão "Buscar versão nova": com o painel aberto, busca sem sair da tela; sem acesso do Google, renova com um toque
       recarregar() {
-        const antes = window.dash && window.dash.geradoEm;
+        if (montado && senhaSessao) { if (token || (token = tokenGuardado())) conferirNovidade(true); else pedirToken(false, true); return; }
         gate.hidden = false; document.body.classList.add('gt-on');
-        if (token) buscar(); else { passo('entrar'); aviso(antes ? 'Entre com o Google para buscar a versão nova.' : ''); }
+        if (token) buscar(); else { passo('entrar'); aviso(''); }
       },
-      sair() {
+      // Sair: apaga a sessão lembrada, os dados guardados e o acesso do Google deste aparelho
+      async sair() {
         try { if (token && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(token, () => {}); } catch (e) {}
-        esquecerToken(); senhaSessao = null;
+        esquecerToken(); senhaSessao = null; await esquecerSessao();
         try { sessionStorage.removeItem('bin_params'); } catch (e) {}
         location.replace(location.pathname);
       },
@@ -5672,7 +5738,28 @@
 
     document.body.classList.add('gt-on');
     token = tokenGuardado();
-    if (token) buscar(); else passo('entrar');
+    // Sessão lembrada: abre direto com os últimos dados guardados no aparelho e depois confere se há versão nova no Drive
+    (async () => {
+      const lemb = window.indexedDB && window.crypto && crypto.subtle ? await sessaoLembrada() : null;
+      if (lemb) {
+        conta = lemb.s.conta || ''; nomeConta = lemb.s.nome || conta; senhaSessao = lemb.senha;
+        const g = await idb.get('dados');
+        if (g && g.env) {
+          aviso('Abrindo o painel…');
+          let dados = null; try { dados = await destrancar(g.env, lemb.senha); } catch (e) { dados = null; }
+          if (dados) {
+            versaoBaixada = versaoCarregada = g.versao || null; lembrar(lemb.senha);
+            montar(dados);
+            if (token) conferirNovidade(true); else mostrarRenovar();
+            return;
+          }
+        }
+        if (token) { buscar(); return; }   // sem dados guardados: baixa e abre com a senha lembrada
+        passo('entrar'); aviso('Toque em "Entrar com Google" para baixar os dados; a senha já está lembrada neste aparelho.');
+        return;
+      }
+      if (token) buscar(); else passo('entrar');
+    })();
   })();
 </script>
 </body>
