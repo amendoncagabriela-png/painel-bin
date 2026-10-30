@@ -4894,8 +4894,8 @@
         const k = r.relatorio + '|' + lj, o = ult.get(k) || { ate: '', salvo: '' };
         if (ate > o.ate) o.ate = ate; if (r.salvo_em > o.salvo) o.salvo = r.salvo_em; ult.set(k, o);
       }
-      if (r.salvo_em >= addD(hoje, -7) && /cabeçalho|exportada duas vezes|não reconhecid|vazio/i.test(r.aviso || ''))
-        avisos.push(`${r.relatorio} · ${r.loja || 'loja ?'} · ${r.arquivo.split('/').pop()}: ${r.aviso.split(' | ').filter((a) => /cabeçalho|duas vezes|reconhecid|vazio/i.test(a)).join(' ')}`);
+      if (r.salvo_em >= addD(hoje, -7) && /cabeçalho|exportada duas vezes|não reconhecid|vazio|na pasta|Erro ao ler/i.test(r.aviso || ''))
+        avisos.push(`${r.relatorio} · ${r.loja || 'loja ?'} · ${r.arquivo.split('/').pop()}: ${r.aviso.split(' | ').filter((a) => /cabeçalho|duas vezes|reconhecid|vazio|na pasta|Erro ao ler/i.test(a)).join(' ')}`);
     }
     const cel = (R, lj) => {
       if (R.rel === '08' && lj === 'L9') return { st: 'na', txt: 'pela L5' };
@@ -5653,29 +5653,48 @@
       if (!t) { t = document.createElement('div'); t.id = 'web-novo'; t.setAttribute('role', 'status'); document.body.append(t); }
       t.textContent = txt; t.hidden = false; clearTimeout(t._tm); t._tm = setTimeout(() => { t.hidden = true; }, 8000);
     }
+    // Leitura pelo link fixo (arquivo compartilhado por link + chave de API do site): não depende do acesso do Google, que vence em 1 hora.
+    // O arquivo continua trancado com a senha. Sem a chave configurada, a conferência usa o acesso do Google, como antes.
+    const PUBLICO = !!(CFG.API_KEY && CFG.ARQUIVO_ID);
+    async function lerPublico(sufixo) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(CFG.ARQUIVO_ID)}?${sufixo}&key=${encodeURIComponent(CFG.API_KEY)}`, { cache: 'no-store' });
+      if (!r.ok) throw Object.assign(new Error('Drive ' + r.status), { codigo: r.status, publico: true });
+      return r;
+    }
     // forcado = pedido pelo botão (mostra o resultado mesmo sem novidade)
     async function conferirNovidade(forcado) {
       if (conferindo || !montado || !senhaSessao || (document.hidden && !forcado)) return;
-      if (!token) { token = tokenGuardado(); if (!token) { mostrarRenovar(); return; } }
+      const pelaChave = PUBLICO;
+      if (!pelaChave && !token) { token = tokenGuardado(); if (!token) { mostrarRenovar(); return; } }
       conferindo = true;
       try {
-        let q = `name = '${CFG.ARQUIVO.replace(/'/g, "\'")}' and trashed = false`;
-        if (CFG.PASTA_ID) q += ` and '${CFG.PASTA_ID}' in parents`;
-        const l = await (await api('https://www.googleapis.com/drive/v3/files?' + new URLSearchParams({ q, orderBy: 'modifiedTime desc', pageSize: '1', fields: 'files(id,modifiedTime)', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' }))).json();
-        const f = (l.files || [])[0];
+        let f;
+        if (pelaChave) f = await (await lerPublico('fields=id,modifiedTime&supportsAllDrives=true')).json();
+        else {
+          let q = `name = '${CFG.ARQUIVO.replace(/'/g, "\'")}' and trashed = false`;
+          if (CFG.PASTA_ID) q += ` and '${CFG.PASTA_ID}' in parents`;
+          const l = await (await api('https://www.googleapis.com/drive/v3/files?' + new URLSearchParams({ q, orderBy: 'modifiedTime desc', pageSize: '1', fields: 'files(id,modifiedTime)', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' }))).json();
+          f = (l.files || [])[0];
+        }
         esconderRenovar();
         if (!f || (versaoCarregada && f.modifiedTime <= versaoCarregada)) { if (forcado) avisoNovo(`O painel já está com os dados mais recentes (${dBR(window.dash && window.dash.geradoEm)}).`); return; }
         if (forcado) avisoNovo('Baixando os dados novos…');
-        const env = await (await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`)).json();
+        const env = pelaChave ? await (await lerPublico('alt=media&supportsAllDrives=true')).json()
+          : await (await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`)).json();
         const dados = await destrancar(env, senhaSessao);
         if (!dados) { avisoNovo('A senha do painel mudou: toque em Sair e entre com a senha nova.'); return; }
         versaoCarregada = f.modifiedTime; guardarDados(env, f.modifiedTime);
         window.dash.__trocar(dados);
         avisoNovo(`Dados atualizados agora (versão de ${dBR(dados.gerado_em || '')}).`);
-      } catch (e) { if (e.codigo === 401) mostrarRenovar('O acesso do Google expirou. Os dados continuam na tela.'); else if (forcado) avisoNovo('Não foi possível ler o Google Drive agora. Confira a internet.'); }
+      } catch (e) {
+        if (e.publico && (e.codigo === 403 || e.codigo === 404)) { if (forcado) avisoNovo('O link do arquivo do painel não está liberado (compartilhamento ou chave de API). Avise quem administra o painel.'); }
+        else if (e.codigo === 401) mostrarRenovar('O acesso do Google expirou. Os dados continuam na tela.');
+        else if (forcado) avisoNovo('Não foi possível ler o Google Drive agora. Confira a internet.');
+      }
       finally { conferindo = false; }
     }
-    setInterval(conferirNovidade, 5 * 60 * 1000);
+    // Com o link fixo, confere a cada minuto (só a data do arquivo; baixa só quando muda); sem ele, a cada 5 minutos
+    setInterval(conferirNovidade, (PUBLICO ? 1 : 5) * 60 * 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirNovidade(); });
 
     window.BIN_WEB = {
@@ -5715,7 +5734,7 @@
       },
       // Botão "Buscar versão nova": com o painel aberto, busca sem sair da tela; sem acesso do Google, renova com um toque
       recarregar() {
-        if (montado && senhaSessao) { if (token || (token = tokenGuardado())) conferirNovidade(true); else pedirToken(false, true); return; }
+        if (montado && senhaSessao) { if (PUBLICO || token || (token = tokenGuardado())) conferirNovidade(true); else pedirToken(false, true); return; }
         gate.hidden = false; document.body.classList.add('gt-on');
         if (token) buscar(); else { passo('entrar'); aviso(''); }
       },
@@ -5750,7 +5769,7 @@
           if (dados) {
             versaoBaixada = versaoCarregada = g.versao || null; lembrar(lemb.senha);
             montar(dados);
-            if (token) conferirNovidade(true); else mostrarRenovar();
+            if (PUBLICO || token) conferirNovidade(); else mostrarRenovar();
             return;
           }
         }
