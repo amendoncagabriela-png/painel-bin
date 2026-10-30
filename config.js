@@ -11,5 +11,5 @@ window.BIN_CONFIG = {
   // (compartilhado como "qualquer pessoa com o link: leitor"; continua cifrado com a senha) e uma chave de API do Google Cloud
   // restrita a este site e à API do Drive. Sem a chave, o painel volta a conferir só com o acesso do Google.
   ARQUIVO_ID: '16gV2wlU2hmKNkn7D6py0L15V0wfz6y69',
-  API_KEY: ''
+  API_KEY: 'AIzaSyDooAO42E6BVajDA1vsRpfQzR7ij1iB_VM'
 };
