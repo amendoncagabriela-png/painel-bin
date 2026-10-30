@@ -297,6 +297,8 @@
   .bd-dev-faixa { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: 0 0 var(--cds-gap-sm); padding: .55rem .8rem; border-radius: var(--cds-radius); background: rgba(242,195,107,.16); border: 1px solid #E0A83A; color: var(--color-fg); font-size: var(--cds-font-size-caption); line-height: 1.45; }
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
   .bd-info { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--bin-gold); background: transparent; color: var(--bin-gold); font: italic 700 .9rem/1 Georgia, serif; cursor: pointer; }
+  .rl-av { border: 0; background: transparent; color: #E0A83A; font-size: 1rem; line-height: 1; padding: 0 .3rem 0 0; cursor: pointer; vertical-align: -1px; }
+  .rl-av:hover, .rl-av:focus-visible { color: #F2C36B; outline: 2px solid var(--bin-gold); outline-offset: 1px; border-radius: 4px; }
   .bd-info:hover, .bd-info:focus-visible { background: var(--bin-gold); color: #111; }
   td.ic, th.ic { width: 2.2rem; text-align: center; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -2287,8 +2289,9 @@
         </div>
         <div class="bd-card">
           <h3>Relatórios por loja <span class="per">| até que dia os dados vão</span></h3>
-          <p class="bd-note">Verde: em dia. Amarelo: sobe hoje. Vermelho: atrasado ou sem arquivo. A data é o último dia com dados lidos do relatório; ao tocar, mostra quando o arquivo foi salvo.</p>
+          <p class="bd-note">Verde: em dia. Amarelo: sobe hoje. Vermelho: atrasado ou sem arquivo. ⚠: algum arquivo da loja tem aviso (loja repetida, pasta trocada, nome diferente do cabeçalho); toque para ver o detalhe. A data é o último dia com dados lidos do relatório; ao tocar, mostra quando o arquivo foi salvo.</p>
           <div class="bd-tablewrap"><table id="rl-tab" class="bd-cards"><thead></thead><tbody></tbody></table></div>
+          <dialog class="bd-dlg" id="rl-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
         </div>
         <details class="bd-card">
           <summary>Rotina e como ler <span class="per">| calendário de envio</span></summary>
@@ -4860,10 +4863,10 @@
 
   /* ---------- Relatórios: acompanhamento da rotina de envio (segunda: até o sábado; quinta: até a quarta) ---------- */
   const RL_REL = [
-    { rel: '01', nome: 'Vendas (resumo)', cad: 'sem' }, { rel: '03', nome: 'Lucratividade (custo)', cad: 'sem' }, { rel: '06', nome: 'Formas de pagamento', cad: 'sem' },
-    { rel: '07', nome: 'Notas fiscais (CFOP)', cad: 'sem' }, { rel: '08', nome: 'Cartão e Pix (Rede)', cad: 'sem' }, { rel: '05', nome: 'Contas pagas', cad: 'sem', util: true },
+    { rel: '01', nome: 'Vendas (resumo)', cad: 'sem' }, { rel: '02', nome: 'Produtos', cad: 'mes' }, { rel: '03', nome: 'Lucratividade (custo)', cad: 'sem' },
+    { rel: '05', nome: 'Contas pagas', cad: 'sem', util: true }, { rel: '06', nome: 'Formas de pagamento', cad: 'sem' }, { rel: '07', nome: 'Notas fiscais (CFOP)', cad: 'sem' },
+    { rel: '08', nome: 'Cartão e Pix (Rede)', cad: 'sem' }, { rel: '10', nome: 'Estoque', cad: 'mes' }, { rel: '12', nome: 'Transferências', cad: 'sem', todas: true },
     { rel: '13', nome: 'Contas a receber em aberto', cad: 'sem' }, { rel: '14', nome: 'Contas a pagar em aberto', cad: 'sem' },
-    { rel: '12', nome: 'Transferências', cad: 'sem', todas: true }, { rel: '02', nome: 'Produtos', cad: 'mes' }, { rel: '10', nome: 'Estoque', cad: 'mes' },
   ];
   const RL_LOJAS = ['L2', 'L3', 'L4', 'L5', 'L7/L10', 'L8', 'L9'];
   const iso = (d) => d.toISOString().slice(0, 10);
@@ -4879,13 +4882,25 @@
     const proxAte = dowS(prox) === 1 ? addD(prox, -2) : addD(prox, -1);
     return { esp, ant, diaSubida: w === 1 || w === 4, prox, proxAte };
   }
+  // Detalhe do ⚠ de uma célula: arquivos com aviso e o que conferir
+  function abrirAvisoRel(R, x, av) {
+    const dlg = $('#rl-dlg');
+    dlg.querySelector('h3').textContent = `${R.rel} · ${R.nome} · ${x.lj === 'Todas' ? 'todas as lojas' : nomeLoja(x.lj)}`;
+    const ps = [];
+    if (x.o && x.o.ate) ps.push(`Dados lidos até ${dBRy(x.o.ate)}${x.o.salvo ? `; último arquivo salvo em ${dBRy(x.o.salvo)}` : ''}.`);
+    for (const a of av) ps.push(`${a.arquivo} (salvo em ${dBRy(a.salvo)}): ${a.txt.join(' ')}`);
+    if (av.some((a) => a.txt.some((t) => /duas vezes/i.test(t)))) ps.push('O que fazer: abrir os arquivos repetidos e conferir a loja no cabeçalho. Se uma loja foi exportada duas vezes, exportar a que faltou; a cópia repetida não muda os números (o mesmo pedido conta uma vez).');
+    if (av.some((a) => a.txt.some((t) => /na pasta/i.test(t)))) ps.push('O que fazer: mover o arquivo para a pasta do número do relatório. Enquanto isso, o painel já lê o arquivo pelo título.');
+    dlg.querySelector('.txt').replaceChildren(...ps.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
   function renderRelatorios() {
     const inv = dash.data('erp_arquivos'); if (inv.status !== 'ok') return;
     const hoje = iso(new Date(Date.now() - new Date().getTimezoneOffset() * 6e4));
     const E = rlEsperada(hoje);
     const mesAnt = (() => { const d = new Date(hoje + 'T12:00:00Z'); d.setUTCDate(0); return iso(d).slice(0, 7); })();
     // último dia com dados e último arquivo salvo por relatório e loja; avisos dos arquivos salvos nos últimos 7 dias
-    const ult = new Map(), avisos = [];
+    const ult = new Map(), avisos = [], avCel = new Map();
     for (const r of inv.data) {
       let ate = r.dados_ate || (r.periodo_fim ? (r.ate_dia ? `${r.periodo_fim}-${String(r.ate_dia).padStart(2, '0')}` : r.periodo_fim) : '');
       // relatório semanal sem data por linha: vale o dia anterior ao salvamento, sem passar do período do nome
@@ -4893,6 +4908,14 @@
       for (const lj of String(r.loja || '').split(',').map((s) => s.trim()).filter(Boolean)) {
         const k = r.relatorio + '|' + lj, o = ult.get(k) || { ate: '', salvo: '' };
         if (ate > o.ate) o.ate = ate; if (r.salvo_em > o.salvo) o.salvo = r.salvo_em; ult.set(k, o);
+      }
+      // avisos dos arquivos salvos nos últimos 7 dias: vão para a célula da loja (ícone ⚠) e para as pendências
+      const RE_AV = /cabeçalho|duas vezes|reconhecid|vazio|na pasta|Erro ao ler/i;
+      if (r.salvo_em >= addD(hoje, -7) && RE_AV.test(r.aviso || '')) {
+        const txt = r.aviso.split(' | ').filter((a) => RE_AV.test(a));
+        for (const lj of (String(r.loja || '').split(',').map((s) => s.trim()).filter(Boolean).length ? String(r.loja).split(',').map((s) => s.trim()) : ['?'])) {
+          const k = r.relatorio + '|' + (lj === 'Todas' ? 'Todas' : lj), a = avCel.get(k) || []; a.push({ arquivo: r.arquivo.split('/').pop(), salvo: r.salvo_em, txt }); avCel.set(k, a);
+        }
       }
       if (r.salvo_em >= addD(hoje, -7) && /cabeçalho|exportada duas vezes|não reconhecid|vazio|na pasta|Erro ao ler/i.test(r.aviso || ''))
         avisos.push(`${r.relatorio} · ${r.loja || 'loja ?'} · ${r.arquivo.split('/').pop()}: ${r.aviso.split(' | ').filter((a) => /cabeçalho|duas vezes|reconhecid|vazio|na pasta|Erro ao ler/i.test(a)).join(' ')}`);
@@ -4956,6 +4979,14 @@
         td.className = { ok: 'ok', mid: 'mid', bad: 'bad', na: '' }[x.st];
         td.textContent = marca[x.st] + x.txt + (R.todas ? ' · um arquivo para todas as lojas' : '');
         if (x.o && x.o.salvo) td.title = `Arquivo salvo em ${dBRy(x.o.salvo)}`;
+        // ⚠ antes da data quando algum arquivo desta loja e deste relatório tem aviso; o toque abre o detalhe
+        const av = avCel.get(R.rel + '|' + (R.todas ? 'Todas' : x.lj));
+        if (av && av.length) {
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'rl-av'; b.textContent = '⚠';
+          b.title = 'Ver o aviso'; b.setAttribute('aria-label', `Aviso: ${R.rel} ${R.nome}, ${x.lj}`);
+          b.addEventListener('click', () => abrirAvisoRel(R, x, av));
+          td.prepend(b);
+        }
         tr.append(td);
       });
       return tr;
