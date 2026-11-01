@@ -48,6 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
+<script>window.BIN_BUILD = '20261031233400';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -5726,6 +5727,26 @@
     }
     // Com o link fixo, confere a cada minuto (só a data do arquivo; baixa só quando muda); sem ele, a cada 5 minutos
     setInterval(conferirNovidade, (PUBLICO ? 1 : 5) * 60 * 1000);
+
+    // Versão nova da página (melhorias publicadas no painel): confere a cada 5 minutos e recarrega sozinha quando ninguém está
+    // digitando nem com uma janela aberta. Com a sessão lembrada, a recarga volta direto ao painel, sem pedir nada.
+    let versaoNovaPagina = false;
+    async function conferirPagina() {
+      if (!window.BIN_BUILD || !montado) return;
+      try {
+        if (!versaoNovaPagina) {
+          const t = await (await fetch(location.pathname + '?b=' + Date.now(), { cache: 'no-store' })).text();
+          const m = t.match(/BIN_BUILD = '(\d+)'/);
+          versaoNovaPagina = !!(m && m[1] !== window.BIN_BUILD);
+        }
+        if (!versaoNovaPagina) return;
+        const ocupado = document.hidden || document.querySelector('dialog[open]') || (document.activeElement && /^(INPUT|TEXTAREA|SELECT|IFRAME)$/.test(document.activeElement.tagName));
+        if (!lembrarSessao) { avisoNovo('Há uma versão nova do painel: recarregue a página para usar.'); return; }
+        if (!ocupado) location.reload();
+      } catch (e) { /* sem internet: tenta na próxima */ }
+    }
+    setInterval(conferirPagina, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(conferirPagina, 1500); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirNovidade(); });
 
     window.BIN_WEB = {
