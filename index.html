@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261031233400';</script>
+<script>window.BIN_BUILD = '20261102214948';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -299,6 +299,20 @@
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
   .bd-info { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--bin-gold); background: transparent; color: var(--bin-gold); font: italic 700 .9rem/1 Georgia, serif; cursor: pointer; }
   .rl-av { border: 0; background: transparent; color: #E0A83A; font-size: 1rem; line-height: 1; padding: 0 .3rem 0 0; cursor: pointer; vertical-align: -1px; }
+  .fc-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem 1rem; }
+  .fc-resumo { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 .8rem; }
+  .fc-chip { padding: .45rem .8rem; border-radius: 999px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); }
+  .fc-chip.ok { border-color: var(--color-ok); } .fc-chip.mid { border-color: var(--color-warn); } .fc-chip.bad { border-color: var(--color-bad); }
+  .fc-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--cds-gap-sm); }
+  .fc-loja { border: 1px solid var(--color-border-line); border-left: 4px solid var(--color-border-line); border-radius: var(--cds-radius); padding: .8rem .9rem; display: flex; flex-direction: column; gap: .25rem; }
+  .fc-loja.ok { border-left-color: var(--color-ok); } .fc-loja.mid { border-left-color: var(--color-warn); } .fc-loja.bad { border-left-color: var(--color-bad); }
+  .fc-nm { font-weight: 700; } .fc-st { font-size: var(--cds-font-size-caption); font-weight: 700; } .fc-v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fc-p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); } .fc-bt { margin-top: .4rem; align-self: flex-start; }
+  .fc-arte { display: grid; grid-template-columns: minmax(0, 18rem) 1fr; gap: 1rem; margin-top: var(--cds-gap-md); border-top: 1px solid var(--color-border-line); padding-top: var(--cds-gap-md); }
+  .fc-arte[hidden] { display: none; } .fc-arte img { width: 100%; border-radius: var(--cds-radius); }
+  .fc-arte pre { white-space: pre-wrap; font: var(--cds-font-size-body) var(--bin-font); background: var(--color-bg, transparent); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: .7rem .8rem; }
+  .fc-bts { display: flex; flex-wrap: wrap; gap: .5rem; } .fc-bts a { text-decoration: none; }
+  @media (max-width: 40rem) { .fc-arte { grid-template-columns: 1fr; } }
   .rl-av:hover, .rl-av:focus-visible { color: #F2C36B; outline: 2px solid var(--bin-gold); outline-offset: 1px; border-radius: 4px; }
   .bd-info:hover, .bd-info:focus-visible { background: var(--bin-gold); color: #111; }
   td.ic, th.ic { width: 2.2rem; text-align: center; }
@@ -522,6 +536,7 @@
     <button class="bd-tab" role="tab" data-area="com" data-tab="central" id="aba-central" aria-selected="false"><svg><use href="#i-proj"/></svg><span class="longo">Central Comercial</span><span class="curto">Central</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
+    <button class="bd-tab" role="tab" data-area="fin" data-tab="usoloja" id="aba-usoloja" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Uso da loja</span><span class="curto">Uso</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="demonstracoes" id="aba-demonstracoes" aria-selected="false" hidden><svg><use href="#i-flag"/></svg><span class="longo">Demonstrações</span><span class="curto">DRE</span></button>
     <button class="bd-tab" role="tab" data-area="rel" data-tab="relatorios" id="aba-relatorios" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Acompanhamento</span><span class="curto">Envio</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="faturamento" id="aba-faturamento" aria-selected="false" hidden><svg><use href="#i-doc"/></svg><span class="longo">Faturado x cartão</span><span class="curto">Faturado</span></button>
@@ -2308,6 +2323,58 @@
     </div>
   </section>
 
+  <!-- ===================== USO DA LOJA ===================== -->
+  <section class="bd-page" data-page="usoloja" id="usoloja" hidden>
+    <div class="bd-ctl">
+      <label class="bd-f"><span>Ano</span><select id="ul-ano" aria-label="Ano"></select></label>
+      <label class="bd-f"><span>Loja</span><select id="ul-loja" aria-label="Loja"></select></label>
+    </div>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Uso da loja (cliente USO LOJA - CONSUMO) · <span id="ul-quem"></span></div>
+      <h2 class="bd-headline" id="ul-headline">—</h2>
+      <p class="bd-comp" id="ul-comp">—</p>
+    </div>
+    <div class="bd-layout">
+      <aside class="bd-rail" aria-label="Indicadores do uso da loja">
+        <div class="bd-goldline"></div>
+        <div class="bd-kpi"><span class="lbl">Retirado para uso</span><span class="ico"><svg><use href="#i-cart"/></svg></span><span class="val" data-ul="tot">—</span><span class="sub" data-ul="tot_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Sobre as vendas</span><span class="ico"><svg><use href="#i-pct"/></svg></span><span class="val" data-ul="pct">—</span><span class="sub" data-ul="pct_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Pedidos de uso</span><span class="ico"><svg><use href="#i-doc"/></svg></span><span class="val" data-ul="ped">—</span><span class="sub" data-ul="ped_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Para conferir</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-ul="alerta">—</span><span class="sub" data-ul="alerta_sub">movimentações fora do padrão</span></div>
+      </aside>
+      <div class="bd-main">
+        <div class="bd-card">
+          <h3><span id="ul-tit-lojas">Uso da loja por unidade</span> <span class="per">| valor dos pedidos de uso e peso sobre as vendas</span></h3>
+          <div class="bd-tablewrap">
+            <table id="ul-tab" class="bd-cards">
+              <thead><tr><th class="l">Loja</th><th>Retirado</th><th>A custo (03)</th><th>% das vendas</th><th>Pedidos</th><th>Pedido médio</th><th>Média por mês</th><th>Último mês</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bd-card">
+          <h3>Mês a mês <span class="per" id="ul-mm-per">| valor retirado por loja</span></h3>
+          <p class="bd-note">Em vermelho, meses bem acima do padrão da própria loja (mais que o dobro da mediana dos meses anteriores).</p>
+          <div class="bd-tablewrap"><table id="ul-mm" class="bd-dre"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="bd-card">
+          <h3><span id="ul-tit-alerta">Movimentações para conferir</span> <span class="per">| leitura crítica</span></h3>
+          <p class="bd-note">Sinais, não conclusões: cada item merece uma conferência com a loja (o que foi retirado, para quê e quem autorizou).</p>
+          <ul class="bd-notes" id="ul-alertas"></ul>
+        </div>
+        <details class="bd-card">
+          <summary>O que falta para ler por produto <span class="per">| e como ler</span></summary>
+          <ul class="bd-notes">
+            <li>Por produto ainda não dá: os relatórios de hoje trazem o pedido de uso da loja (01: valor; 03: custo), mas não os itens. Para abrir por produto, falta um relatório de itens dos pedidos filtrado pelo cliente USO LOJA (CONSUMO), por loja e mês: no Futura, "Vendas por produto" (ou "Pedidos analítico") com filtro de cliente, com código, descrição, quantidade e valor de cada item. Salvar numa pasta nova, 15_Uso_da_Loja, um arquivo por loja e mês.</li>
+            <li>Com os itens, o painel passa a mostrar o que mais sai para uso (limpeza, copa, embalagens da própria loja), compara com o que seria esperado por loja e aponta produtos de revenda saindo como consumo.</li>
+            <li>Valor retirado: total do pedido no relatório 01. A custo: custo das mercadorias no relatório 03, quando o 03 do mês existe. Os pedidos de uso da loja não contam como venda em nenhuma análise do painel.</li>
+            <li>Os nomes de usuários e clientes não são lidos: a análise fica por loja, data e número do pedido.</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <!-- ===================== EMPRESAS ===================== -->
   <section class="bd-page" data-page="empresas" id="empresas" hidden>
     <div class="bd-hero">
@@ -2345,6 +2412,29 @@
     <div class="bd-ctl">
       <label class="bd-f"><span>Comparar com</span><select id="mt-ref" aria-label="Meta de referência"></select></label>
     </div>
+    <div class="bd-card" id="fc-card">
+      <div class="fc-topo">
+        <h3><span id="fc-tit">Fechamento do mês</span> <span class="per" id="fc-per">| metas da loja e do gerente</span></h3>
+        <label class="bd-f"><span>Mês</span><select id="fc-mes" aria-label="Mês do fechamento"></select></label>
+      </div>
+      <p class="bd-note" id="fc-nota">—</p>
+      <div class="fc-resumo" id="fc-resumo"></div>
+      <div class="fc-grade" id="fc-grade"></div>
+      <div class="fc-arte" id="fc-arte" hidden>
+        <img id="fc-img" alt="Arte do resultado da loja">
+        <div class="fc-msg">
+          <h4 id="fc-arte-tit">Arte e mensagem</h4>
+          <pre id="fc-texto"></pre>
+          <div class="fc-bts">
+            <a class="bd-btn-atu" id="fc-baixar" download>Baixar imagem</a>
+            <button class="bd-btn-atu" id="fc-copiar" type="button">Copiar mensagem</button>
+            <a class="bd-btn-atu" id="fc-whats" href="#" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+          </div>
+          <p class="bd-note" id="fc-res"></p>
+        </div>
+      </div>
+    </div>
+
     <div class="bd-hero" data-story="historia_metas">
       <div class="bd-eyebrow">Headline executiva · metas de 2026</div>
       <h2 class="bd-headline" data-source="historia_metas" data-field="headline" data-row="0">—</h2>
@@ -4313,6 +4403,7 @@
     });
   };
   function renderMetas() {
+    renderFechamento();
     const h = dash.data('historia_metas');
     if (h.status === 'ok') fillStory($('#metas .bd-hero'), h.data[0]);
     const ref = P().mt_ref === 'loja' ? 'loja' : 'gerente';
@@ -4996,6 +5087,185 @@
     const ar = $('.bd-area[data-area="rel"]'); if (ar) { ar.classList.toggle('com-alerta', nBad.length > 0); if (nBad.length) ar.title = `${nBad.length} relatórios atrasados`; else ar.removeAttribute('title'); }
   }
 
+  /* ---------- Metas > Fechamento do mês: quem bateu a meta da loja e a do gerente, com arte e mensagem para cada loja ---------- */
+  const FC_ST = {
+    gerente: { txt: 'Meta do gerente batida', ico: '🏆', cls: 'ok' },
+    loja: { txt: 'Meta da loja batida', ico: '✅', cls: 'mid' },
+    abaixo: { txt: 'Abaixo da meta da loja', ico: '⚠', cls: 'bad' },
+  };
+  const fcSt = (r) => r.pct_gerente >= 1 ? 'gerente' : r.pct_loja >= 1 ? 'loja' : 'abaixo';
+  // uma casa decimal: 99,9% não pode aparecer como 100%
+  const fcPct = (v) => v == null ? '—' : (Math.floor(v * 1000) / 10).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  const fcProx = (m) => { const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 1)); return MESES_LONGOS[d.getUTCMonth()]; };
+  function fcTexto(r) {
+    const s = fcSt(r), mesL = MESES_LONGOS[Number(r.mes.slice(5, 7)) - 1], prox = fcProx(r.mes), parcial = r.dias_rest > 0;
+    const quem = `${r.loja} ${r.nome}`, falta = (alvo) => Math.max(0, alvo - r.realizado), porDia = (alvo) => falta(alvo) / Math.max(1, r.dias_mes);
+    const cab = `*BIN Embalagens · Resultado de ${mesL}${parcial ? ` (até ${dBR(r.data)})` : ''}*\n${quem}\n\n`;
+    if (s === 'gerente') return cab + `🏆 Meta do gerente batida!\nVendas de ${brl.format(r.realizado)}: ${fcPct(r.pct_gerente)} da meta do gerente e ${fcPct(r.pct_loja)} da meta da loja.\n\nParabéns a toda a equipe pelo resultado: foi trabalho de time. Vamos com a mesma garra para ${prox}!`;
+    if (s === 'loja') return cab + `✅ Meta da loja batida!\nVendas de ${brl.format(r.realizado)}: ${fcPct(r.pct_loja)} da meta da loja.\nPara a meta do gerente ${parcial ? 'faltam' : 'faltaram'} ${brl.format(falta(r.meta_gerente))}, cerca de ${brl.format(porDia(r.meta_gerente))} por dia de loja aberta.\n\nParabéns pelo resultado! Em ${prox}, esse passo a mais está ao alcance da equipe.`;
+    return cab + `Vendas de ${brl.format(r.realizado)}: ${fcPct(r.pct_loja)} da meta da loja.\n${parcial ? 'Faltam' : 'Faltaram'} ${brl.format(falta(r.meta_loja))} para a meta da loja, cerca de ${brl.format(porDia(r.meta_loja))} por dia de loja aberta.\n\nCada dia conta e cada cliente atendido faz diferença. Em ${prox}, vamos juntos buscar esse resultado: conte com a diretoria!`;
+  }
+  async function fcArte(r) {
+    const s = fcSt(r), mesL = MESES_LONGOS[Number(r.mes.slice(5, 7)) - 1], prox = fcProx(r.mes);
+    const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    x.fillStyle = '#A62A2E'; x.fillRect(0, 0, W, H);
+    const gr = x.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, '#7E1F22'); gr.addColorStop(0.5, '#F7E1E2'); gr.addColorStop(1, '#7E1F22');
+    x.fillStyle = gr; x.fillRect(0, 300, W, 8); x.fillRect(0, H - 120, W, 6);
+    const logo = document.querySelector('.bd-logo');
+    try { if (logo && logo.complete) { const lw = 360, lh = lw * logo.naturalHeight / logo.naturalWidth; x.drawImage(logo, (W - lw) / 2, 60, lw, lh); } } catch (e) {}
+    x.textAlign = 'center';
+    x.fillStyle = '#F7E1E2'; x.font = 'bold 40px Arial, Helvetica, sans-serif'; x.fillText(`RESULTADO DE ${mesL.toUpperCase()}${r.dias_rest > 0 ? ' (PARCIAL)' : ''}`, W / 2, 395);
+    x.fillStyle = '#ffffff'; x.font = 'bold 84px Arial, Helvetica, sans-serif'; x.fillText(`${r.loja} ${r.nome}`, W / 2, 500);
+    const selo = s === 'gerente' ? 'META DO GERENTE BATIDA!' : s === 'loja' ? 'META DA LOJA BATIDA!' : `RUMO À META EM ${prox.toUpperCase()}!`;
+    x.fillStyle = s === 'abaixo' ? '#ffffff' : '#FAF4B4'; x.font = 'bold 58px Arial, Helvetica, sans-serif'; x.fillText(selo, W / 2, 600);
+    const box = (y, rot, val, sub) => {
+      x.fillStyle = '#7E1F22'; x.beginPath(); if (x.roundRect) x.roundRect(90, y, W - 180, 200, 22); else x.rect(90, y, W - 180, 200); x.fill();
+      x.fillStyle = '#F3C9CB'; x.font = 'bold 34px Arial, Helvetica, sans-serif'; x.fillText(rot, W / 2, y + 56);
+      x.fillStyle = '#ffffff'; x.font = 'bold 92px Arial, Helvetica, sans-serif'; x.fillText(val, W / 2, y + 145);
+      x.fillStyle = '#F3C9CB'; x.font = '28px Arial, Helvetica, sans-serif'; x.fillText(sub, W / 2, y + 186);
+    };
+    box(660, 'META DA LOJA', fcPct(r.pct_loja), r.pct_loja >= 1 ? 'meta batida' : `faltaram ${brl.format(Math.max(0, r.meta_loja - r.realizado))}`);
+    box(890, 'META DO GERENTE', fcPct(r.pct_gerente), r.pct_gerente >= 1 ? 'meta batida' : `faltaram ${brl.format(Math.max(0, r.meta_gerente - r.realizado))}`);
+    x.fillStyle = '#ffffff'; x.font = '36px Arial, Helvetica, sans-serif';
+    x.fillText(s === 'abaixo' ? 'Cada dia conta. Vamos juntos!' : 'Parabéns, equipe!', W / 2, 1165);
+    x.fillStyle = '#F7E1E2'; x.font = 'italic 32px Arial, Helvetica, sans-serif'; x.fillText('Para todos os tipos de negócios', W / 2, H - 50);
+    return c;
+  }
+  async function fcAbrir(r) {
+    const c = await fcArte(r), texto = fcTexto(r), url = c.toDataURL('image/png');
+    $('#fc-arte-tit').textContent = `Arte e mensagem · ${r.loja} ${r.nome}`;
+    $('#fc-img').src = url;
+    const a = $('#fc-baixar'); a.href = url; a.download = `resultado-${r.mes}-${r.loja.replace('/', '-')}.png`;
+    $('#fc-texto').textContent = texto;
+    $('#fc-whats').href = 'https://wa.me/?text=' + encodeURIComponent(texto);
+    $('#fc-res').textContent = '';
+    $('#fc-copiar').onclick = async () => {
+      try { await navigator.clipboard.writeText(texto); $('#fc-res').textContent = 'Mensagem copiada.'; }
+      catch (e) { const rg = document.createRange(); rg.selectNodeContents($('#fc-texto')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); $('#fc-res').textContent = 'Texto selecionado: use Copiar do seu aparelho.'; }
+    };
+    const box = $('#fc-arte'); box.hidden = false; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function renderFechamento() {
+    const a = dash.data('acomp'); if (a.status !== 'ok' || !a.data.length) return;
+    const meses = [...new Set(a.data.map((r) => r.mes))].sort();
+    const fechado = (m) => a.data.filter((r) => r.mes === m && r.loja !== 'Todas').every((r) => r.dias_rest === 0);
+    const padrao = [...meses].reverse().find(fechado) || meses[meses.length - 1];
+    const mes = meses.includes(P().fc_mes) ? P().fc_mes : padrao;
+    opcoes($('#fc-mes'), [...meses].reverse().map((m) => [m, mesNome(m) + (fechado(m) ? '' : ' (parcial)')]), mes);
+    const rows = a.data.filter((r) => r.mes === mes && r.loja !== 'Todas').sort((p, q) => (q.pct_gerente - p.pct_gerente));
+    const tot = a.data.find((r) => r.mes === mes && r.loja === 'Todas');
+    const g = { gerente: rows.filter((r) => fcSt(r) === 'gerente'), loja: rows.filter((r) => fcSt(r) === 'loja'), abaixo: rows.filter((r) => fcSt(r) === 'abaixo') };
+    const parcial = !fechado(mes);
+    $('#fc-tit').textContent = `${cap(MESES_LONGOS[Number(mes.slice(5, 7)) - 1])}${parcial ? ' (parcial)' : ''}: ${g.gerente.length} ${g.gerente.length === 1 ? 'loja bateu' : 'lojas bateram'} a meta do gerente, ${g.loja.length} só a da loja e ${g.abaixo.length} ${g.abaixo.length === 1 ? 'ficou abaixo' : 'ficaram abaixo'}`;
+    $('#fc-nota').textContent = (parcial ? `Mês ainda sem o relatório de vendas até o último dia útil: valores até ${dBR(rows.length ? rows.map((r) => r.data).sort().pop() : '')}. ` : '')
+      + (tot ? `Grupo: ${brl.format(tot.realizado)}, ${fcPct(tot.pct_loja)} da meta da loja e ${fcPct(tot.pct_gerente)} da do gerente. ` : '')
+      + 'Toque em "Arte e mensagem" para a imagem e o texto de cada loja (parabéns ou incentivo para o próximo mês). Vendas do relatório 01, sem o uso da loja.';
+    $('#fc-resumo').replaceChildren(...['gerente', 'loja', 'abaixo'].map((k) => {
+      const d = document.createElement('div'); d.className = 'fc-chip ' + FC_ST[k].cls;
+      d.append(Object.assign(document.createElement('b'), { textContent: `${FC_ST[k].ico} ${g[k].length}` }), document.createTextNode(' ' + FC_ST[k].txt + (g[k].length ? ': ' + g[k].map((r) => r.loja).join(', ') : '')));
+      return d;
+    }));
+    $('#fc-grade').replaceChildren(...rows.map((r) => {
+      const s = fcSt(r), d = document.createElement('div'); d.className = 'fc-loja ' + FC_ST[s].cls;
+      const t = document.createElement('div'); t.className = 'fc-nm'; t.textContent = `${r.loja} ${r.nome}`;
+      const b = document.createElement('div'); b.className = 'fc-st'; b.textContent = `${FC_ST[s].ico} ${FC_ST[s].txt}`;
+      const v = document.createElement('div'); v.className = 'fc-v'; v.textContent = brl.format(r.realizado);
+      const p = document.createElement('div'); p.className = 'fc-p'; p.textContent = `${fcPct(r.pct_loja)} da meta da loja · ${fcPct(r.pct_gerente)} do gerente`;
+      const f = document.createElement('div'); f.className = 'fc-p';
+      f.textContent = s === 'gerente' ? `${brl.format(r.realizado - r.meta_gerente)} acima da meta do gerente` : s === 'loja' ? `faltaram ${brl.format(r.meta_gerente - r.realizado)} para a do gerente` : `faltaram ${brl.format(r.meta_loja - r.realizado)} para a da loja`;
+      const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'bd-btn-atu fc-bt'; bt.textContent = 'Arte e mensagem'; bt.addEventListener('click', () => fcAbrir(r));
+      d.append(t, b, v, p, f, bt); return d;
+    }));
+  }
+
+  /* ---------- Financeiro > Uso da loja: pedidos para o cliente USO LOJA (CONSUMO), por unidade, com leitura crítica ---------- */
+  function renderUsoLoja() {
+    const dd = (id) => { const x = dash.data(id); return x.status === 'ok' ? x.data : []; };
+    const uso = dd('erp_uso_loja').map((r) => ({ ...r, v: r.valor !== '' ? Number(r.valor) : Number(r.venda03 || 0), c: r.custo !== '' ? Number(r.custo) : null, mes: r.data.slice(0, 7) }));
+    if (!uso.length) { $('#ul-headline').textContent = 'Ainda sem os pedidos de uso da loja: aparecem depois da próxima atualização dos dados.'; $('#ul-comp').textContent = ''; return; }
+    const anos = [...new Set(uso.map((r) => r.data.slice(0, 4)))].sort();
+    const ano = anos.includes(P().ul_ano) ? P().ul_ano : anos[anos.length - 1];
+    opcoes($('#ul-ano'), [...anos].reverse().map((a) => [a, a]), ano);
+    const lojasAll = [...new Set(uso.map((r) => r.loja))].sort((a, b) => ord(a) - ord(b));
+    const loja = lojasAll.includes(P().ul_loja) ? P().ul_loja : 'Todas';
+    opcoesG($('#ul-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', lojasAll.map((l) => [l, nomeLoja(l)])]], loja);
+    const doAno = uso.filter((r) => r.data.slice(0, 4) === ano && (loja === 'Todas' || r.loja === loja));
+    const vendas = new Map(); for (const r of dd('erp_diario')) if (r.data.slice(0, 4) === ano) vendas.set(r.loja, (vendas.get(r.loja) || 0) + Number(r.valor));
+    const soma = (rs, f) => rs.reduce((s, r) => s + (f(r) || 0), 0);
+    const meses = [...new Set(doAno.map((r) => r.mes))].sort();
+    // por loja
+    const lojas = lojasAll.filter((l) => loja === 'Todas' || l === loja);
+    const porLoja = lojas.map((l) => {
+      const rs = doAno.filter((r) => r.loja === l); if (!rs.length) return null;
+      const ms = [...new Set(rs.map((r) => r.mes))].sort(), ult = ms[ms.length - 1];
+      const comC = rs.filter((r) => r.c != null);
+      return { loja: l, v: soma(rs, (r) => r.v), c: comC.length ? soma(comC, (r) => r.c) : null, cParcial: comC.length < rs.length, n: rs.length, vend: vendas.get(l) || 0,
+        mediaMes: soma(rs, (r) => r.v) / Math.max(1, ms.length), ult, vUlt: soma(rs.filter((r) => r.mes === ult), (r) => r.v), maior: Math.max(...rs.map((r) => r.v)) };
+    }).filter(Boolean).sort((a, b) => (b.vend ? b.v / b.vend : 0) - (a.vend ? a.v / a.vend : 0));
+    const tot = { v: soma(porLoja, (r) => r.v), n: soma(porLoja, (r) => r.n), vend: soma(porLoja, (r) => r.vend) };
+    // Leitura crítica: meses fora do padrão, pedidos grandes, vários pedidos no mesmo dia, uso em domingo/feriado, custo acima do valor
+    const FER = ['01-01', '04-03', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25'];
+    const alertas = [];
+    for (const l of lojas) {
+      const hist = uso.filter((r) => r.loja === l);
+      const mm = new Map(); for (const r of hist) mm.set(r.mes, (mm.get(r.mes) || 0) + r.v);
+      const ordM = [...mm.keys()].sort();
+      for (const m of ordM.filter((m) => m.startsWith(ano))) {
+        const ant = ordM.filter((x) => x < m).slice(-12).map((x) => mm.get(x)).sort((a, b) => a - b);
+        if (ant.length < 4) continue;
+        const med = ant[Math.floor(ant.length / 2)];
+        if (med > 0 && mm.get(m) > 2 * med && mm.get(m) - med > 300) alertas.push({ peso: mm.get(m) - med, loja: l, txt: `${nomeLoja(l)} · ${mesNome(m)}: ${brl.format(mm.get(m))} retirados, ${(mm.get(m) / med).toFixed(1).replace('.', ',')}× a mediana dos meses anteriores (${brl.format(med)}).`, mes: m });
+      }
+      const vs = hist.map((r) => r.v).sort((a, b) => a - b), p95 = vs[Math.floor(vs.length * 0.95)] || 0;
+      for (const r of doAno.filter((r) => r.loja === l)) {
+        if (r.v >= Math.max(500, p95 * 1.5)) alertas.push({ peso: r.v, loja: l, txt: `${nomeLoja(l)} · pedido ${r.pedido} em ${dBRy(r.data)}: ${brl.format(r.v)}, bem acima do pedido de uso comum da loja (95% ficam até ${brl.format(p95)}).` });
+        const dw = new Date(r.data + 'T12:00:00Z').getUTCDay();
+        if (dw === 0 || FER.includes(r.data.slice(5))) alertas.push({ peso: r.v / 2 + 50, loja: l, txt: `${nomeLoja(l)} · pedido ${r.pedido} em ${dw === 0 ? 'domingo' : 'feriado'}, ${dBRy(r.data)}: ${brl.format(r.v)}.` });
+        if (r.c != null && r.v > 0 && r.c > r.v * 1.05) alertas.push({ peso: r.c - r.v, loja: l, txt: `${nomeLoja(l)} · pedido ${r.pedido} (${dBRy(r.data)}): custo de ${brl.format(r.c)} acima do valor lançado (${brl.format(r.v)}).` });
+      }
+      const porDia = new Map(); for (const r of doAno.filter((r) => r.loja === l)) porDia.set(r.data, (porDia.get(r.data) || []).concat(r));
+      for (const [d, rs] of porDia) if (rs.length >= 3) alertas.push({ peso: soma(rs, (r) => r.v), loja: l, txt: `${nomeLoja(l)} · ${rs.length} pedidos de uso no mesmo dia (${dBRy(d)}), somando ${brl.format(soma(rs, (r) => r.v))}.` });
+    }
+    alertas.sort((a, b) => b.peso - a.peso);
+    // Textos e indicadores
+    $('#ul-quem').textContent = `${ano} · ${nomeLoja(loja)}`;
+    const top = porLoja[0];
+    $('#ul-headline').textContent = `${brl.format(tot.v)} retirados para uso das lojas em ${ano}: ${pct(tot.vend ? tot.v / tot.vend : null)} das vendas, em ${tot.n} pedidos.`;
+    $('#ul-comp').textContent = (top && porLoja.length > 1 ? `Maior peso: ${nomeLoja(top.loja)}, com ${pct(top.vend ? top.v / top.vend : null)} das vendas da loja. ` : '')
+      + (alertas.length ? `${alertas.length} movimentações fora do padrão para conferir.` : 'Nenhuma movimentação fora do padrão no período.');
+    const kp = (k, v) => { const el = $(`#usoloja [data-ul="${k}"]`); if (el) el.textContent = v; };
+    const comC = porLoja.filter((r) => r.c != null);
+    kp('tot', money(tot.v)); kp('tot_sub', comC.length ? `${money(soma(comC, (r) => r.c))} a custo, onde há relatório 03` : 'valor dos pedidos (relatório 01)');
+    kp('pct', pct(tot.vend ? tot.v / tot.vend : null)); kp('pct_sub', `sobre ${money(tot.vend)} vendidos`);
+    kp('ped', String(tot.n)); kp('ped_sub', `pedido médio de ${brl.format(tot.n ? tot.v / tot.n : 0)}`);
+    kp('alerta', String(alertas.length)); $('#usoloja [data-ul="alerta"]').className = 'val ' + (alertas.length ? 'down' : 'up');
+    $('#ul-tit-lojas').textContent = top ? `${nomeLoja(top.loja)} tem o maior peso de uso sobre as vendas` : 'Uso da loja por unidade';
+    fillTable($('#ul-tab'), porLoja, [
+      { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
+      { fmt: (r) => brl.format(r.v) },
+      { fmt: (r) => r.c == null ? '—' : brl.format(r.c) + (r.cParcial ? '*' : '') },
+      { fmt: (r) => pct(r.vend ? r.v / r.vend : null) },
+      { fmt: (r) => String(r.n) },
+      { fmt: (r) => brl.format(r.v / r.n) },
+      { fmt: (r) => brl.format(r.mediaMes) },
+      { cls: (r) => r.vUlt > 1.5 * r.mediaMes ? 'bad' : '', fmt: (r) => `${MESES[Number(r.ult.slice(5, 7)) - 1]}: ${brl.format(r.vUlt)}` },
+    ]);
+    // Mês a mês (lojas nas linhas)
+    const altos = new Set(alertas.filter((a) => a.mes).map((a) => a.loja + '|' + a.mes));
+    const t = $('#ul-mm'), trh = document.createElement('tr');
+    for (const h of ['', ...meses.map((m) => MESES[Number(m.slice(5, 7)) - 1]), 'Total']) { const th = document.createElement('th'); th.textContent = h; if (!h) th.className = 'l'; trh.append(th); }
+    t.tHead.replaceChildren(trh);
+    t.tBodies[0].replaceChildren(...porLoja.map((p) => {
+      const tr = document.createElement('tr'), td0 = document.createElement('td'); td0.className = 'l'; td0.textContent = nomeLoja(p.loja); tr.append(td0);
+      for (const m of meses) { const td = document.createElement('td'), v = soma(doAno.filter((r) => r.loja === p.loja && r.mes === m), (r) => r.v); td.textContent = v ? brl.format(v) : '—'; if (altos.has(p.loja + '|' + m)) td.className = 'bad'; tr.append(td); }
+      const tdT = document.createElement('td'); tdT.textContent = brl.format(p.v); tr.append(tdT); return tr;
+    }));
+    $('#ul-mm-per').textContent = `| ${ano}, valor retirado por loja`;
+    $('#ul-tit-alerta').textContent = alertas.length ? `${alertas.length} movimentações para conferir` : 'Nenhuma movimentação fora do padrão';
+    $('#ul-alertas').replaceChildren(...(alertas.length ? alertas.slice(0, 25) : [{ txt: 'Nenhum sinal: meses dentro do padrão de cada loja, sem pedidos grandes, sem uso em domingo ou feriado e sem vários pedidos no mesmo dia.' }]).map((a) => Object.assign(document.createElement('li'), { textContent: a.txt })),
+      ...(alertas.length > 25 ? [Object.assign(document.createElement('li'), { textContent: `e mais ${alertas.length - 25} itens menores.` })] : []));
+  }
+
   /* ---------- Central Comercial (Comercial > Central): a Central roda isolada num quadro e usa esta ponte no lugar do banco do Claude ---------- */
   // Bases: as mesmas do painel. Metas aprovadas, observações e parâmetros: arquivo trancado no Google Drive (central_bin.enc.json),
   // gravado só por quem é Editor da pasta BIN Painel (o diretor comercial). No computador, a Central abre em modo leitura.
@@ -5427,6 +5697,7 @@
     if (aba === 'central') renderCentral();
     if (aba === 'demonstracoes') renderDemonstracoes();
     if (aba === 'faturamento') renderFaturamento();
+    if (aba === "usoloja") renderUsoLoja();
     renderRelatorios();   // sempre: mantém o alerta da área Relatórios
     if (aba === 'metas') renderMetas();
   }
@@ -5435,6 +5706,9 @@
   ao('#sel-mes', (v) => ({ mes: v, mes_ate: '' }));
   ao('#sel-ate', (v) => ({ mes_ate: v }));
   ao('#ft-mes', (v) => ({ ft_mes: v }));
+  ao('#fc-mes', (v) => ({ fc_mes: v }));
+  ao("#ul-ano", (v) => ({ ul_ano: v }));
+  ao("#ul-loja", (v) => ({ ul_loja: v }));
   ao('#ft-loja', (v) => ({ ft_loja: v }));
   ao('#sel-loja', (v) => ({ loja: v }));
   ao('#ano-ano', (v) => ({ ano_ano: v, ano_ate: '' }));
