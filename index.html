@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261102214948';</script>
+<script>window.BIN_BUILD = '20261102223130';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -308,6 +308,8 @@
   .fc-loja.ok { border-left-color: var(--color-ok); } .fc-loja.mid { border-left-color: var(--color-warn); } .fc-loja.bad { border-left-color: var(--color-bad); }
   .fc-nm { font-weight: 700; } .fc-st { font-size: var(--cds-font-size-caption); font-weight: 700; } .fc-v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
   .fc-p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); } .fc-bt { margin-top: .4rem; align-self: flex-start; }
+  .fc-ano { display: flex; flex-wrap: wrap; gap: 3px; margin-top: .3rem; } .fc-bol { width: 1.15rem; height: 1.15rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: 700 .62rem/1 Arial, sans-serif; color: #fff; background: var(--color-bad); cursor: default; }
+  .fc-bol.ok { background: var(--color-ok); } .fc-bol.mid { background: var(--color-warn); color: #191919; } .fc-seq.ruim { color: var(--color-bad); font-weight: 700; }
   .fc-arte { display: grid; grid-template-columns: minmax(0, 18rem) 1fr; gap: 1rem; margin-top: var(--cds-gap-md); border-top: 1px solid var(--color-border-line); padding-top: var(--cds-gap-md); }
   .fc-arte[hidden] { display: none; } .fc-arte img { width: 100%; border-radius: var(--cds-radius); }
   .fc-arte pre { white-space: pre-wrap; font: var(--cds-font-size-body) var(--bin-font); background: var(--color-bg, transparent); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: .7rem .8rem; }
@@ -5160,11 +5162,19 @@
     $('#fc-nota').textContent = (parcial ? `Mês ainda sem o relatório de vendas até o último dia útil: valores até ${dBR(rows.length ? rows.map((r) => r.data).sort().pop() : '')}. ` : '')
       + (tot ? `Grupo: ${brl.format(tot.realizado)}, ${fcPct(tot.pct_loja)} da meta da loja e ${fcPct(tot.pct_gerente)} da do gerente. ` : '')
       + 'Toque em "Arte e mensagem" para a imagem e o texto de cada loja (parabéns ou incentivo para o próximo mês). Vendas do relatório 01, sem o uso da loja.';
+    // Histórico do ano de cada loja até o mês escolhido: meses seguidos sem bater e quantos meses bateu cada meta
+    const hist = (loja) => a.data.filter((x) => x.loja === loja && x.mes.slice(0, 4) === mes.slice(0, 4) && x.mes <= mes && (x.mes === mes || fechado(x.mes))).sort((p, q) => p.mes.localeCompare(q.mes));
+    const seguidos = (hs, falhou) => { let n = 0; for (let i = hs.length - 1; i >= 0 && falhou(hs[i]); i--) n++; return n; };
+    const H = new Map(rows.map((r) => { const hs = hist(r.loja);
+      return [r.loja, { hs, semLoja: seguidos(hs, (x) => x.pct_loja < 1), semGer: seguidos(hs, (x) => x.pct_gerente < 1), lojaOk: hs.filter((x) => x.pct_loja >= 1).length, gerOk: hs.filter((x) => x.pct_gerente >= 1).length }]; }));
+    const repetem = rows.filter((r) => H.get(r.loja).semLoja >= 2);
     $('#fc-resumo').replaceChildren(...['gerente', 'loja', 'abaixo'].map((k) => {
       const d = document.createElement('div'); d.className = 'fc-chip ' + FC_ST[k].cls;
       d.append(Object.assign(document.createElement('b'), { textContent: `${FC_ST[k].ico} ${g[k].length}` }), document.createTextNode(' ' + FC_ST[k].txt + (g[k].length ? ': ' + g[k].map((r) => r.loja).join(', ') : '')));
       return d;
-    }));
+    }), ...(repetem.length ? [Object.assign(document.createElement('div'), { className: 'fc-chip bad', textContent: `🔁 2 meses ou mais seguidos sem a meta da loja: ${repetem.map((r) => `${r.loja} (${H.get(r.loja).semLoja})`).join(', ')}` })] : []),
+      ...(() => { const rg = rows.filter((r) => H.get(r.loja).semGer >= 2).sort((p, q) => H.get(q.loja).semGer - H.get(p.loja).semGer);
+        return rg.length ? [Object.assign(document.createElement('div'), { className: 'fc-chip mid', textContent: `🔁 2 meses ou mais seguidos sem a meta do gerente: ${rg.map((r) => `${r.loja} (${H.get(r.loja).semGer})`).join(', ')}` })] : []; })());
     $('#fc-grade').replaceChildren(...rows.map((r) => {
       const s = fcSt(r), d = document.createElement('div'); d.className = 'fc-loja ' + FC_ST[s].cls;
       const t = document.createElement('div'); t.className = 'fc-nm'; t.textContent = `${r.loja} ${r.nome}`;
@@ -5174,7 +5184,14 @@
       const f = document.createElement('div'); f.className = 'fc-p';
       f.textContent = s === 'gerente' ? `${brl.format(r.realizado - r.meta_gerente)} acima da meta do gerente` : s === 'loja' ? `faltaram ${brl.format(r.meta_gerente - r.realizado)} para a do gerente` : `faltaram ${brl.format(r.meta_loja - r.realizado)} para a da loja`;
       const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'bd-btn-atu fc-bt'; bt.textContent = 'Arte e mensagem'; bt.addEventListener('click', () => fcAbrir(r));
-      d.append(t, b, v, p, f, bt); return d;
+      // Ano em bolinhas (verde: gerente; amarela: só a loja; vermelha: nenhuma), meses seguidos sem bater e a contagem do ano
+      const h = H.get(r.loja), bol = document.createElement('div'); bol.className = 'fc-ano';
+      for (const x of h.hs) { const sp = document.createElement('span'); const k = fcSt(x); sp.className = 'fc-bol ' + FC_ST[k].cls; sp.textContent = MESES[Number(x.mes.slice(5, 7)) - 1][0].toUpperCase(); sp.title = `${mesNome(x.mes)}: ${FC_ST[k].txt} (${fcPct(x.pct_loja)} da loja · ${fcPct(x.pct_gerente)} do gerente)`; bol.append(sp); }
+      const sq = document.createElement('div'); sq.className = 'fc-p fc-seq';
+      sq.textContent = h.semLoja >= 2 ? `🔁 ${h.semLoja} meses seguidos sem a meta da loja` : h.semGer >= 2 ? `${h.semGer} meses seguidos sem a meta do gerente` : h.semLoja === 0 && h.hs.length > 1 && h.hs[h.hs.length - 2].pct_loja >= 1 ? 'Meta da loja batida também no mês anterior' : '';
+      if (h.semLoja >= 2) sq.classList.add('ruim');
+      const an = document.createElement('div'); an.className = 'fc-p'; an.textContent = `No ano: loja ${h.lojaOk} de ${h.hs.length} meses · gerente ${h.gerOk} de ${h.hs.length}`;
+      d.append(t, b, v, p, f, bol, ...(sq.textContent ? [sq] : []), an, bt); return d;
     }));
   }
 
