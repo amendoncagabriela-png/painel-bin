@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261102223130';</script>
+<script>window.BIN_BUILD = '20261104112626';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -237,6 +237,24 @@
   .bd { --status-h: 2.5rem; }
   .bd-status { position: sticky; top: 0; z-index: 22; min-height: var(--status-h); display: flex; align-items: center; justify-content: space-between; gap: var(--cds-gap-sm); padding: .3rem var(--cds-pad-md); margin-bottom: calc(-1 * var(--cds-gap-lg) + 4px); background: var(--bin-black); color: #ECE9E4; font-size: var(--cds-font-size-caption); border-radius: var(--cds-radius); box-shadow: 0 4px 10px rgba(0,0,0,.18); }
   .bd-status b { color: #fff; font-weight: 700; }
+  /* Barra do topo (como a do sistema de RH): marca, dados da empresa, pasta, situação da sincronização, sincronizar, WhatsApp e conta */
+  .sb-esq, .sb-dir { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+  .sb-dir { margin-left: auto; }
+  .sb-marca { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .75rem; border-radius: 999px; background: rgba(250,244,180,.08); color: #FAF4B4; font-weight: 700; white-space: nowrap; }
+  .sb-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--rail-ok, #4AC26B); flex: none; }
+  .bd-status.st-velho .sb-marca .sb-dot, .sb-sync.erro .sb-dot { background: var(--rail-bad, #F0645C); }
+  .sb-sync.conferindo .sb-dot { background: var(--rail-warn, #E0AE3C); animation: sbPisca 1s infinite alternate; }
+  @keyframes sbPisca { to { opacity: .35; } }
+  .sb-pill, .sb-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .32rem .8rem; border-radius: 999px; border: 1px solid rgba(250,244,180,.45); background: transparent; color: #ECE9E4; font: 700 var(--cds-font-size-caption) var(--bin-font); text-decoration: none; white-space: nowrap; cursor: pointer; }
+  .sb-btn { border-radius: 8px; border-color: var(--bin-gold); color: #FAF4B4; }
+  .sb-pill:hover, .sb-btn:hover { background: rgba(250,244,180,.12); }
+  .sb-sync { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .75rem; border-radius: 999px; background: rgba(255,255,255,.07); color: #CFC8BD; white-space: nowrap; }
+  .sb-avatar { width: 2.1rem; height: 2.1rem; border-radius: 50%; border: 0; flex: none; background: linear-gradient(135deg, #AF6839, #FAF4B4); color: #191919; font: 700 .95rem var(--bin-font); cursor: pointer; }
+  .sb-menu { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right)); top: calc(var(--status-h) + .4rem); min-width: 14rem; background: var(--color-panel); color: var(--color-fg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); box-shadow: 0 10px 28px rgba(0,0,0,.25); padding: .8rem .9rem; font-size: var(--cds-font-size-caption); }
+  .sb-menu p { margin: 0 0 .6rem; overflow-wrap: anywhere; }
+  .sb-menu button { width: 100%; border: 1px solid var(--color-border-line); background: transparent; color: var(--color-fg); border-radius: 8px; padding: .5rem; font-weight: 700; cursor: pointer; }
+  @media (max-width: 56rem) { .sb-pill .sb-tx, .sb-btn .sb-tx { display: none; } .sb-pill, .sb-btn { padding: .32rem .55rem; } }
+  @media (max-width: 30rem) { .sb-marca .sb-tx { display: none; } .sb-marca { padding: .3rem .45rem; } .sb-esq, .sb-dir { gap: .3rem; } .sb-avatar { width: 1.9rem; height: 1.9rem; } }
   .bd-status .st-lbl-c { display: none; }
   .bd-status .st-velho b { color: var(--rail-warn); }
   .bd-btn-atu { appearance: none; flex-shrink: 0; font: 700 .8rem var(--bin-font); padding: .35rem .8rem; border-radius: 999px; border: 1px solid var(--bin-gold); background: var(--bin-gold); color: #fff; cursor: pointer; }
@@ -508,9 +526,19 @@
 
 <div class="bd">
   <div class="bd-status" id="bd-status" role="status">
-    <span class="st-txt"><b><span class="st-lbl">Dados atualizados em</span><span class="st-lbl-c">Atualizado em</span> <span id="st-quando">—</span></b><span class="st-det"> · mês atual até <span id="st-leit">—</span> · ERP até <span id="st-erp">—</span></span></span>
-    <button class="bd-btn-atu" id="btn-atu" type="button" aria-expanded="false" aria-controls="atu-pop">Atualizar dados</button>
+    <div class="sb-esq">
+      <span class="sb-marca" id="sb-marca" title="Situação dos dados"><i class="sb-dot"></i><span class="sb-tx">BIN Embalagens</span></span>
+      <button class="sb-pill" id="sb-empresa" type="button" title="Dados das empresas: CNPJ, regime, endereço e abertura"><span class="sb-ic" aria-hidden="true">⚙</span><span class="sb-tx">Dados da empresa</span></button>
+      <a class="sb-pill" id="sb-pasta" href="https://drive.google.com/drive/folders/1zVyPV3MIZzI-alhvkpiW6byWp_Gzreyc" target="_blank" rel="noopener" title="Pasta dos relatórios do ERP no Google Drive (só para quem tem acesso)"><span class="sb-ic" aria-hidden="true">📁</span><span class="sb-tx">Pasta</span></a>
+    </div>
+    <div class="sb-dir">
+      <span class="sb-sync" id="sb-sync"><i class="sb-dot"></i><span id="sb-sync-txt">Sincronizado —</span></span>
+      <span class="st-txt" hidden><span id="st-quando">—</span><span id="st-leit">—</span><span id="st-erp">—</span></span>
+      <button class="sb-btn" id="btn-atu" type="button" aria-expanded="false" aria-controls="atu-pop" title="Buscar os dados mais novos agora"><span class="sb-ic" aria-hidden="true">🔄</span><span class="sb-tx">Sincronizar / Iniciar</span></button>
+      <button class="sb-avatar" id="sb-avatar" type="button" aria-haspopup="true" aria-expanded="false" title="Sua conta">B</button>
+    </div>
   </div>
+  <div class="sb-menu" id="sb-menu" hidden><p id="sb-conta">—</p><button type="button" id="sb-sair" hidden>Sair e trancar</button></div>
   <div class="bd-atu-pop" id="atu-pop" hidden></div>
   <header class="bd-top">
     <div class="bd-top-in">
@@ -5632,6 +5660,7 @@
     { const e = grupoErp(); const v = e ? e.g.filter((r) => r.rel === '01').map((r) => r.ate).filter(Boolean).sort().pop() : null; $('#st-erp').textContent = dBRy(v || metaErp('ultima_data')); }
   }
   const pop = $('#atu-pop'), btnAtu = $('#btn-atu');
+  const rotuloAtu = (t) => { const s = btnAtu.querySelector(".sb-tx"); if (s) s.textContent = t; else btnAtu.textContent = t; };
   function mostrarPop(partes) {
     pop.replaceChildren(...partes.map((p) => typeof p === 'string' ? Object.assign(document.createElement('p'), { textContent: p }) : p));
     pop.querySelectorAll('p').forEach((p) => { p.style.margin = '0 0 .4rem'; });
@@ -5647,7 +5676,7 @@
       s.log = Array.isArray(s.log) ? s.log : typeof s.log === 'string' ? [s.log] : [];
       if (s.rodando) { viuRodar = true;
         const pc = Math.max(1, Math.min(100, Number(s.pct) || 1));
-        btnAtu.disabled = true; btnAtu.textContent = `Atualizando ${pc}%`;
+        btnAtu.disabled = true; rotuloAtu(`Sincronizando ${pc}%`); if (window.binSincronizado) window.binSincronizado("conferindo");
         const min = s.inicio ? Math.max(0, Math.round((Date.now() - new Date(s.inicio.replace(' ', 'T'))) / 60000)) : 0;
         const barra = document.createElement('div'); barra.className = 'atu-barra'; barra.setAttribute('role', 'progressbar'); barra.setAttribute('aria-valuemin', '0'); barra.setAttribute('aria-valuemax', '100'); barra.setAttribute('aria-valuenow', String(pc));
         const fill = document.createElement('i'); fill.style.width = pc + '%'; barra.append(fill);
@@ -5655,13 +5684,13 @@
         mostrarPop([`Atualizando desde ${s.inicio ? s.inicio.slice(11, 16) : '—'}. Pode levar até 20 minutos quando há arquivos novos; o painel recarrega sozinho no fim.`, barra, lin]);
         espera = setTimeout(acompanhar, 3000); return;
       }
-      btnAtu.disabled = false; btnAtu.textContent = 'Atualizar dados';
+      btnAtu.disabled = false; rotuloAtu("Sincronizar / Iniciar");
       if (s.fim && viuRodar) { viuRodar = false;
         if (s.ok) { mostrarPop(['Dados atualizados. Recarregando o painel…']); setTimeout(() => location.reload(), 800); }
         else mostrarPop(['A atualização parou com erro. As últimas linhas do registro:', ...(s.log || []), botoes(botao('Fechar', fecharPop))]);
       }
       espera = null;
-    } catch (e) { btnAtu.disabled = false; btnAtu.textContent = 'Atualizar dados'; espera = null; mostrarPop(['A janela do "Abrir painel" foi fechada. Abra de novo para atualizar.', botoes(botao('Fechar', fecharPop))]); }
+    } catch (e) { btnAtu.disabled = false; rotuloAtu("Sincronizar / Iniciar"); espera = null; mostrarPop(['A janela do "Abrir painel" foi fechada. Abra de novo para atualizar.', botoes(botao('Fechar', fecharPop))]); }
   }
   btnAtu.addEventListener('click', async () => {
     if (!pop.hidden && !espera) { fecharPop(); return; }
@@ -5690,14 +5719,39 @@
     const conferir = async () => {
       try {
         const v = (await (await fetch('/api/versao', { cache: 'no-store' })).json()).dados;
+        if (window.binSincronizado) window.binSincronizado('ok', new Date());
         if (v0 == null) { v0 = v; return; }
         if (!v || v === v0) return;
         const ae = document.activeElement, ocupado = ae && /^(INPUT|TEXTAREA|SELECT|IFRAME)$/.test(ae.tagName);
         if (!ocupado || document.hidden) { location.reload(); return; }
         v0 = v; mostrarPop(['Chegaram dados novos das pastas.', botoes(botao('Recarregar agora', () => location.reload(), true), botao('Depois', fecharPop))]);
-      } catch (e) {}
+      } catch (e) { if (window.binSincronizado) window.binSincronizado('erro'); }
     };
     conferir(); setInterval(conferir, 60000);
+  }
+
+  /* ---------- Barra do topo: situação da sincronização, dados da empresa, WhatsApp e conta ---------- */
+  // "Sincronizado HH:MM" = última conferência com o Google Drive (web) ou com as pastas do computador (local)
+  const hhmm = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  window.binSincronizado = (estado, quando) => {
+    const s = $('#sb-sync'); if (!s) return;
+    s.classList.remove('conferindo', 'erro'); if (estado !== 'ok') s.classList.add(estado);
+    $('#sb-sync-txt').textContent = estado === 'conferindo' ? 'Sincronizando…' : estado === 'erro' ? 'Sem conexão' : 'Sincronizado ' + hhmm(quando || new Date());
+    s.title = `Dados de ${$('#st-quando').textContent} · mês atual até ${$('#st-leit').textContent} · relatórios do ERP até ${$('#st-erp').textContent}`
+      + (estado === 'erro' ? ' · a última conferência falhou; os números na tela continuam valendo' : '');
+  };
+  window.binSincronizado('ok', new Date());
+  $('#sb-empresa').addEventListener('click', () => showTab('empresas', true));
+  // Conta: inicial no círculo; o menu mostra a conta e o "Sair e trancar" (só na versão web)
+  {
+    const nome = window.BIN_WEB ? (window.BIN_WEB.nome || window.BIN_WEB.conta || '') : 'Computador da BIN';
+    $('#sb-avatar').textContent = (nome.trim()[0] || 'B').toUpperCase();
+    $('#sb-conta').textContent = window.BIN_WEB ? `Conectado como ${nome}${window.BIN_WEB.conta && window.BIN_WEB.conta !== nome ? ' (' + window.BIN_WEB.conta + ')' : ''}. Este aparelho fica conectado até "Sair e trancar".` : 'Painel aberto no computador da BIN, com os dados das pastas deste computador.';
+    $('#sb-sair').hidden = !window.BIN_WEB;
+    const menu = $('#sb-menu'), av = $('#sb-avatar');
+    av.addEventListener('click', (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; av.setAttribute('aria-expanded', String(!menu.hidden)); });
+    document.addEventListener('click', (ev) => { if (!menu.hidden && !menu.contains(ev.target)) { menu.hidden = true; av.setAttribute('aria-expanded', 'false'); } });
+    $('#sb-sair').addEventListener('click', () => window.BIN_WEB && window.BIN_WEB.sair());
   }
 
   function render() {
@@ -5989,7 +6043,7 @@
       if (conferindo || !montado || !senhaSessao || (document.hidden && !forcado)) return;
       const pelaChave = PUBLICO;
       if (!pelaChave && !token) { token = tokenGuardado(); if (!token) { mostrarRenovar(); return; } }
-      conferindo = true;
+      conferindo = true; let falhou = false; if (window.binSincronizado) window.binSincronizado("conferindo");
       try {
         let f;
         if (pelaChave) f = await (await lerPublico('fields=id,modifiedTime&supportsAllDrives=true')).json();
@@ -6009,12 +6063,12 @@
         versaoCarregada = f.modifiedTime; guardarDados(env, f.modifiedTime);
         window.dash.__trocar(dados);
         avisoNovo(`Dados atualizados agora (versão de ${dBR(dados.gerado_em || '')}).`);
-      } catch (e) {
+      } catch (e) { falhou = true;
         if (e.publico && (e.codigo === 403 || e.codigo === 404)) { if (forcado) avisoNovo('O link do arquivo do painel não está liberado (compartilhamento ou chave de API). Avise quem administra o painel.'); }
         else if (e.codigo === 401) mostrarRenovar('O acesso do Google expirou. Os dados continuam na tela.');
         else if (forcado) avisoNovo('Não foi possível ler o Google Drive agora. Confira a internet.');
       }
-      finally { conferindo = false; }
+      finally { conferindo = false; if (window.binSincronizado) window.binSincronizado(falhou ? "erro" : "ok", new Date()); }
     }
     // Com o link fixo, confere a cada minuto (só a data do arquivo; baixa só quando muda); sem ele, a cada 5 minutos
     setInterval(conferirNovidade, (PUBLICO ? 1 : 5) * 60 * 1000);
