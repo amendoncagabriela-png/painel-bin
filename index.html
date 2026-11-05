@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261104112626';</script>
+<script>window.BIN_BUILD = '20261105174456';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -317,6 +317,7 @@
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
   .bd-info { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--bin-gold); background: transparent; color: var(--bin-gold); font: italic 700 .9rem/1 Georgia, serif; cursor: pointer; }
   .rl-av { border: 0; background: transparent; color: #E0A83A; font-size: 1rem; line-height: 1; padding: 0 .3rem 0 0; cursor: pointer; vertical-align: -1px; }
+  .rl-destaque { border: 1px solid var(--bin-gold); box-shadow: 0 6px 18px rgba(175,104,57,.15); } .rl-destaque h3 { font-size: 1.15rem; }
   .fc-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem 1rem; }
   .fc-resumo { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 .8rem; }
   .fc-chip { padding: .45rem .8rem; border-radius: 999px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); }
@@ -2315,6 +2316,12 @@
 
   <!-- ===================== RELATÓRIOS (acompanhamento da rotina de envio) ===================== -->
   <section class="bd-page" data-page="relatorios" id="relatorios" hidden>
+    <div class="bd-card rl-destaque">
+      <h3>Relatórios por loja <span class="per">| até que dia os dados vão</span></h3>
+      <p class="bd-note">Verde: em dia. Amarelo: sobe hoje. Vermelho: atrasado ou sem arquivo. ⚠: algum arquivo da loja tem aviso (loja repetida, pasta trocada, nome diferente do cabeçalho); toque para ver o detalhe. A data é o último dia com dados lidos do relatório; ao tocar, mostra quando o arquivo foi salvo.</p>
+      <div class="bd-tablewrap"><table id="rl-tab" class="bd-cards"><thead></thead><tbody></tbody></table></div>
+      <dialog class="bd-dlg" id="rl-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
+    </div>
     <div class="bd-hero">
       <div class="bd-eyebrow">Acompanhamento dos relatórios · <span id="rl-quem"></span></div>
       <h2 class="bd-headline" id="rl-headline">—</h2>
@@ -2329,15 +2336,9 @@
         <div class="bd-kpi"><span class="lbl">Próxima subida</span><span class="ico"><svg><use href="#i-pace"/></svg></span><span class="val" data-rl="prox">—</span><span class="sub" data-rl="prox_sub">—</span></div>
       </aside>
       <div class="bd-main">
-        <div class="bd-card">
+        <div class="bd-card" hidden>
           <h3>Pendências <span class="per" id="rl-pend-per">| o que falta subir</span></h3>
           <ul class="bd-notes" id="rl-pend"></ul>
-        </div>
-        <div class="bd-card">
-          <h3>Relatórios por loja <span class="per">| até que dia os dados vão</span></h3>
-          <p class="bd-note">Verde: em dia. Amarelo: sobe hoje. Vermelho: atrasado ou sem arquivo. ⚠: algum arquivo da loja tem aviso (loja repetida, pasta trocada, nome diferente do cabeçalho); toque para ver o detalhe. A data é o último dia com dados lidos do relatório; ao tocar, mostra quando o arquivo foi salvo.</p>
-          <div class="bd-tablewrap"><table id="rl-tab" class="bd-cards"><thead></thead><tbody></tbody></table></div>
-          <dialog class="bd-dlg" id="rl-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
         </div>
         <details class="bd-card">
           <summary>Rotina e como ler <span class="per">| calendário de envio</span></summary>
