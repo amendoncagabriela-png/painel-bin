@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109120559';</script>
+<script>window.BIN_BUILD = '20261109121414';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1319,7 +1319,7 @@
       <div class="tabwrap">
         <table class="cartoes" id="tab-metas">
           <thead><tr>
-            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Meta do mês anterior</th><th>Faturado no mês anterior</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
+            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Faturado no mês anterior · meta loja · gerente</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
 
           </tr></thead>
           <tbody></tbody>
@@ -1748,36 +1748,39 @@
       st.textContent = S.mes === corrente ? 'Aprovada · vigente' : 'Aprovada';
       sts.textContent = `por ${nome(r.aprovado_por)} em ${dBR(String(r.aprovado_em || '').slice(0, 10))}` + (r.historico && r.historico.length ? ` · ${r.historico.length} correção(ões)` : '');
     } else { st.textContent = 'Aguardando aprovação'; sts.textContent = 'sugestão automática pronta'; }
-    let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0, tReal = 0;
-    // Títulos com os meses de verdade: meta do mês anterior ao escolhido e o atingimento dos 3 últimos meses fechados
-    { const ths = document.querySelectorAll('#tab-metas thead th'); const u = sug.ult3;
-      ths[4].textContent = `Meta de ${mesCurto(sug.atual)}`;
-      ths[4].title = `Meta da loja de ${mesNome(sug.atual)}, referência para a meta nova.`;
-      ths[5].textContent = `Faturado em ${mesCurto(sug.atual)}`;
-      ths[5].title = `Vendas de ${mesNome(sug.atual)} pelo ERP (relatório 01, sem o uso da loja) e o percentual da meta da loja do mês.`; }
+    let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0, tAtG = 0, tReal = 0;
+    // Título com o mês de verdade: o faturamento do mês anterior ao escolhido e quanto ele foi das metas da loja e do gerente
+    { const ths = document.querySelectorAll('#tab-metas thead th');
+      ths[4].textContent = `Faturado em ${mesCurto(sug.atual)} · meta loja · gerente`;
+      ths[4].title = `Vendas de ${mesNome(sug.atual)} pelo ERP (relatório 01, sem o uso da loja) e quanto elas foram da meta da loja e da meta do gerente do mês.`; }
     const tb = $('#tab-metas tbody'); tb.replaceChildren();
     const lbl = [...document.querySelectorAll('#tab-metas thead th')].map((th) => th.textContent);
     for (const x of sug.rows) {
       const vl = valorEdit(x.loja, 'loja', x.sugLoja), vg = valorEdit(x.loja, 'gerente', x.sugGer);
-      tProj += x.proj; tL += vl; tG += vg; tBase += x.base; tAt += x.metaAtual ? x.metaAtual.loja : 0; tReal += x.realAnt || 0;
+      tProj += x.proj; tL += vl; tG += vg; tBase += x.base; tAt += x.metaAtual ? x.metaAtual.loja : 0; tAtG += x.metaAtual ? x.metaAtual.gerente : 0; tReal += x.realAnt || 0;
       const tr = document.createElement('tr');
       const td = (i, txt, cls) => { const c = document.createElement('td'); c.dataset.r = lbl[i]; if (cls) c.className = cls; if (txt != null) c.textContent = txt; tr.appendChild(c); return c; };
       td(0, `${x.loja} ${x.nome}`, 'l nm');
       td(1, x.base > 0 ? brl.format(x.base) : '—');
       { const c = td(2, null); const a = el("span", null, pct(x.g3, true)); tom(a, x.g3); const b = el("span", null, pct(x.gy, true)); tom(b, x.gy); c.append(a, document.createTextNode(" · "), b); }
       const cp = td(3, brl.format(x.proj)); cp.title = `Base: ${x.baseTxt}. Crescimento ponderado ${pct(x.g, true)}.`;
-      td(4, x.metaAtual ? brl.format(x.metaAtual.loja) : "—");
-      { const c = td(5, x.realAnt > 0 ? brl.format(x.realAnt) + " · " : "—"); if (x.realAnt > 0 && x.metaAtual) { const p = x.realAnt / x.metaAtual.loja; const a = el("span", null, pctTrunc(p)); a.className = p >= 1 ? "up" : "down"; c.append(a); }
-        c.title = `Vendas de ${mesNome(sug.atual)}${x.ateAnt && x.ateAnt.slice(8) < String(diasMes(sug.atual)).padStart(2, "0") ? " até " + x.ateAnt.slice(8, 10) + "/" + x.ateAnt.slice(5, 7) + " (mês ainda sem todos os dias)" : ""}${x.metaAtual ? "; o percentual é sobre a meta da loja do mês" : ""}.`; }
-      { const c = td(6, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
-      for (const [i, campo, val, sg] of [[7, "loja", vl, x.sugLoja], [8, "gerente", vg, x.sugGer]]) {
+      { const c = td(4, x.realAnt > 0 ? brl.format(x.realAnt) : "—");
+        if (x.realAnt > 0 && x.metaAtual) {
+          const pl = x.realAnt / x.metaAtual.loja, pg = x.realAnt / x.metaAtual.gerente;
+          const a = el("span", null, pctTrunc(pl)); a.className = pl >= 1 ? "up" : "down";
+          const b = el("span", null, pctTrunc(pg)); b.className = pg >= 1 ? "up" : "down";
+          c.append(document.createTextNode(" · "), a, document.createTextNode(" · "), b);
+        }
+        c.title = `Vendas de ${mesNome(sug.atual)}${x.ateAnt && x.ateAnt.slice(8) < String(diasMes(sug.atual)).padStart(2, "0") ? " até " + x.ateAnt.slice(8, 10) + "/" + x.ateAnt.slice(5, 7) + " (mês ainda sem todos os dias)" : ""}${x.metaAtual ? `: ${pctTrunc(x.realAnt / x.metaAtual.loja)} da meta da loja (${brl.format(x.metaAtual.loja)}) e ${pctTrunc(x.realAnt / x.metaAtual.gerente)} da meta do gerente (${brl.format(x.metaAtual.gerente)})` : ""}.`; }
+      { const c = td(5, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
+      for (const [i, campo, val, sg] of [[6, "loja", vl, x.sugLoja], [7, "gerente", vg, x.sugGer]]) {
         const c = td(i, null); const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'num'; inp.inputMode = 'numeric'; inp.id = `in-${campo}-${x.loja.replace('/', '-')}`;
         inp.value = fmtNum(val); inp.setAttribute('aria-label', `${lbl[i]} ${x.loja}`); inp.disabled = S.podeEscrever === false;
         if (val !== sg) inp.style.borderColor = 'var(--destaque)';
         inp.addEventListener('change', () => { const n = parseNum(inp.value); if (n == null || n <= 0) { inp.value = fmtNum(val); return; } S.edits[S.mes] = S.edits[S.mes] || {}; S.edits[S.mes][x.loja] = Object.assign({}, S.edits[S.mes][x.loja], { [campo]: n }); render(); });
         c.appendChild(inp);
       }
-      const ce = td(9, null, "acoes");
+      const ce = td(8, null, "acoes");
       const ap = r && r.status === 'aprovada' && r.lojas && r.lojas[x.loja];
       const b1 = document.createElement('button'); b1.className = 'btn peq'; b1.type = 'button'; b1.textContent = 'Arte e mensagem'; b1.disabled = !ap;
       b1.title = ap ? '' : 'Disponível depois da aprovação';
@@ -1786,7 +1789,7 @@
       tb.appendChild(tr);
     }
     const tot = document.createElement('tr'); tot.className = 'tot';
-    [["Grupo", "l nm"], [brl.format(tBase)], [""], [brl.format(tProj)], [brl.format(tAt)], [tReal > 0 ? brl.format(tReal) + (tAt > 0 ? " · " + pctTrunc(tReal / tAt) : "") : "—"], [""], [brl.format(tL)], [brl.format(tG)], [""]].forEach(([t, c], i) => { const e = document.createElement("td"); e.dataset.r = lbl[i]; if (c) e.className = c; e.textContent = t; tot.appendChild(e); });
+    [["Grupo", "l nm"], [brl.format(tBase)], [""], [brl.format(tProj)], [tReal > 0 ? brl.format(tReal) + (tAt > 0 ? " · " + pctTrunc(tReal / tAt) + " · " + pctTrunc(tReal / tAtG) : "") : "—"], [""], [brl.format(tL)], [brl.format(tG)], [""]].forEach(([t, c], i) => { const e = document.createElement("td"); e.dataset.r = lbl[i]; if (c) e.className = c; e.textContent = t; tot.appendChild(e); });
     tb.appendChild(tot);
     $('#k-proj').textContent = brl.format(tProj);
     $('#k-proj-s').textContent = tBase > 0 ? `${pct(tProj / tBase - 1, true)} sobre ${mesNome(addMes(S.mes, -12))}` : '—';
