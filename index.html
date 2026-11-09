@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109180053';</script>
+<script>window.BIN_BUILD = '20261109180951';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1250,6 +1250,14 @@
   .explica-loja p { margin: 4px 0 0; }
   /* Crescimento 3 m · ano: oculto na tabela (continua no texto da análise de cada loja e na dica da projeção) */
   #tab-metas th:nth-child(3), #tab-metas td:nth-child(3) { display: none; }
+  /* Análise da loja em pop-up sobre a tela (o quadro "Texto da sugestão" fica sempre oculto) */
+  .pop-fundo { position: absolute; left: 0; top: 0; width: 100%; background: rgba(0,0,0,.45); z-index: 50; }
+  .pop-an { position: absolute; left: 50%; transform: translateX(-50%); width: min(600px, calc(100% - 24px)); background: var(--painel); color: var(--fg); border: 1px solid var(--linha); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.3); z-index: 51; padding: 14px 16px 16px; }
+  .pop-an .pop-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .pop-an .pop-cab .eyebrow { margin: 0; }
+  .pop-an .fechar { border: 1px solid var(--linha); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  .pop-an .explica-loja { border-top: 1px solid var(--linha); }
+  .pop-an details.mais { margin-top: 10px; }
   .explica-loja p.erp { color: var(--fg2); font-size: .85rem; }
   .evento { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--linha); }
   .evento:last-child { border-bottom: 0; }
@@ -1327,10 +1335,10 @@
           <tbody></tbody>
         </table>
       </div>
-      <p class="nota legenda">Toque no selo de cada loja (na coluna Sugestão) para abrir o texto da sugestão com a análise dela.<br><span class="selo acima">Aumento</span> A sugestão fica acima da meta do mês passado, puxada pelo crescimento recente da loja.<br><span class="selo igual">Igual</span> A projeção bate com a meta do mês passado.<br><span class="selo mantida">= mês passado</span> A projeção ficou abaixo da meta do mês passado, mas este mês não tem queda natural no histórico de faturamento. Como não reduzimos metas sem motivo, a sugestão repete a meta do mês passado, que a loja tem potencial de atingir.<br><span class="selo queda">Queda natural</span> Nos anos anteriores este mês vendeu menos que o mês passado na maioria das vezes, por isso a sugestão pode ficar um pouco abaixo.</p>
+      <p class="nota legenda">Toque no selo de cada loja (na coluna Sugestão) para ver a análise dela numa janela sobre a tela.<br><span class="selo acima">Aumento</span> A sugestão fica acima da meta do mês passado, puxada pelo crescimento recente da loja.<br><span class="selo igual">Igual</span> A projeção bate com a meta do mês passado.<br><span class="selo mantida">= mês passado</span> A projeção ficou abaixo da meta do mês passado, mas este mês não tem queda natural no histórico de faturamento. Como não reduzimos metas sem motivo, a sugestão repete a meta do mês passado, que a loja tem potencial de atingir.<br><span class="selo queda">Queda natural</span> Nos anos anteriores este mês vendeu menos que o mês passado na maioria das vezes, por isso a sugestão pode ficar um pouco abaixo.</p>
     </div>
 
-    <details class="card" id="card-explica" hidden>
+    <details class="card" id="card-explica" hidden><!-- sempre oculto: serve de fonte para a janela da análise -->
       <summary><span class="eyebrow">Texto da sugestão</span> · <span id="explica-titulo">Como a sugestão foi montada</span></summary>
       <div id="explica-geral" class="explica" style="margin-top:12px"></div>
       <div class="lista" id="explica-lojas" style="margin-top:12px"></div>
@@ -1674,7 +1682,30 @@
   const mil = (v) => v >= 1e6 ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi' : 'R$ ' + Math.round(v / 1000).toLocaleString('pt-BR') + ' mil';
   const SELOS = { mantida: ['mantida', '= mês passado'], 'queda natural': ['queda', 'Queda natural'], acima: ['acima', 'Aumento'], igual: ['igual', 'Igual'] };
   // Leva da tabela até o texto da sugestão daquela loja, já com a conta aberta.
-  function irAnalise(l) { const cx = document.getElementById('card-explica'); if (cx) { cx.hidden = false; cx.open = true; } const b = document.getElementById('exp-' + l.replace('/', '-')); if (!b) return; const d = b.querySelector('details'); if (d) d.open = true; b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
+  // Abre a análise da loja numa janela sobre a tela, na altura do selo tocado; fecha no ×, no fundo escuro ou com Esc.
+  function fecharAnalise() { document.querySelectorAll('.pop-fundo, .pop-an').forEach((e) => e.remove()); document.removeEventListener('keydown', escAnalise); }
+  function escAnalise(e) { if (e.key === 'Escape') fecharAnalise(); }
+  function irAnalise(l, origem) {
+    fecharAnalise();
+    const b = document.getElementById('exp-' + l.replace('/', '-')); if (!b) return;
+    const box = b.cloneNode(true); box.removeAttribute('id'); box.classList.remove('flash');
+    const d = box.querySelector('details'); if (d) d.open = true;
+    const pop = el('div', 'pop-an'); pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-modal', 'true'); pop.setAttribute('aria-label', `Análise de ${l}`);
+    const cab = el('div', 'pop-cab'); const tit = el('p', 'eyebrow', $('#explica-titulo').textContent || 'Texto da sugestão');
+    const x = el('button', 'fechar', 'Fechar ×'); x.type = 'button'; x.addEventListener('click', fecharAnalise);
+    cab.append(tit, x); pop.append(cab, box);
+    // Resumo do grupo e "como o cálculo funciona": recolhidos, no fim da janela
+    const g = $('#explica-geral'); if (g && g.childNodes.length) { const r = el('details', 'mais'); r.append(el('summary', null, 'Resumo do grupo e como o cálculo funciona')); const cg = g.cloneNode(true); cg.removeAttribute('id'); r.append(cg); pop.append(r); }
+    const fundo = el('div', 'pop-fundo'); fundo.style.height = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) + 'px'; fundo.addEventListener('click', fecharAnalise);
+    const y = origem ? origem.getBoundingClientRect().top + window.scrollY : window.scrollY + 40;
+    document.body.append(fundo, pop);
+    // Na altura do selo, sem passar do fim da página
+    const alt = pop.offsetHeight, fim = fundo.offsetHeight;
+    pop.style.top = Math.max(12, Math.min(y - 60, fim - alt - 12)) + 'px';
+    document.addEventListener('keydown', escAnalise);
+    x.focus({ preventScroll: true });
+    pop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   const selo = (regra) => { const s = SELOS[regra] || SELOS.acima; const e = el('span', 'selo ' + s[0], s[1]); if (regra === 'mantida') e.title = 'Projeção abaixo da meta do mês passado, mas o mês não tem queda natural no histórico: mantida a meta do mês passado.'; return e; };
   function renderExplica(sug, r) {
     const T = sug.T, A = addMes(T, -1), c = cfg();
@@ -1779,7 +1810,7 @@
           c.append(document.createTextNode(" · "), a, document.createTextNode(" · "), b);
         }
         c.title = `Vendas de ${mesNome(sug.atual)}${x.ateAnt && x.ateAnt.slice(8) < String(diasMes(sug.atual)).padStart(2, "0") ? " até " + x.ateAnt.slice(8, 10) + "/" + x.ateAnt.slice(5, 7) + " (mês ainda sem todos os dias)" : ""}${x.metaAtual ? `: ${pctTrunc(x.realAnt / x.metaAtual.loja)} da meta da loja (${brl.format(x.metaAtual.loja)}) e ${pctTrunc(x.realAnt / x.metaAtual.gerente)} da meta do gerente (${brl.format(x.metaAtual.gerente)})` : ""}.`; }
-      { const c = td(5, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
+      { const c = td(5, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja, b)); c.append(document.createElement('br'), b); }
       for (const [i, campo, val, sg] of [[6, "loja", vl, x.sugLoja], [7, "gerente", vg, x.sugGer]]) {
         const c = td(i, null); const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'num'; inp.inputMode = 'numeric'; inp.id = `in-${campo}-${x.loja.replace('/', '-')}`;
         inp.value = fmtNum(val); inp.setAttribute('aria-label', `${lbl[i]} ${x.loja}`); inp.disabled = S.podeEscrever === false;
