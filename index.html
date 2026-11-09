@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109115043';</script>
+<script>window.BIN_BUILD = '20261109120559';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1319,7 +1319,7 @@
       <div class="tabwrap">
         <table class="cartoes" id="tab-metas">
           <thead><tr>
-            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Meta atual · atingiu</th><th>Faturado no mês anterior</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
+            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Meta do mês anterior</th><th>Faturado no mês anterior</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
 
           </tr></thead>
           <tbody></tbody>
@@ -1749,6 +1749,12 @@
       sts.textContent = `por ${nome(r.aprovado_por)} em ${dBR(String(r.aprovado_em || '').slice(0, 10))}` + (r.historico && r.historico.length ? ` · ${r.historico.length} correção(ões)` : '');
     } else { st.textContent = 'Aguardando aprovação'; sts.textContent = 'sugestão automática pronta'; }
     let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0, tReal = 0;
+    // Títulos com os meses de verdade: meta do mês anterior ao escolhido e o atingimento dos 3 últimos meses fechados
+    { const ths = document.querySelectorAll('#tab-metas thead th'); const u = sug.ult3;
+      ths[4].textContent = `Meta de ${mesCurto(sug.atual)}`;
+      ths[4].title = `Meta da loja de ${mesNome(sug.atual)}, referência para a meta nova.`;
+      ths[5].textContent = `Faturado em ${mesCurto(sug.atual)}`;
+      ths[5].title = `Vendas de ${mesNome(sug.atual)} pelo ERP (relatório 01, sem o uso da loja) e o percentual da meta da loja do mês.`; }
     const tb = $('#tab-metas tbody'); tb.replaceChildren();
     const lbl = [...document.querySelectorAll('#tab-metas thead th')].map((th) => th.textContent);
     for (const x of sug.rows) {
@@ -1760,7 +1766,7 @@
       td(1, x.base > 0 ? brl.format(x.base) : '—');
       { const c = td(2, null); const a = el("span", null, pct(x.g3, true)); tom(a, x.g3); const b = el("span", null, pct(x.gy, true)); tom(b, x.gy); c.append(a, document.createTextNode(" · "), b); }
       const cp = td(3, brl.format(x.proj)); cp.title = `Base: ${x.baseTxt}. Crescimento ponderado ${pct(x.g, true)}.`;
-      { const c = td(4, x.metaAtual ? brl.format(x.metaAtual.loja) + " · " : "— · "); const a = el("span", null, pct0(x.at3)); if (x.at3 != null) a.className = x.at3 >= 1 ? "up" : "down"; c.append(a); }
+      td(4, x.metaAtual ? brl.format(x.metaAtual.loja) : "—");
       { const c = td(5, x.realAnt > 0 ? brl.format(x.realAnt) + " · " : "—"); if (x.realAnt > 0 && x.metaAtual) { const p = x.realAnt / x.metaAtual.loja; const a = el("span", null, pctTrunc(p)); a.className = p >= 1 ? "up" : "down"; c.append(a); }
         c.title = `Vendas de ${mesNome(sug.atual)}${x.ateAnt && x.ateAnt.slice(8) < String(diasMes(sug.atual)).padStart(2, "0") ? " até " + x.ateAnt.slice(8, 10) + "/" + x.ateAnt.slice(5, 7) + " (mês ainda sem todos os dias)" : ""}${x.metaAtual ? "; o percentual é sobre a meta da loja do mês" : ""}.`; }
       { const c = td(6, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
