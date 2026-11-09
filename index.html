@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109121414';</script>
+<script>window.BIN_BUILD = '20261109121901';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1340,9 +1340,11 @@
       <label class="campo"><span class="rotulo">Observação da aprovação</span><textarea id="aprov-obs" placeholder="Ex.: metas de novembro consideram a Black Friday e o feriado de 20/11."></textarea></label>
       <div class="linha-ctl" style="margin-top:12px">
         <button class="btn pri" id="btn-aprovar" type="button">Aprovar metas</button>
+        <button class="btn" id="btn-reabrir" type="button" hidden>Reabrir mês</button>
         <button class="btn" id="btn-sugestao" type="button">Voltar para a sugestão</button>
         <span id="aprov-msg"></span>
       </div>
+      <p class="nota" id="aprov-leitura" hidden style="margin-top:10px"></p>
     </div>
 
     <div class="card" id="card-arte" hidden>
@@ -1747,6 +1749,9 @@
     } else if (r && r.status === 'aprovada') {
       st.textContent = S.mes === corrente ? 'Aprovada · vigente' : 'Aprovada';
       sts.textContent = `por ${nome(r.aprovado_por)} em ${dBR(String(r.aprovado_em || '').slice(0, 10))}` + (r.historico && r.historico.length ? ` · ${r.historico.length} correção(ões)` : '');
+    } else if (r && r.status === 'reaberta') {
+      st.textContent = 'Reaberto · aguardando nova aprovação';
+      sts.textContent = `por ${nome(r.reaberto_por)} em ${dBR(String(r.reaberto_em || '').slice(0, 10))}; até aprovar de novo, valem as metas anteriores`;
     } else { st.textContent = 'Aguardando aprovação'; sts.textContent = 'sugestão automática pronta'; }
     let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0, tAtG = 0, tReal = 0;
     // Título com o mês de verdade: o faturamento do mês anterior ao escolhido e quanto ele foi das metas da loja e do gerente
@@ -1800,9 +1805,23 @@
     // aprovação
     const ob = $('#aprov-obs');
     if (document.activeElement !== ob) ob.value = S.edits[S.mes]?._obs ?? (r?.obs || '');
-    $('#btn-aprovar').textContent = r && r.status === 'aprovada' ? 'Aprovar correção' : 'Aprovar metas';
+    $('#btn-aprovar').textContent = r && r.status === 'aprovada' ? 'Aprovar correção' : r && r.status === 'reaberta' ? 'Aprovar de novo' : 'Aprovar metas';
     $('#btn-aprovar').disabled = S.podeEscrever === false || !S.db;
-    $('#aprov-nota').textContent = r && r.origem === 'planilha'
+    // Reabrir: só para mês já aprovado, por quem pode gravar
+    $('#btn-reabrir').hidden = !(r && r.status === 'aprovada') || S.podeEscrever === false || !S.db;
+    // Modo leitura no link do painel (acesso do Google vencido): o botão para liberar fica aqui, junto da aprovação
+    { const lt = $('#aprov-leitura'), pai = (() => { try { return window.parent !== window ? window.parent : null; } catch (e) { return null; } })();
+      const podeLiberar = S.podeEscrever === false && pai && pai.BIN_WEB && typeof pai.BIN_WEB.liberarEdicao === 'function';
+      lt.hidden = !podeLiberar;
+      if (podeLiberar) {
+        const b = document.createElement('button'); b.className = 'btn pri'; b.type = 'button'; b.textContent = 'Liberar edição';
+        b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Abrindo o Google…'; pai.BIN_WEB.liberarEdicao(() => pai.location.reload()); });
+        lt.replaceChildren(document.createTextNode('A Central está em modo leitura porque o acesso do Google venceu. Para alterar ou reabrir as metas, libere a edição (um toque; a página recarrega já liberada). '), b);
+      }
+    }
+    $('#aprov-nota').textContent = r && r.status === 'reaberta'
+      ? `Mês reaberto por ${nome(r.reaberto_por)} em ${dBR(String(r.reaberto_em || '').slice(0, 10))}. Ajuste os valores e aprove de novo; até lá valem as metas anteriores, e a versão anterior fica no histórico.`
+      : r && r.origem === 'planilha'
       ? `Estas metas já foram aprovadas na planilha ${planilhaDe(S.mes)} e ${S.mes === corrente ? 'estão valendo' : 'valeram'} neste mês. A arte e a mensagem para o gerente já estão liberadas. Só aprove aqui se precisar corrigir algum valor: a versão da planilha fica no histórico.`
       : r && r.status === 'aprovada'
       ? `Aprovadas por ${nome(r.aprovado_por)} em ${dBR(String(r.aprovado_em).slice(0, 10))}. Para corrigir, mude os valores e aprove de novo: a versão anterior fica no histórico.`
@@ -1829,6 +1848,19 @@
     try { await S.db.collection('metas_mes').doc(S.mes).set(doc); delete S.edits[S.mes]; msg(out, `Metas de ${mesNome(S.mes)} aprovadas.`, true); }
     catch (e) { if (e && e.code === 'invalid_argument') { S.podeEscrever = false; msg(out, 'Seu acesso é só de leitura. Só o diretor comercial (Editor da pasta BIN Painel no Google Drive) aprova as metas.', false); } else msg(out, 'Não foi possível salvar agora. Tente de novo em instantes.', false); }
     finally { btn.disabled = S.podeEscrever === false; }
+  });
+
+  // Reabrir um mês aprovado: guarda a versão aprovada no histórico e deixa o mês aguardando nova aprovação
+  $('#btn-reabrir').addEventListener('click', async () => {
+    const out = $('#aprov-msg'), ant = regMes(); if (!ant || ant.status !== 'aprovada' || !S.db) return;
+    if (!confirm(`Reabrir as metas de ${mesNome(S.mes)}? Até aprovar de novo, continuam valendo as metas atuais.`)) return;
+    const doc = { mes: S.mes, status: 'reaberta', lojas: ant.lojas, obs: ant.obs || '', aprovado_por: ant.aprovado_por || null, aprovado_em: ant.aprovado_em || null,
+      reaberto_por: S.uid || null, reaberto_em: new Date().toISOString(), calculo: ant.calculo || null,
+      historico: [...(ant.historico || []), { lojas: ant.lojas, obs: ant.obs || '', aprovado_por: ant.aprovado_por || null, aprovado_em: ant.aprovado_em || null, origem: ant.origem || 'central' }].slice(-10) };
+    const btn = $('#btn-reabrir'); btn.disabled = true; msg(out, 'Reabrindo…', true);
+    try { await S.db.collection('metas_mes').doc(S.mes).set(doc); msg(out, `Metas de ${mesNome(S.mes)} reabertas: ajuste e aprove de novo.`, true); }
+    catch (e) { if (e && e.code === 'invalid_argument') { S.podeEscrever = false; msg(out, 'Seu acesso é só de leitura: libere a edição ou peça acesso de Editor.', false); } else msg(out, 'Não foi possível reabrir agora. Tente de novo em instantes.', false); }
+    finally { btn.disabled = false; render(); }
   });
 
   /* ---------- Parâmetros ---------- */
@@ -2600,7 +2632,7 @@
       const meta = new Map(metas26.map((m) => [m.mes + '|' + m.loja, { loja: Number(m.meta_loja), gerente: Number(m.meta_gerente), markup: m.markup === '' ? null : Number(m.markup) }]));
       try {
         const c = JSON.parse((dash.bruto && dash.bruto('json_central')) || '{}');
-        for (const [mes, d] of Object.entries(c.metas_mes || {})) if (d && d.status === 'aprovada') for (const [loja, v] of Object.entries(d.lojas || {}))
+        for (const [mes, d] of Object.entries(c.metas_mes || {})) if (d && (d.status === 'aprovada' || d.status === 'reaberta')) for (const [loja, v] of Object.entries(d.lojas || {}))
           if (v && v.loja > 0) meta.set(mes + '|' + loja, { ...(meta.get(mes + '|' + loja) || {}), loja: Number(v.loja), gerente: Number(v.gerente) || Number(v.loja) });
       } catch (e) { /* sem cópia da Central: fica o histórico */ }
       // Corte "Ler até" (só no mês dele)
