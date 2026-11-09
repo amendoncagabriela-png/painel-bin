@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261105174456';</script>
+<script>window.BIN_BUILD = '20261109115043';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1319,7 +1319,7 @@
       <div class="tabwrap">
         <table class="cartoes" id="tab-metas">
           <thead><tr>
-            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Meta atual · atingiu</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
+            <th class="l">Loja</th><th>Mesmo mês ano ant.</th><th>Crescimento 3 m · ano</th><th>Projeção</th><th>Meta atual · atingiu</th><th>Faturado no mês anterior</th><th>Sugestão loja · gerente</th><th>Meta loja</th><th>Meta gerente</th><th class="l">Enviar</th>
 
           </tr></thead>
           <tbody></tbody>
@@ -1519,6 +1519,8 @@
   const janelaAnt = () => { const m0 = hoje.slice(0, 7), m2 = addMes(m0, 2); return { ini: m0 + '-01', fim: `${m2}-${String(diasMes(m2)).padStart(2, '0')}`, m0, m2 }; };
   const util = (s) => dt(s).getUTCDay() !== 0 && !feriados(Number(s.slice(0, 4))).includes(s);
   const diasMes = (m) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).getUTCDate();
+  // uma casa decimal sem arredondar para cima: 99,9% da meta não aparece como 100%
+  const pctTrunc = (v) => v == null || !isFinite(v) ? "—" : (Math.floor(v * 1000) / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
   const wd = (m, a, b) => { let c = 0; for (let i = a; i <= b; i++) if (util(`${m}-${String(i).padStart(2, '0')}`)) c++; return c; };
 
   /* ---------- Estado ---------- */
@@ -1627,6 +1629,10 @@
       } else if (ant && slProj === ant.loja) regra = 'igual';
       if (ant && !saz.natural && sg < ant.gerente) sg = ant.gerente;
       sg = Math.max(sg, sl + c.arred);
+      // Faturado no mês anterior ao da meta (vendas do ERP, relatório 01, sem o uso da loja; sem ERP, a planilha de vendas)
+      let realAnt = 0, ateAnt = null; const dlj = d.DL.get(l);
+      if (dlj) for (const [k, val] of dlj) if (k.startsWith(atual)) { realAnt += val; if (!ateAnt || k > ateAnt) ateAnt = k; }
+      if (!ateAnt) realAnt = v(atual, l) || 0;
       // mês em andamento, pelas leituras
       const lt = (d.L.get(l) || []).filter((r) => r.mes === atual);
       const ul = lt[lt.length - 1];
@@ -1634,7 +1640,7 @@
       const e3 = (off) => ult3.reduce((s, m) => { const x = d.E.get(addMes(m, off) + '|' + l); return x ? { p: s.p + x.ped, v: s.v + x.val, i: s.i + x.ident, n: s.n + 1 } : s; }, { p: 0, v: 0, i: 0, n: 0 });
       const eA = e3(0), eB = e3(-12);
       const erp = eA.n === 3 && eA.p > 0 ? { tkt: eA.v / eA.p, ident: eA.i / eA.v, pedVar: eB.n === 3 && eB.p > 0 ? eA.p / eB.p - 1 : null, tktVar: eB.n === 3 && eB.p > 0 ? (eA.v / eA.p) / (eB.v / eB.p) - 1 : null, identAnt: eB.n === 3 && eB.v > 0 ? eB.i / eB.v : null } : null;
-      return { loja: l, nome: NOMES[l] || l, erp, base, baseTxt, med3, g3, gy, sm, g, proj, at3, razao, slProj, sgProj, sugLoja: sl, sugGer: sg, metaAtual: ant, ant, saz, regra, projAtual };
+      return { loja: l, nome: NOMES[l] || l, erp, base, baseTxt, med3, g3, gy, sm, g, proj, at3, razao, slProj, sgProj, sugLoja: sl, sugGer: sg, metaAtual: ant, ant, saz, regra, projAtual, realAnt, ateAnt };
     });
     return { T, fech, ult3, sm, rows, atual };
   }
@@ -1742,12 +1748,12 @@
       st.textContent = S.mes === corrente ? 'Aprovada · vigente' : 'Aprovada';
       sts.textContent = `por ${nome(r.aprovado_por)} em ${dBR(String(r.aprovado_em || '').slice(0, 10))}` + (r.historico && r.historico.length ? ` · ${r.historico.length} correção(ões)` : '');
     } else { st.textContent = 'Aguardando aprovação'; sts.textContent = 'sugestão automática pronta'; }
-    let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0;
+    let tProj = 0, tL = 0, tG = 0, tBase = 0, tAt = 0, tReal = 0;
     const tb = $('#tab-metas tbody'); tb.replaceChildren();
     const lbl = [...document.querySelectorAll('#tab-metas thead th')].map((th) => th.textContent);
     for (const x of sug.rows) {
       const vl = valorEdit(x.loja, 'loja', x.sugLoja), vg = valorEdit(x.loja, 'gerente', x.sugGer);
-      tProj += x.proj; tL += vl; tG += vg; tBase += x.base; tAt += x.metaAtual ? x.metaAtual.loja : 0;
+      tProj += x.proj; tL += vl; tG += vg; tBase += x.base; tAt += x.metaAtual ? x.metaAtual.loja : 0; tReal += x.realAnt || 0;
       const tr = document.createElement('tr');
       const td = (i, txt, cls) => { const c = document.createElement('td'); c.dataset.r = lbl[i]; if (cls) c.className = cls; if (txt != null) c.textContent = txt; tr.appendChild(c); return c; };
       td(0, `${x.loja} ${x.nome}`, 'l nm');
@@ -1755,15 +1761,17 @@
       { const c = td(2, null); const a = el("span", null, pct(x.g3, true)); tom(a, x.g3); const b = el("span", null, pct(x.gy, true)); tom(b, x.gy); c.append(a, document.createTextNode(" · "), b); }
       const cp = td(3, brl.format(x.proj)); cp.title = `Base: ${x.baseTxt}. Crescimento ponderado ${pct(x.g, true)}.`;
       { const c = td(4, x.metaAtual ? brl.format(x.metaAtual.loja) + " · " : "— · "); const a = el("span", null, pct0(x.at3)); if (x.at3 != null) a.className = x.at3 >= 1 ? "up" : "down"; c.append(a); }
-      { const c = td(5, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
-      for (const [i, campo, val, sg] of [[6, 'loja', vl, x.sugLoja], [7, 'gerente', vg, x.sugGer]]) {
+      { const c = td(5, x.realAnt > 0 ? brl.format(x.realAnt) + " · " : "—"); if (x.realAnt > 0 && x.metaAtual) { const p = x.realAnt / x.metaAtual.loja; const a = el("span", null, pctTrunc(p)); a.className = p >= 1 ? "up" : "down"; c.append(a); }
+        c.title = `Vendas de ${mesNome(sug.atual)}${x.ateAnt && x.ateAnt.slice(8) < String(diasMes(sug.atual)).padStart(2, "0") ? " até " + x.ateAnt.slice(8, 10) + "/" + x.ateAnt.slice(5, 7) + " (mês ainda sem todos os dias)" : ""}${x.metaAtual ? "; o percentual é sobre a meta da loja do mês" : ""}.`; }
+      { const c = td(6, `${brl.format(x.sugLoja)} · ${brl.format(x.sugGer)}`); const s = selo(x.regra); const b = el('button', s.className + ' ir', s.textContent + ' ›'); b.type = 'button'; b.title = 'Ver a análise desta loja'; b.setAttribute('aria-label', `${s.textContent}: ver a análise de ${x.loja}`); b.addEventListener('click', () => irAnalise(x.loja)); c.append(document.createElement('br'), b); }
+      for (const [i, campo, val, sg] of [[7, "loja", vl, x.sugLoja], [8, "gerente", vg, x.sugGer]]) {
         const c = td(i, null); const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'num'; inp.inputMode = 'numeric'; inp.id = `in-${campo}-${x.loja.replace('/', '-')}`;
         inp.value = fmtNum(val); inp.setAttribute('aria-label', `${lbl[i]} ${x.loja}`); inp.disabled = S.podeEscrever === false;
         if (val !== sg) inp.style.borderColor = 'var(--destaque)';
         inp.addEventListener('change', () => { const n = parseNum(inp.value); if (n == null || n <= 0) { inp.value = fmtNum(val); return; } S.edits[S.mes] = S.edits[S.mes] || {}; S.edits[S.mes][x.loja] = Object.assign({}, S.edits[S.mes][x.loja], { [campo]: n }); render(); });
         c.appendChild(inp);
       }
-      const ce = td(8, null, 'acoes');
+      const ce = td(9, null, "acoes");
       const ap = r && r.status === 'aprovada' && r.lojas && r.lojas[x.loja];
       const b1 = document.createElement('button'); b1.className = 'btn peq'; b1.type = 'button'; b1.textContent = 'Arte e mensagem'; b1.disabled = !ap;
       b1.title = ap ? '' : 'Disponível depois da aprovação';
@@ -1772,7 +1780,7 @@
       tb.appendChild(tr);
     }
     const tot = document.createElement('tr'); tot.className = 'tot';
-    [["Grupo", "l nm"], [brl.format(tBase)], [""], [brl.format(tProj)], [brl.format(tAt)], [""], [brl.format(tL)], [brl.format(tG)], [""]].forEach(([t, c], i) => { const e = document.createElement("td"); e.dataset.r = lbl[i]; if (c) e.className = c; e.textContent = t; tot.appendChild(e); });
+    [["Grupo", "l nm"], [brl.format(tBase)], [""], [brl.format(tProj)], [brl.format(tAt)], [tReal > 0 ? brl.format(tReal) + (tAt > 0 ? " · " + pctTrunc(tReal / tAt) : "") : "—"], [""], [brl.format(tL)], [brl.format(tG)], [""]].forEach(([t, c], i) => { const e = document.createElement("td"); e.dataset.r = lbl[i]; if (c) e.className = c; e.textContent = t; tot.appendChild(e); });
     tb.appendChild(tot);
     $('#k-proj').textContent = brl.format(tProj);
     $('#k-proj-s').textContent = tBase > 0 ? `${pct(tProj / tBase - 1, true)} sobre ${mesNome(addMes(S.mes, -12))}` : '—';
@@ -5318,7 +5326,7 @@
   const CENTRAL = (() => {
     const VAZIO = () => ({ config: {}, metas_mes: {}, observacoes: {}, nomes: {} });
     const servidorLocal = () => !window.BIN_WEB && location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname);
-    let estado = VAZIO(), podeEscrever = false, carregado = false, erro = null, eu = { id: 'local', name: 'você' }, montada = false;
+    let estado = VAZIO(), podeEscrever = false, carregado = false, erro = null, eu = { id: 'local', name: 'você' }, montada = false, precisaAcesso = false;
     let fimCarga; const pronto = new Promise((r) => { fimCarga = r; });   // a Central só pergunta quem é e se grava depois da primeira leitura
     const ouv = new Map();
     const ouvir = (nome, fn) => { if (!ouv.has(nome)) ouv.set(nome, []); ouv.get(nome).push(fn); };
@@ -5358,6 +5366,7 @@
         try {
           const r = await window.BIN_WEB.lerCentral();
           podeEscrever = !!r.podeEscrever && !r.senhaErrada;
+          precisaAcesso = !!r.precisaAcesso;
           if (r.senhaErrada) erro = 'A Central foi trancada com outra senha. Saia e entre de novo no painel com a senha atual.';
           if (r.dados) estado = Object.assign(VAZIO(), r.dados);
           eu = { id: window.BIN_WEB.conta || 'web', name: window.BIN_WEB.nome || window.BIN_WEB.conta || 'você' };
@@ -5395,6 +5404,7 @@
       return (async () => {
         await prep;
         const r = await window.BIN_WEB.lerCentral();
+        if (r.precisaAcesso) throw Object.assign(new Error('sem acesso para ler a versão atual'), { code: 'expirou' });   // nunca grava sobre a cópia
         if (r.senhaErrada) throw Object.assign(new Error('senha diferente'), { code: 'senha' });
         const e = Object.assign(VAZIO(), r.dados || {});
         muda(e);
@@ -5429,6 +5439,13 @@
     window.BIN_CENTRAL = { usar: async (n) => n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null };
     function statusCentral() {
       const st = $('#central-status');
+      if (precisaAcesso && !erro && carregado && window.BIN_WEB) {
+        // Acesso do Google vencido: a Central mostra a cópia que veio com os dados; um toque renova o acesso e libera a edição
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'bd-btn-atu'; b.textContent = 'Liberar edição';
+        b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Abrindo o Google…'; window.BIN_WEB.liberarEdicao(() => carregar().then(() => { const fr = $("#central-frame"); fr.srcdoc = fr.srcdoc; })); });
+        st.replaceChildren(document.createTextNode('Mostrando a cópia da última atualização. Para aprovar metas ou registrar observações, libere a edição (renova o acesso do Google em um toque). '), b);
+        return;
+      }
       st.textContent = erro ? erro : !carregado ? 'Carregando a Central Comercial…'
         : podeEscrever ? (servidorLocal() ? 'Neste computador você pode aprovar metas e registrar observações. As gravações ficam trancadas na pasta BIN Painel do Google Drive e aparecem também no painel pelo link.' : `Conectado como ${eu.name}: você pode aprovar metas e registrar observações. As gravações ficam trancadas no Google Drive.`)
         : window.BIN_WEB ? 'Modo leitura. Aprovar metas e registrar observações é do diretor comercial (Editor da pasta BIN Painel no Google Drive).'
@@ -5892,8 +5909,8 @@
     let cliente = null;
     // so = só renovar o acesso com o painel aberto (sem abrir a tela de entrada): depois confere se há dados novos
     let depoisDoToken = null;
-    function pedirToken(trocar, so) {
-      depoisDoToken = so && montado ? () => conferirNovidade(true) : null;
+    function pedirToken(trocar, so, manter) {
+      if (!manter) depoisDoToken = so && montado ? () => conferirNovidade(true) : null;
       if (!CFG.CLIENT_ID || /COLE_AQUI/.test(CFG.CLIENT_ID)) { aviso('O acesso pelo Google ainda não foi configurado (falta o CLIENT_ID no config.js). Use "Abrir arquivo do aparelho".', true); return; }
       if (!window.google || !google.accounts || !google.accounts.oauth2) { aviso('Carregando o login do Google… tente de novo em alguns segundos. Sem internet, o painel não abre.', true); return; }
       if (!cliente) cliente = google.accounts.oauth2.initTokenClient({
@@ -6102,7 +6119,13 @@
       prepararGravacao() { return pedirTokenGravar(); },
       // { dados, podeEscrever, versao }: dados = null quando o arquivo ainda não existe
       async lerCentral() {
-        if (!token || !senhaSessao) return { dados: null, podeEscrever: false };
+        if (!token) token = tokenGuardado() || tokenGravar;   // o acesso de gravação (Drive) também lê
+        // Sem o acesso do Google (venceu ou o painel abriu pela sessão lembrada): mostra a cópia que vem com os dados, em modo leitura,
+        // e avisa que um toque em "Liberar edição" renova o acesso
+        if (!token || !senhaSessao) {
+          let copia = null; try { const j = window.dash && window.dash.bruto && window.dash.bruto('json_central'); if (j) copia = JSON.parse(j); } catch (e) {}
+          return { dados: copia, podeEscrever: false, precisaAcesso: !!senhaSessao };
+        }
         const f = await acharCentral();
         let podeEscrever = !!(f && f.capabilities && f.capabilities.canEdit);
         if (!f && CFG.PASTA_ID) { try { const p = await (await api(`https://www.googleapis.com/drive/v3/files/${CFG.PASTA_ID}?fields=capabilities(canAddChildren)&supportsAllDrives=true`)).json(); podeEscrever = !!(p.capabilities && p.capabilities.canAddChildren); } catch (e) {} }
@@ -6111,6 +6134,8 @@
         let dados = null; try { dados = await destrancar(env, senhaSessao); } catch (e) { dados = null; }
         return { dados, podeEscrever, versao: f.modifiedTime, id: f.id, senhaErrada: !dados };
       },
+      // "Liberar edição" da Central: renova o acesso do Google num toque e chama de volta quando estiver pronto
+      liberarEdicao(depois) { depoisDoToken = () => { if (typeof depois === 'function') depois(); conferirNovidade(); }; pedirToken(false, false, true); },
       // Pede a permissão de gravação (precisa vir de um toque do usuário) e grava o objeto inteiro, trancado
       async gravarCentral(obj) {
         if (!senhaSessao) throw Object.assign(new Error('sem senha'), { code: 'invalid_argument' });
