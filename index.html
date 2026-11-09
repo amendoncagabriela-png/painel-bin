@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109180951';</script>
+<script>window.BIN_BUILD = '20261109182922';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -639,6 +639,28 @@
           </div>
         </div>
 
+        <div class="bd-card" id="card-lojas-mes">
+          <h3>Resumo das lojas <span class="per">| mês selecionado</span></h3>
+          <p class="bd-note">Toque numa loja para ver o acompanhamento dela. Ordenado pelo ritmo.</p>
+          <div class="bd-tablewrap">
+            <table id="tab-lojas-mes" class="bd-cards" data-source="acomp" data-row-key="mes,loja">
+              <thead><tr>
+                <th class="l" data-field="loja">Cód.</th>
+                <th class="l" data-field="nome">Loja</th>
+                <th data-field="realizado">Realizado</th>
+                <th data-field="pct_loja">% meta loja</th>
+                <th data-field="ritmo">Ritmo</th>
+                <th data-field="semana_ritmo">Ritmo semana</th>
+                <th data-field="proj_pct">Projeção</th>
+                <th data-field="falta_dia_loja">Precisa/dia</th>
+                <th data-field="markup">Markup</th>
+                <th class="l" data-field="status">Situação</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="bd-card" id="card-curva">
           <h3><span data-source="historia_mes" data-field="titulo_curva">Acumulado do mês contra a meta</span> <span class="per">| acumulado diário</span></h3>
           <p class="bd-note">Pontos são o acumulado de cada dia com venda (relatório 01 do ERP). As linhas mostram onde o acumulado deveria estar a cada dia para bater a meta da loja e a do gerente.</p>
@@ -663,27 +685,6 @@
           </div>
         </div>
 
-        <div class="bd-card" id="card-lojas-mes">
-          <h3>Resumo das lojas <span class="per">| mês selecionado</span></h3>
-          <p class="bd-note">Toque numa loja para ver o acompanhamento dela. Ordenado pelo ritmo.</p>
-          <div class="bd-tablewrap">
-            <table id="tab-lojas-mes" class="bd-cards" data-source="acomp" data-row-key="mes,loja">
-              <thead><tr>
-                <th class="l" data-field="loja">Cód.</th>
-                <th class="l" data-field="nome">Loja</th>
-                <th data-field="realizado">Realizado</th>
-                <th data-field="pct_loja">% meta loja</th>
-                <th data-field="ritmo">Ritmo</th>
-                <th data-field="semana_ritmo">Ritmo semana</th>
-                <th data-field="proj_pct">Projeção</th>
-                <th data-field="falta_dia_loja">Precisa/dia</th>
-                <th data-field="markup">Markup</th>
-                <th class="l" data-field="status">Situação</th>
-              </tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
 
         <details class="bd-card" id="card-semanas">
           <summary>Semana a semana <span class="per">| mês selecionado</span></summary>
