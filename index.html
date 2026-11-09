@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109121901';</script>
+<script>window.BIN_BUILD = '20261109180053';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1248,6 +1248,8 @@
   .explica-loja.igual { border-left-color: var(--linha); }
   .explica-loja.acima { border-left-color: var(--ok); }
   .explica-loja p { margin: 4px 0 0; }
+  /* Crescimento 3 m · ano: oculto na tabela (continua no texto da análise de cada loja e na dica da projeção) */
+  #tab-metas th:nth-child(3), #tab-metas td:nth-child(3) { display: none; }
   .explica-loja p.erp { color: var(--fg2); font-size: .85rem; }
   .evento { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--linha); }
   .evento:last-child { border-bottom: 0; }
@@ -1325,10 +1327,10 @@
           <tbody></tbody>
         </table>
       </div>
-      <p class="nota legenda">Toque no selo de cada loja para ver a análise dela.<br><span class="selo acima">Aumento</span> A sugestão fica acima da meta do mês passado, puxada pelo crescimento recente da loja.<br><span class="selo igual">Igual</span> A projeção bate com a meta do mês passado.<br><span class="selo mantida">= mês passado</span> A projeção ficou abaixo da meta do mês passado, mas este mês não tem queda natural no histórico de faturamento. Como não reduzimos metas sem motivo, a sugestão repete a meta do mês passado, que a loja tem potencial de atingir.<br><span class="selo queda">Queda natural</span> Nos anos anteriores este mês vendeu menos que o mês passado na maioria das vezes, por isso a sugestão pode ficar um pouco abaixo.</p>
+      <p class="nota legenda">Toque no selo de cada loja (na coluna Sugestão) para abrir o texto da sugestão com a análise dela.<br><span class="selo acima">Aumento</span> A sugestão fica acima da meta do mês passado, puxada pelo crescimento recente da loja.<br><span class="selo igual">Igual</span> A projeção bate com a meta do mês passado.<br><span class="selo mantida">= mês passado</span> A projeção ficou abaixo da meta do mês passado, mas este mês não tem queda natural no histórico de faturamento. Como não reduzimos metas sem motivo, a sugestão repete a meta do mês passado, que a loja tem potencial de atingir.<br><span class="selo queda">Queda natural</span> Nos anos anteriores este mês vendeu menos que o mês passado na maioria das vezes, por isso a sugestão pode ficar um pouco abaixo.</p>
     </div>
 
-    <details class="card" id="card-explica" open>
+    <details class="card" id="card-explica" hidden>
       <summary><span class="eyebrow">Texto da sugestão</span> · <span id="explica-titulo">Como a sugestão foi montada</span></summary>
       <div id="explica-geral" class="explica" style="margin-top:12px"></div>
       <div class="lista" id="explica-lojas" style="margin-top:12px"></div>
@@ -1672,7 +1674,7 @@
   const mil = (v) => v >= 1e6 ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi' : 'R$ ' + Math.round(v / 1000).toLocaleString('pt-BR') + ' mil';
   const SELOS = { mantida: ['mantida', '= mês passado'], 'queda natural': ['queda', 'Queda natural'], acima: ['acima', 'Aumento'], igual: ['igual', 'Igual'] };
   // Leva da tabela até o texto da sugestão daquela loja, já com a conta aberta.
-  function irAnalise(l) { const cx = document.getElementById('card-explica'); if (cx) cx.open = true; const b = document.getElementById('exp-' + l.replace('/', '-')); if (!b) return; const d = b.querySelector('details'); if (d) d.open = true; b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
+  function irAnalise(l) { const cx = document.getElementById('card-explica'); if (cx) { cx.hidden = false; cx.open = true; } const b = document.getElementById('exp-' + l.replace('/', '-')); if (!b) return; const d = b.querySelector('details'); if (d) d.open = true; b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
   const selo = (regra) => { const s = SELOS[regra] || SELOS.acima; const e = el('span', 'selo ' + s[0], s[1]); if (regra === 'mantida') e.title = 'Projeção abaixo da meta do mês passado, mas o mês não tem queda natural no histórico: mantida a meta do mês passado.'; return e; };
   function renderExplica(sug, r) {
     const T = sug.T, A = addMes(T, -1), c = cfg();
@@ -1768,7 +1770,7 @@
       td(0, `${x.loja} ${x.nome}`, 'l nm');
       td(1, x.base > 0 ? brl.format(x.base) : '—');
       { const c = td(2, null); const a = el("span", null, pct(x.g3, true)); tom(a, x.g3); const b = el("span", null, pct(x.gy, true)); tom(b, x.gy); c.append(a, document.createTextNode(" · "), b); }
-      const cp = td(3, brl.format(x.proj)); cp.title = `Base: ${x.baseTxt}. Crescimento ponderado ${pct(x.g, true)}.`;
+      const cp = td(3, brl.format(x.proj)); cp.title = `Base: ${x.baseTxt}. Crescimento ponderado ${pct(x.g, true)} (3 meses ${pct(x.g3, true)}, ano ${pct(x.gy, true)}).`;
       { const c = td(4, x.realAnt > 0 ? brl.format(x.realAnt) : "—");
         if (x.realAnt > 0 && x.metaAtual) {
           const pl = x.realAnt / x.metaAtual.loja, pg = x.realAnt / x.metaAtual.gerente;
@@ -1810,13 +1812,18 @@
     // Reabrir: só para mês já aprovado, por quem pode gravar
     $('#btn-reabrir').hidden = !(r && r.status === 'aprovada') || S.podeEscrever === false || !S.db;
     // Modo leitura no link do painel (acesso do Google vencido): o botão para liberar fica aqui, junto da aprovação
-    { const lt = $('#aprov-leitura'), pai = (() => { try { return window.parent !== window ? window.parent : null; } catch (e) { return null; } })();
-      const podeLiberar = S.podeEscrever === false && pai && pai.BIN_WEB && typeof pai.BIN_WEB.liberarEdicao === 'function';
-      lt.hidden = !podeLiberar;
-      if (podeLiberar) {
+    { const lt = $('#aprov-leitura');
+      const ponte = (() => { try { return window.parent !== window && window.parent.BIN_CENTRAL && window.parent.BIN_CENTRAL.acesso ? window.parent.BIN_CENTRAL : null; } catch (e) { return null; } })();
+      const a = ponte ? ponte.acesso() : null;
+      lt.hidden = !(S.podeEscrever === false && a && a.web && a.carregado && !a.erro);
+      if (!lt.hidden && a.precisaAcesso) {
+        // Acesso do Google vencido: um toque renova e a Central recarrega já liberada
         const b = document.createElement('button'); b.className = 'btn pri'; b.type = 'button'; b.textContent = 'Liberar edição';
-        b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Abrindo o Google…'; pai.BIN_WEB.liberarEdicao(() => pai.location.reload()); });
-        lt.replaceChildren(document.createTextNode('A Central está em modo leitura porque o acesso do Google venceu. Para alterar ou reabrir as metas, libere a edição (um toque; a página recarrega já liberada). '), b);
+        b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Abrindo o Google…'; ponte.liberar(); });
+        lt.replaceChildren(document.createTextNode('A Central está em modo leitura porque o acesso do Google venceu. Para alterar ou reabrir as metas, libere a edição (um toque). '), b);
+      } else if (!lt.hidden) {
+        // Conta conectada sem permissão de Editor no arquivo da Central: liberar não adianta, precisa da permissão no Drive
+        lt.textContent = `A conta ${a.conta || 'conectada'} só pode ver as metas: ela é leitora do arquivo central_bin.enc.json no Google Drive. Para alterar, reabrir ou aprovar, a dona do arquivo precisa dar a ela permissão de Editor nesse arquivo (pasta BIN Painel); depois é só tocar em "Buscar versão nova".`;
       }
     }
     $('#aprov-nota').textContent = r && r.status === 'reaberta'
@@ -5477,7 +5484,12 @@
       async profiles(ids) { const o = {}; for (const id of ids) o[id] = { name: estado.nomes[id] || (String(id).includes('@') ? id : '') }; return o; },
     };
     const downloads = { async save({ filename, data }) { const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); } };
-    window.BIN_CENTRAL = { usar: async (n) => n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null };
+    window.BIN_CENTRAL = {
+      usar: async (n) => n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null,
+      // Por que a Central está em modo leitura: acesso do Google vencido (libera num toque) ou conta sem permissão de Editor no arquivo
+      acesso: () => ({ web: !!window.BIN_WEB, carregado, podeEscrever, precisaAcesso, erro, conta: window.BIN_WEB ? (window.BIN_WEB.conta || '') : '' }),
+      liberar: () => window.BIN_WEB && window.BIN_WEB.liberarEdicao(() => carregar().then(() => { const fr = $("#central-frame"); fr.srcdoc = fr.srcdoc; })),
+    };
     function statusCentral() {
       const st = $('#central-status');
       if (precisaAcesso && !erro && carregado && window.BIN_WEB) {
@@ -5489,7 +5501,7 @@
       }
       st.textContent = erro ? erro : !carregado ? 'Carregando a Central Comercial…'
         : podeEscrever ? (servidorLocal() ? 'Neste computador você pode aprovar metas e registrar observações. As gravações ficam trancadas na pasta BIN Painel do Google Drive e aparecem também no painel pelo link.' : `Conectado como ${eu.name}: você pode aprovar metas e registrar observações. As gravações ficam trancadas no Google Drive.`)
-        : window.BIN_WEB ? 'Modo leitura. Aprovar metas e registrar observações é do diretor comercial (Editor da pasta BIN Painel no Google Drive).'
+        : window.BIN_WEB ? `Modo leitura: a conta ${window.BIN_WEB.conta || 'conectada'} é só leitora do arquivo central_bin.enc.json. Para aprovar, reabrir ou registrar, ela precisa ser Editor desse arquivo no Google Drive (pasta BIN Painel).`
         : 'Modo leitura no computador (cópia da última atualização). Para aprovar ou registrar, use o Painel pelo link, com a conta do diretor comercial.';
     }
     // Ajusta a altura do quadro ao conteúdo da Central
