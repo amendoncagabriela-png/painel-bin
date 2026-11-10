@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261109182922';</script>
+<script>window.BIN_BUILD = '20261110102637';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -316,6 +316,7 @@
   .bd-dev-faixa { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: 0 0 var(--cds-gap-sm); padding: .55rem .8rem; border-radius: var(--cds-radius); background: rgba(242,195,107,.16); border: 1px solid #E0A83A; color: var(--color-fg); font-size: var(--cds-font-size-caption); line-height: 1.45; }
   .bd-page > .bd-dev-faixa { margin: 0; font-size: var(--cds-font-size-body); }
   .bd-info { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--bin-gold); background: transparent; color: var(--bin-gold); font: italic 700 .9rem/1 Georgia, serif; cursor: pointer; }
+  .rl-resp { display: inline-block; min-width: 1.9em; margin-right: .4rem; padding: 0 .3rem; border: 1px solid var(--bin-gold); border-radius: 4px; color: var(--bin-gold); font-size: .72rem; font-weight: 700; text-align: center; letter-spacing: .02em; }
   .rl-av { border: 0; background: transparent; color: #E0A83A; font-size: 1rem; line-height: 1; padding: 0 .3rem 0 0; cursor: pointer; vertical-align: -1px; }
   .rl-destaque { border: 1px solid var(--bin-gold); box-shadow: 0 6px 18px rgba(175,104,57,.15); } .rl-destaque h3 { font-size: 1.15rem; }
   .fc-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem 1rem; }
@@ -2431,7 +2432,7 @@
         <details class="bd-card">
           <summary>Rotina e como ler <span class="per">| calendário de envio</span></summary>
           <ul class="bd-notes">
-            <li>Semanais (01, 03, 05, 06, 07, 08, 12, 13 e 14): sobem toda segunda, com os dados até o sábado anterior, e toda quinta, com os dados até a quarta anterior. De segunda a quarta a leitura esperada é a do último sábado; de quinta a domingo, a da última quarta.</li>
+            <li>Semanais (01, 03, 05, 06, 07, 08, 12, 13 e 14): sobem toda terça, com os dados até a segunda, e toda sexta, com os dados até a quinta (desde 10/11/2026; antes era segunda e quinta). De terça a quinta a leitura esperada é a da última segunda; de sexta a segunda, a da última quinta.</li>
             <li>Mensais (02 produtos e 10 estoque): esperado o mês anterior fechado.</li>
             <li>Extrato da Rede (08): a L9 recebe pela maquininha da matriz da M S (L5).</li>
             <li>Os arquivos podem ser salvos com o nome padrão do ERP: a loja e o período são lidos do cabeçalho do relatório. Se o nome do arquivo trouxer outra loja, vale o cabeçalho e aparece um aviso nas pendências.</li>
@@ -5072,26 +5073,26 @@
     $('#ft-proj-glob').textContent = `Atenção à receita global: o Simples também soma a receita das empresas em que um mesmo sócio tem mais de 10% do capital (LC 123, art. 3º, § 4º). As notas projetadas de ${ano} de todas as empresas lidas somam ${money(tg)}${tg > SN_LIM.teto ? ', acima de R$ 4,8 mi' : ''}. Conferir com a contabilidade o quadro societário de cada CNPJ do Simples.`;
   }
 
-  /* ---------- Relatórios: acompanhamento da rotina de envio (segunda: até o sábado; quinta: até a quarta) ---------- */
+  /* ---------- Relatórios: acompanhamento da rotina de envio (terça: até a segunda; sexta: até a quinta) ---------- */
   const RL_REL = [
-    { rel: '01', nome: 'Vendas (resumo)', cad: 'sem' }, { rel: '02', nome: 'Produtos', cad: 'mes' }, { rel: '03', nome: 'Lucratividade (custo)', cad: 'sem' },
-    { rel: '05', nome: 'Contas pagas', cad: 'sem', util: true }, { rel: '06', nome: 'Formas de pagamento', cad: 'sem' }, { rel: '07', nome: 'Notas fiscais (CFOP)', cad: 'sem' },
-    { rel: '08', nome: 'Cartão e Pix (Rede)', cad: 'sem' }, { rel: '10', nome: 'Estoque', cad: 'mes' }, { rel: '12', nome: 'Transferências', cad: 'sem', todas: true },
-    { rel: '13', nome: 'Contas a receber em aberto', cad: 'sem' }, { rel: '14', nome: 'Contas a pagar em aberto', cad: 'sem' },
+    { rel: '01', resp: 'Ag', nome: 'Vendas (resumo)', cad: 'sem' }, { rel: '02', resp: 'Ag', nome: 'Produtos', cad: 'mes' }, { rel: '03', resp: 'Ag', nome: 'Lucratividade (custo)', cad: 'sem' },
+    { rel: '05', resp: 'Ag', nome: 'Contas pagas', cad: 'sem', util: true }, { rel: '06', resp: 'Ag', nome: 'Formas de pagamento', cad: 'sem' }, { rel: '07', resp: 'BI', nome: 'Notas fiscais (CFOP)', cad: 'sem' },
+    { rel: '08', resp: 'BI', nome: 'Cartão e Pix (Rede)', cad: 'sem' }, { rel: '10', resp: 'BI', nome: 'Estoque', cad: 'mes' }, { rel: '12', resp: 'BI', nome: 'Transferências', cad: 'sem', todas: true },
+    { rel: '13', resp: 'Ag', nome: 'Contas a receber em aberto', cad: 'sem' }, { rel: '14', resp: 'Ag', nome: 'Contas a pagar em aberto', cad: 'sem' },
   ];
   const RL_LOJAS = ['L2', 'L3', 'L4', 'L5', 'L7/L10', 'L8', 'L9'];
   const iso = (d) => d.toISOString().slice(0, 10);
   const addD = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
   const dowS = (s) => new Date(s + 'T12:00:00Z').getUTCDay();
   const SEM3 = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-  // Leitura esperada hoje: de segunda a quarta, o último sábado; de quinta a domingo, a última quarta
+  // Leitura esperada hoje (rotina desde 10/11/2026): de terça a quinta, a última segunda; de sexta a segunda, a última quinta
   function rlEsperada(hoje) {
     const w = dowS(hoje);
-    const esp = w >= 1 && w <= 3 ? addD(hoje, -(w + 1)) : addD(hoje, -((w + 7 - 3) % 7));
-    const ant = dowS(esp) === 6 ? addD(esp, -3) : addD(esp, -4);   // a leitura anterior (quarta antes do sábado, sábado antes da quarta)
-    const prox = w === 1 || w === 4 ? hoje : addD(hoje, w < 4 ? 4 - w : (8 - w) % 7 || 7);
-    const proxAte = dowS(prox) === 1 ? addD(prox, -2) : addD(prox, -1);
-    return { esp, ant, diaSubida: w === 1 || w === 4, prox, proxAte };
+    const esp = w >= 2 && w <= 4 ? addD(hoje, -(w - 1)) : addD(hoje, -((w + 7 - 4) % 7));
+    const ant = dowS(esp) === 1 ? addD(esp, -4) : addD(esp, -3);   // a leitura anterior (quinta antes da segunda, segunda antes da quinta)
+    const prox = w === 2 || w === 5 ? hoje : addD(hoje, w === 3 || w === 4 ? 5 - w : (2 - w + 7) % 7);
+    const proxAte = addD(prox, -1);   // terça: até a segunda; sexta: até a quinta
+    return { esp, ant, diaSubida: w === 2 || w === 5, prox, proxAte };
   }
   // Detalhe do ⚠ de uma célula: arquivos com aviso e o que conferir
   function abrirAvisoRel(R, x, av) {
@@ -5165,7 +5166,7 @@
     for (const r of porRel) {
       const cs = nBad.filter((c) => c.R.rel === r), R = cs[0].R;
       const det = cs.map((c) => `${c.lj === 'Todas' ? 'todas' : c.lj} ${!c.o || !c.o.ate ? 'sem arquivo' : 'até ' + dBR(c.o.ate)}`).join(', ');
-      itens.push([`${r} ${R.nome}: `, `esperado até ${dBR(E.esp)} · ${det}.`]);
+      itens.push([`${R.resp ? R.resp + ' · ' : ''}${r} ${R.nome}: `, `esperado até ${dBR(E.esp)} · ${det}.`]);
     }
     if (nMid.length) itens.push(['Sobem hoje: ', [...new Set(nMid.map((c) => c.R.rel + ' ' + c.R.nome))].join(', ') + '.']);
     for (const r of [...new Set(mensBad.map((c) => c.R.rel))]) {
@@ -5183,7 +5184,7 @@
     const marca = { ok: '● ', mid: '◐ ', bad: '○ ', na: '' };
     t.tBodies[0].replaceChildren(...linhas.map(({ R, c }) => {
       const tr = document.createElement('tr');
-      const td0 = document.createElement('td'); td0.className = 'l nm'; td0.textContent = `${R.rel} · ${R.nome}${R.cad === 'mes' ? ' (mensal)' : ''}`; tr.append(td0);
+      const td0 = document.createElement('td'); td0.className = 'l nm'; if (R.resp) { const rs = document.createElement('span'); rs.className = 'rl-resp'; rs.textContent = R.resp; rs.title = 'Responsável pelo envio'; td0.append(rs); } td0.append(`${R.rel} · ${R.nome}${R.cad === 'mes' ? ' (mensal)' : ''}`); tr.append(td0);
       c.forEach((x, i) => {
         const td = document.createElement('td'); td.dataset.label = R.todas ? 'Todas as lojas' : RL_LOJAS[i];
         if (R.todas) { td.colSpan = RL_LOJAS.length; td.style.textAlign = 'center'; }
