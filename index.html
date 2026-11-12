@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261110102637';</script>
+<script>window.BIN_BUILD = '20261112102906';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -660,6 +660,20 @@
               <tbody></tbody>
             </table>
           </div>
+        </div>
+
+        <div class="bd-card" id="card-ticket-mes">
+          <h3>Ticket médio <span class="per" id="tk-per">| mês anterior e ano anterior</span></h3>
+          <p class="bd-note" id="tk-nota">Mesma conta do Raio-X: venda sem devoluções ÷ pedidos. Toque no ⚠ ou no ⓘ para ver o efeito da mudança no faturamento.</p>
+          <div class="bd-tablewrap">
+            <table id="tab-ticket-mes" class="bd-cards">
+              <thead><tr>
+                <th class="l">Loja</th><th>Ticket do mês</th><th id="tk-h-ma">Mês anterior</th><th>Variação</th><th id="tk-h-aa">Ano anterior</th><th>Variação</th><th>Pedidos por dia</th><th class="l">Leitura</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <dialog class="bd-dlg" id="tk-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
         </div>
 
         <div class="bd-card" id="card-curva">
@@ -3599,6 +3613,86 @@
       .on('pointerleave', () => { tip.hidden = true; rule.style('opacity', 0); dots.selectAll('*').remove(); });
   }
 
+  /* ---------- Mês atual: ticket médio contra o mês anterior e o mesmo mês do ano anterior ---------- */
+  // Mesma base e mesma conta do Raio-X (venda sem devoluções ÷ pedidos, relatório 01). Loja-mês com o ERP incompleto
+  // (menos da metade do faturamento da planilha) fica fora da comparação, como no Raio-X.
+  function renderTicketMes(mes, loja) {
+    const tb = $('#tab-ticket-mes tbody'), b = rxBase(); if (!tb) return;
+    if (!b) { tb.replaceChildren(); $('#tk-nota').textContent = 'Os dados do ERP ainda não foram carregados.'; return; }
+    const mA = addMes(mes, -1), mY = addMes(mes, -12);
+    const { ult, parcial } = ultInfo(); const emCurso = parcial === mes;
+    $('#tk-per').textContent = `| ${mesNome(mes)}${emCurso && ult ? ' até ' + dBR(ult) : ''} contra ${mesNome(mA)} e ${mesNome(mY)}`;
+    $('#tk-h-ma').textContent = cap(MESES[Number(mA.slice(5, 7)) - 1]) + '/' + mA.slice(2, 4);
+    $('#tk-h-aa').textContent = cap(MESES[Number(mY.slice(5, 7)) - 1]) + '/' + mY.slice(2, 4);
+    const vp = dash.data('vendas'), planM = new Map(vp.status === 'ok' ? vp.data.map((r) => [r.loja + '|' + r.mes, Number(r.faturamento)]) : []);
+    const soma = new Map(); for (const r of b.rows) { const k = r.loja + '|' + r.mes; if (!soma.has(k)) soma.set(k, []); soma.get(k).push(r); }
+    const S = (l, m) => { const v = soma.get(l + '|' + m); return v ? rxSoma(v) : null; };
+    const incompleto = (l, m) => { const p = planM.get(l + '|' + m), s = S(l, m); return m !== parcial && p > 0 && (!s || s.val < 0.5 * p); };
+    // Dias com venda (relatório 01, dia a dia): para comparar pedidos por dia entre um mês em curso e um mês fechado
+    const ed = dash.data('erp_diario'), dias = new Map();
+    if (ed.status === 'ok') for (const r of ed.data) { const l = lojaDe(r), k = l + '|' + r.data.slice(0, 7); if (Number(r.pedidos) > 0) dias.set(k, (dias.get(k) || 0) + 1); }
+    const lojas = b.lojas.filter((l) => (loja === 'Todas' || l === loja) && S(l, mes) && S(l, mes).ped > 0 && !incompleto(l, mes));
+    const linha = (l) => {
+      const c = S(l, mes), a = incompleto(l, mA) ? null : S(l, mA), y = incompleto(l, mY) ? null : S(l, mY);
+      return { l, c, a: a && a.ped > 0 ? a : null, y: y && y.ped > 0 ? y : null, dc: dias.get(l + '|' + mes) || 0, da: dias.get(l + '|' + mA) || 0, dy: dias.get(l + '|' + mY) || 0 };
+    };
+    const rows = lojas.map(linha);
+    // Grupo: soma das lojas, cada comparação só com as lojas que têm os dois meses (mesma base)
+    const grupo = (sel) => { const s = { ped: 0, valPos: 0, dias: 0 }; for (const x of sel) { s.ped += x.ped; s.valPos += x.valPos; } s.tkt = s.ped > 0 ? s.valPos / s.ped : null; return s; };
+    let g = null;
+    if (loja === 'Todas' && rows.length > 1) {
+      const comA = rows.filter((x) => x.a), comY = rows.filter((x) => x.y);
+      g = { l: 'Grupo', c: grupo(rows.map((x) => x.c)), cA: grupo(comA.map((x) => x.c)), cY: grupo(comY.map((x) => x.c)), a: comA.length ? grupo(comA.map((x) => x.a)) : null, y: comY.length ? grupo(comY.map((x) => x.y)) : null,
+        dc: d3.max(rows, (x) => x.dc) || 0, da: d3.max(rows, (x) => x.da) || 0, dy: d3.max(rows, (x) => x.dy) || 0, nA: comA.length, nY: comY.length, n: rows.length };
+    }
+    const LIM = 0.05;   // a partir de 5% de mudança no ticket, o ícone abre a análise
+    const leitura = (vt, vp) => vt == null ? '' : vp == null ? (vt < 0 ? 'Ticket menor' : 'Ticket maior')
+      : vt < 0 && vp >= 0 ? 'Mais pedidos, cesta menor' : vt < 0 ? 'Menos pedidos e cesta menor' : vp < 0 ? 'Menos pedidos, cesta maior' : 'Mais pedidos e cesta maior';
+    const abrir = (x) => {
+      const dlg = $('#tk-dlg'), nome = x.l === 'Grupo' ? 'Grupo (todas as lojas)' : nomeLoja(x.l);
+      dlg.querySelector('h3').textContent = `Ticket médio · ${nome} · ${mesNome(mes)}`;
+      const ps = [], cc = (k) => x.l === 'Grupo' ? x[k] : x.c;
+      ps.push(`${mesNome(mes)}${emCurso && ult ? ` (até ${dBR(ult)})` : ''}: ticket de ${brl2.format(x.c.tkt)} em ${int.format(x.c.ped)} pedidos.`);
+      const comp = (o, base, mRef, dRef, rot) => {
+        if (!o) { ps.push(`${cap(rot)} (${mesNome(mRef)}): sem base para comparar (sem venda no ERP ou relatório incompleto).`); return; }
+        const vt = base.tkt / o.tkt - 1, ppdC = x.dc ? base.ped / x.dc : null, ppdR = dRef ? o.ped / dRef : null, vpd = ppdC && ppdR ? ppdC / ppdR - 1 : null;
+        const efeito = (base.tkt - o.tkt) * base.ped;
+        ps.push(`${cap(rot)} (${mesNome(mRef)}): ticket de ${brl2.format(o.tkt)}, variação de ${pct(vt, true)}. Pedidos por dia com venda: ${ppdC ? int.format(ppdC) : '—'} contra ${ppdR ? int.format(ppdR) : '—'} (${pct(vpd, true)}).`
+          + ` Efeito do ticket no faturamento: com o ticket de ${mesNome(mRef)}, os ${int.format(base.ped)} pedidos de agora somariam ${money(o.tkt * base.ped)}; a diferença de ticket ${efeito < 0 ? 'tirou' : 'acrescentou'} ${money(Math.abs(efeito))}${emCurso ? ' até agora' : ''}.`);
+        const l2 = leitura(vt, vpd);
+        if (Math.abs(vt) >= LIM) ps.push(vt < 0
+          ? (vpd != null && vpd >= 0 ? `Leitura: ${l2.toLowerCase()}. Os clientes continuam vindo, mas levam menos por pedido: vale olhar mix, itens de maior valor em falta, preço e descontos.` : `Leitura: ${l2.toLowerCase()}. A queda vem do movimento e do valor por pedido: vale olhar fluxo da loja, ruptura de estoque e atendimento.`)
+          : (vpd != null && vpd < 0 ? `Leitura: ${l2.toLowerCase()}. Menos clientes, comprando mais por vez: o faturamento depende de poucos pedidos maiores; vale olhar recorrência e captação.` : `Leitura: ${l2.toLowerCase()}. Bom sinal: cresce o movimento e o valor por pedido.`));
+      };
+      comp(x.a, cc('cA'), mA, x.da, 'mês anterior');
+      comp(x.y, cc('cY'), mY, x.dy, 'mesmo mês do ano anterior');
+      if (x.l === 'Grupo') ps.push(`Grupo: ${x.n} lojas no mês; a comparação com o mês anterior usa as ${x.nA} lojas com os dois meses e a com o ano anterior, as ${x.nY} que já vendiam em ${mesNome(mY)}.`);
+      if (emCurso) ps.push('Mês em curso: o ticket é uma média e já pode ser comparado; pedidos e efeito no faturamento valem até o último dia lido. O "Ler até" não muda este quadro, que usa o mês até a última leitura.');
+      dlg.querySelector('.txt').replaceChildren(...ps.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    };
+    const LBL = [...document.querySelectorAll('#tab-ticket-mes thead th')].map((th) => th.textContent);
+    const tr = (x) => {
+      const t = document.createElement('tr'), cA = x.l === 'Grupo' ? x.cA : x.c, cY = x.l === 'Grupo' ? x.cY : x.c;
+      const vA = x.a ? cA.tkt / x.a.tkt - 1 : null, vY = x.y ? cY.tkt / x.y.tkt - 1 : null;
+      const ppd = (s, d) => s && d ? s.ped / d : null, vpd = x.a && ppd(x.c, x.dc) && ppd(x.a, x.da) ? ppd(x.c, x.dc) / ppd(x.a, x.da) - 1 : null;
+      const cel = (txt, cls, v) => { const c = document.createElement('td'); c.dataset.label = LBL[t.children.length] || ''; if (cls) c.className = cls; c.textContent = txt; if (v != null) tone(c, v); t.append(c); return c; };
+      cel(x.l === 'Grupo' ? 'Grupo' : nomeLoja(x.l), 'l nm');
+      cel(brl2.format(x.c.tkt)); cel(x.a ? brl2.format(x.a.tkt) : '—'); cel(pct(vA, true), null, vA); cel(x.y ? brl2.format(x.y.tkt) : '—'); cel(pct(vY, true), null, vY);
+      cel(ppd(x.c, x.dc) ? int.format(ppd(x.c, x.dc)) + (vpd != null ? ` (${pct(vpd, true)})` : '') : '—');
+      const cl = cel('', 'l'), maior = [vA, vY].filter((v) => v != null).sort((p, q) => Math.abs(q) - Math.abs(p))[0];
+      if (maior != null && Math.abs(maior) >= LIM) {
+        const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'rl-av'; bt.textContent = maior < 0 ? '⚠' : 'ⓘ';
+        if (maior > 0) bt.style.color = 'var(--color-ok)';
+        bt.title = 'Ver a análise'; bt.setAttribute('aria-label', `Análise do ticket: ${x.l === 'Grupo' ? 'Grupo' : nomeLoja(x.l)}`); bt.addEventListener('click', () => abrir(x)); cl.append(bt);
+      }
+      const ver = document.createElement('a'); ver.href = '#'; ver.textContent = leitura(vA ?? vY, vA != null ? vpd : null) || 'Ver'; ver.addEventListener('click', (e) => { e.preventDefault(); abrir(x); }); cl.append(ver);
+      return t;
+    };
+    tb.replaceChildren(...(g ? [tr(g)] : []), ...rows.map(tr));
+    if (!rows.length) { const t = document.createElement('tr'), c = document.createElement('td'); c.colSpan = 8; c.textContent = `Sem pedidos do ERP em ${mesNome(mes)} para esta seleção.`; t.append(c); tb.append(t); }
+  }
+
   /* ---------- Aba Mês atual ---------- */
   function renderMes() {
     const a = dash.data('acomp');
@@ -3618,6 +3712,7 @@
     opcoes(sel, [...meses].reverse().map((m) => [m, mesNome(m) + (m === MES_CORRENTE ? ' (em curso)' : '')]), mes);
     const lojasMes = daMes.slice().sort((p, q) => ord(p.loja) - ord(q.loja)).map((r) => r.loja);
     opcoesG($('#sel-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', lojasMes.filter((l) => l !== 'Todas').map((l) => [l, nomeLoja(l)])]], loja);
+    try { renderTicketMes(mes, loja); } catch (e) { console.error(e); }
     // Ler até: qualquer dia com venda no mês (relatório 01), para ler uma semana ainda não fechada
     {
       const ed = dash.data('erp_diario');
