@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261112111014';</script>
+<script>window.BIN_BUILD = '20261112130805';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -4831,6 +4831,7 @@
   function ftBase() {
     const d = (id) => { const x = dash.data(id); return x.status === 'ok' ? x.data : []; };
     const fat = d('erp_faturado'), car = d('erp_cartao'), ven = d('erp_diario'), c03 = d('erp_cmv_diario');
+    const ent = d('erp_entradas');   // entradas com nota do mesmo relatório 07 (compras, transferências recebidas, devoluções)
     const meses = [...new Set([...fat.map((r) => r.ini.slice(0, 7)), ...car.map((r) => r.data.slice(0, 7))])].sort();
     // Período de cada loja no mês: o mais longo do relatório 07; sem 07, do dia 1 ao último dia do extrato
     const porLoja = (mes) => {
@@ -4841,6 +4842,8 @@
         const cl = car.filter((r) => r.loja === loja && r.data.slice(0, 7) === mes);
         const de = per ? per.slice(0, 10) : mes + '-01', ate = per ? per.slice(11) : cl.map((r) => r.data).sort().pop();
         const nf = per ? fl.filter((r) => r.ini + '|' + r.fim === per) : [];
+        const en = per ? ent.filter((r) => r.loja === loja && r.ini + '|' + r.fim === per) : [];
+        const sE = (t, f = 'valor') => en.filter((r) => r.tipo === t).reduce((s, r) => s + Number(r[f] || 0), 0);
         const dentro = (s) => s >= de && s <= ate;
         const m = { 'Débito': 0, 'Crédito': 0, 'Pix': 0, 'Outros': 0 }; let liq = 0;
         for (const r of cl) if (dentro(r.data)) { m[r.modalidade] = (m[r.modalidade] || 0) + Number(r.bruto); liq += Number(r.liquido); }
@@ -4855,6 +4858,7 @@
           st: nf.filter((r) => r.tipo === 'venda' && /^[56]40[1-5]$/.test(r.cfop)).reduce((s, r) => s + Number(r.valor), 0),
           custo03: c03.filter((r) => r.loja === loja && dentro(r.data)).reduce((s, r) => s + Number(r.custo), 0),
           venda03: c03.filter((r) => r.loja === loja && dentro(r.data)).reduce((s, r) => s + Number(r.venda), 0),
+          temEnt: !!per && ent.length > 0, compras: sE('compra'), comprasIcms: sE('compra', 'icms'), transfEnt: sE('transferencia'), devolEnt: sE('devolucao'),
         };
       }).map((r) => ({ ...r, ok: r.temNf && r.temCar && r.ele > 0, cob: r.temNf && r.ele > 0 ? r.fat / r.ele : null, gap: r.temNf && r.temCar ? Math.max(0, r.ele - r.fat) : null }));
     };
@@ -4867,7 +4871,7 @@
         const mod = {}; for (const k of ['Débito', 'Crédito', 'Pix', 'Outros']) mod[k] = g.reduce((t, r) => t + r.mod[k], 0);
         const o = { loja: e.id, nome: e.nome, lojas: g.map((r) => r.loja), semNf: g.filter((r) => !r.temNf).map((r) => r.loja),
           de: g.map((r) => r.de).sort()[0], ate: g.map((r) => r.ate).filter(Boolean).sort().pop(), carAte: g.map((r) => r.carAte).filter(Boolean).sort().pop() || null,
-          regime: e.regime, temNf: g.some((r) => r.temNf), temCar: g.some((r) => r.temCar), st: s('st'), custo03: s('custo03'), venda03: s('venda03'), fat: s('fat'), outras: s('outras'), ele: s('ele'), taxas: s('taxas'), vendas: s('vendas'), mod };
+          regime: e.regime, temNf: g.some((r) => r.temNf), temCar: g.some((r) => r.temCar), st: s('st'), temEnt: g.some((r) => r.temEnt), compras: s('compras'), comprasIcms: s('comprasIcms'), transfEnt: s('transfEnt'), devolEnt: s('devolEnt'), custo03: s('custo03'), venda03: s('venda03'), fat: s('fat'), outras: s('outras'), ele: s('ele'), taxas: s('taxas'), vendas: s('vendas'), mod };
         o.ok = o.temNf && o.temCar && o.ele > 0; o.cob = o.temNf && o.ele > 0 ? o.fat / o.ele : null; o.gap = o.temNf && o.temCar ? Math.max(0, o.ele - o.fat) : null;
         return o;
       }).filter(Boolean);
@@ -5019,10 +5023,17 @@
       const tr = ddd('erp_transf').filter((r) => e.lojas.includes(r.loja) && r.mes === mes).reduce((s, r) => s + Number(r.valor), 0);
       const cm = ddd('erp_cmv_diario').filter((r) => e.lojas.includes(r.loja) && r.data.slice(0, 7) === mes).reduce((s, r) => s + Number(r.custo), 0);
       const sT = cm > 0 ? Math.min(1, tr / cm) : 0;
-      const compras = e.vendas * k;                 // entradas que dão crédito: o custo de tudo o que foi vendido no período
+      // Crédito: as compras com nota da parte de entradas do relatório 07 (mesmo período das notas de venda). Sem as entradas,
+      // estimado pelo custo das mercadorias vendidas (relatório 03).
+      const diasM = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate();
+      const trP = tr * Math.min(1, ftDias(e.de, e.ate) / diasM);   // transferências recebidas no período (relatório 12, mês proporcional)
+      const real = !!e.temEnt;
+      const compras = real ? e.compras : e.vendas * k * (1 - sT);    // compras de fornecedores com nota
+      const transfNF = real ? e.transfEnt : 0;                        // transferências que já chegam com nota
+      const transfTodas = real ? Math.max(e.transfEnt, trP) : e.vendas * k * sT;   // se todas as transferências tiverem nota
       const deb = e.fat * t27, debCob = (e.fat + (e.gap || 0)) * t27;
-      const credCom = compras * t27, credSem = compras * (1 - sT) * t27;
-      Object.assign(l, { k, sT, compras, deb, debCob, credCom, credSem, hib: e.regime === 'Simples' && hib.includes(e.loja) });
+      const credSem = (compras + transfNF) * t27, credCom = (compras + transfTodas) * t27;
+      Object.assign(l, { k, sT, compras, transfNF, transfTodas, trP, real, deb, debCob, credCom, credSem, hib: e.regime === 'Simples' && hib.includes(e.loja) });
       if (e.regime === 'Simples') {
         const dasSemCbs = l.hoje.v * (1 - (l.hoje.pc || 0.155));
         l.hCom = dasSemCbs + Math.max(0, deb - credCom); l.hSem = dasSemCbs + Math.max(0, deb - credSem);
@@ -5038,9 +5049,23 @@
       const e = l.e, fx = filial[e.loja], mae = fx && empDe(fx.de);
       l.fil = fx && mae ? { nome: mae.nome, lojas: mae.lojas, regime: mae.regime, mes: fx.mes } : null;
       l.hojeM = pm(l.hoje.v, e);
-      if (l.fil) {   // vira filial: CBS e IBS pelo regime da empresa que a recebe; IRPJ, CSLL e ICMS passam a ser apurados por ela (fora da conta)
-        l.r27 = ftImposto({ ...e, regime: l.fil.regime }, e.fat, '2027'); l.v27M = pm(l.r27.v, e); l.comp = false;
-        l.tag = ['mud', `Filial da ${l.fil.lojas.join('+')}`]; l.muda = `Sai do Simples em ${mesNome(l.fil.mes)}: vira filial da ${l.fil.nome} (${FT_REG[l.fil.regime]})`;
+      if (l.fil) {   // vira filial: estimada sozinha no regime da empresa que a recebe (Lucro Real: CBS/IBS, ICMS, IRPJ e CSLL)
+        const R = pm(e.fat, e), st = pm(e.st, e), mg = e.venda03 > 0 ? 1 - e.custo03 / e.venda03 : 0.33;
+        // entradas com crédito: compras com nota + todas as transferências do grupo (relatório 12) com nota; o ICMS das transferências
+        // a 18% sobre a parte sem substituição tributária (mesma proporção das vendas)
+        const stSh = e.fat > 0 ? Math.min(1, e.st / e.fat) : 0, trM = pm(l.transfTodas, e);
+        const ent = pm(l.compras, e) + trM, icmsCred = pm(l.real ? e.comprasIcms : 0, e) + trM * 0.18 * (1 - stSh);
+        const cbs = Math.max(0, R * t27 - ent * t27), icms = Math.max(0, (R - st) * 0.18 - icmsCred);
+        // despesas da loja: média dos 3 últimos meses fechados do relatório 05 (sem mercadorias, impostos, investimentos e sócios)
+        const DESP = ['Administrativo', 'Comercial e marketing', 'Estrutura das lojas', 'Financeiro', 'Logística e veículos', 'Pessoal', 'Outras despesas'];
+        const pg = ddd('l2_pagas').filter((r) => e.lojas.includes(lojaDe(r)) && DESP.includes(r.grupo) && r.mes < e.ate.slice(0, 7));
+        const ms = [...new Set(pg.map((r) => r.mes))].sort().slice(-3);
+        const desp = ms.length ? pg.filter((r) => ms.includes(r.mes)).reduce((s, r) => s + Number(r.valor), 0) / ms.length : 0;
+        const cmv = R * (1 - mg), lucro = R - icms - cmv - desp;
+        const irpj = lucro > 0 ? lucro * 0.15 + Math.max(0, lucro - 20000) * 0.10 : 0, csll = lucro > 0 ? lucro * 0.09 : 0;
+        l.lr = { R, st, ent, trM, icmsCred, cbs, icms, desp, cmv, lucro, irpj, csll,mesesDesp: ms.length ? `${mesNome(ms[0])} a ${mesNome(ms[ms.length - 1])}` : 'nenhum mês' };
+        l.v27M = cbs + icms + irpj + csll; l.comp = true;
+        l.tag = ['mud', `Filial da ${l.fil.lojas.join('+')}`]; l.muda = `Sai do Simples em ${mesNome(l.fil.mes)}: vira filial da ${l.fil.nome}. Estimada sozinha no ${FT_REG[l.fil.regime]} (CBS, IBS, ICMS, IRPJ e CSLL)`;
       } else if (e.regime === 'Simples' && l.hib) {
         l.v27M = pm(l.hCom, e); l.comp = true; l.tag = ['hib', 'Simples híbrido'];
         l.muda = 'CBS e IBS saem do DAS e são pagos sobre as notas de venda, com crédito das compras';
@@ -5061,7 +5086,7 @@
     {
       const r = $('#ft-2027-resumo'), maior = cmp.filter((l) => Math.abs(l.difM) > 1).sort((a, b) => Math.abs(b.difM) - Math.abs(a.difM))[0], fil = linhas.filter((l) => l.fil);
       const frases = [`Em 2027 o PIS e a Cofins viram CBS (${cbsTxt}) e começa o IBS de teste (0,1%). `,
-        `Nas empresas lidas${fil.length ? ' (sem a Quinteiro, que muda de regime)' : ''}, o imposto estimado vai de ${money(tH)} para ${money(tM27)} por mês: ${Math.abs(tM27 - tH) < 1 ? 'praticamente igual' : (tM27 > tH ? `${money(tM27 - tH)} a mais` : `${money(tH - tM27)} a menos`)}. `];
+        `Nas empresas lidas${fil.length ? ` (a ${fil.map((l) => l.e.nome).join(', ')} já estimada no Lucro Real)` : ''}, o imposto estimado vai de ${money(tH)} para ${money(tM27)} por mês: ${Math.abs(tM27 - tH) < 1 ? 'praticamente igual' : (tM27 > tH ? `${money(tM27 - tH)} a mais` : `${money(tH - tM27)} a menos`)}. `];
       if (maior) frases.push(`A maior mudança é na ${maior.e.nome} (${maior.e.lojas.join('+')}): ${maior.difM > 0 ? '+' : '−'}${money(Math.abs(maior.difM))} por mês. `);
       if (fil.length) frases.push(fil.map((l) => `A ${l.e.nome} (${l.e.lojas.join('+')}) vira filial da ${l.fil.nome} em ${mesNome(l.fil.mes)} e deixa o Simples.`).join(' '));
       r.textContent = frases.join('');
@@ -5079,7 +5104,7 @@
       { cls: 'l nm', fmt: (l) => l.tot ? `Total (${l.n} empresas comparáveis)` : ftNome(l.e) },
       { cls: 'l', fmt: () => '' },
       { fmt: (l) => money(l.hojeM) },
-      { fmt: (l) => l.tot ? money(l.v27M) : l.fil ? `${money(l.v27M)} + IRPJ, CSLL e ICMS na ${l.fil.lojas.join('+')}` : money(l.v27M) },
+      { fmt: (l) => l.tot ? money(l.v27M) : l.fil ? `${money(l.v27M)} no Lucro Real` : money(l.v27M) },
       { cls: (l) => corDif(l.difM), fmt: (l) => l.difM == null ? 'Não comparável' : Math.abs(l.difM) < 1 ? 'Igual' : (l.difM > 0 ? '+ ' : '− ') + money(Math.abs(l.difM)) },
       { cls: 'ic', fmt: () => '' },
     ], tt);
@@ -5096,15 +5121,22 @@
     function abrirLeitura(l) {
       const e = l.e, p = [], M = (v) => money(pm(v, e));
       p.push(`Em 2027: ${l.tag[1]}. ${l.muda}.`);
-      if (l.fil) {
-        p.push(`Hoje (Simples): cerca de ${money(l.hojeM)} por mês de DAS, com todos os tributos dentro.`);
-        p.push(`Como filial da ${l.fil.nome} (${FT_REG[l.fil.regime]}): CBS e IBS de cerca de ${money(l.v27M)} por mês sobre a venda menos o custo das mercadorias. IRPJ e CSLL passam a sair do lucro da ${l.fil.nome} e o ICMS é apurado fora do Simples: por isso a comparação com o DAS não é direta.`);
-        p.push(`As vendas da ${e.lojas.join('+')} deixam de contar para os limites do Simples. As transferências entre a ${l.fil.lojas.join('+')} e a ${e.lojas.join('+')} passam a ser entre estabelecimentos da mesma empresa.`);
+      if (l.fil && l.lr) {
+        const x = l.lr;
+        p.push(`Hoje (Simples): ${money(l.hojeM)} por mês de DAS, com todos os tributos dentro.`);
+        p.push(`Estimativa da ${e.lojas.join('+')} sozinha no ${FT_REG[l.fil.regime]} em 2027, por mês: notas de venda de ${money(x.R)}.`);
+        p.push(`• CBS e IBS: ${money(x.cbs)} (${pct(t27)} sobre as notas, menos o crédito de ${money(x.ent)} em entradas: compras com nota do relatório 07 e ${money(x.trM)} em transferências do grupo, com nota).`);
+        p.push(`• ICMS: ${money(x.icms)} (18% sobre as notas sem substituição tributária, ${money(x.R - x.st)}, menos ${money(x.icmsCred)} de crédito: o ICMS destacado nas compras e 18% das transferências sem substituição).`);
+        p.push(`• IRPJ e CSLL: ${money(x.irpj + x.csll)}. Lucro estimado de ${money(x.lucro)} = notas − ICMS − custo das mercadorias vendidas com nota (${money(x.cmv)}, pela margem do relatório 03) − despesas da loja (${money(x.desp)} por mês, média de ${x.mesesDesp} no relatório 05, sem mercadorias, impostos, investimentos e retiradas dos sócios).${x.lucro <= 0 ? ' Lucro negativo: sem IRPJ e CSLL.' : ''}`);
+        p.push(`Total: ${money(l.v27M)} por mês, contra ${money(l.hojeM)} no DAS hoje (${l.difM > 0 ? '+' : '−'}${money(Math.abs(l.difM))}).`);
+        p.push(`Leitura: hoje ${pct0(e.vendas > 0 ? e.fat / e.vendas : null)} das vendas saem em nota. No Lucro Real, as despesas da loja inteira entram contra só a receita com nota${x.lucro <= 0 ? ', e o lucro contábil fica negativo' : ''}. Com as notas cobrindo o cartão e o Pix, a receita, o ICMS e a CBS sobem. Como filial da ${l.fil.nome}, o IRPJ e a CSLL saem do lucro somado das duas lojas, e as transferências entre a ${l.fil.lojas.join('+')} e a ${e.lojas.join('+')} passam a ser entre estabelecimentos da mesma empresa.`);
+        p.push(`As vendas da ${e.lojas.join('+')} deixam de contar para os limites do Simples.`);
       } else if (e.regime === 'Simples') {
         p.push(`Hoje ${pct0(e.vendas > 0 ? e.fat / e.vendas : null)} das vendas do sistema saem em nota. Imposto hoje: ${money(l.hojeM)} por mês.`);
         if (l.hib) {
           p.push(`No híbrido, o DAS perde a parcela da CBS e a empresa paga CBS e IBS sobre as notas de venda (${M(l.deb)} por mês), com crédito das compras (${M(l.credCom)} por mês com as transferências do grupo com nota). Resultado: ${money(l.v27M)} por mês.`);
-          if (l.sT > 0) p.push(`Cerca de ${pct0(l.sT)} da mercadoria vendida chega por transferência de outras lojas do grupo. Se essas transferências saíssem sem nota, o crédito cairia para ${M(l.credSem)} por mês e o imposto subiria para ${M(l.hSem)} por mês.`);
+          p.push(l.real ? `Crédito pelas entradas do relatório 07: compras com nota de ${M(l.compras)} por mês e transferências recebidas com nota de ${M(l.transfNF)}; pelo relatório 12, as transferências recebidas somam ${M(l.trP)} por mês.` : 'Sem as entradas do relatório 07 no período: o crédito foi estimado pelo custo das mercadorias vendidas (relatório 03).');
+          if (l.transfTodas > l.transfNF + 1) p.push(`Se todas as transferências do grupo saírem com nota, o crédito é de ${M(l.credCom)} por mês (já usado acima). Só com as que hoje têm nota, seria ${M(l.credSem)} e o imposto subiria para ${M(l.hSem)} por mês.`);
           p.push(`Se tivesse ficado no DAS: ${M(l.a27.v)} por mês. A vantagem do híbrido é dar crédito integral a quem compra da empresa (outras lojas do grupo e clientes empresas).`);
           if (l.sobra > 1) p.push(`Atenção: o crédito das entradas passa do débito das notas de venda (sobra de ${M(l.sobra)} por mês). Entradas com nota muito maiores que as saídas com nota acumulam crédito e chamam a atenção da fiscalização; com as notas cobrindo o cartão e o Pix, o débito sobe para ${M(l.debCob)} por mês.`);
         } else {
@@ -5125,7 +5157,10 @@
     {
       const pend = [];
       if (!oficial) pend.push(['Alíquota da CBS de 2027', `ainda é projeção (${pct(cbsRef)} de referência); o Senado fixa até 15/12/2026. Quando sair, o painel atualiza as contas.`]);
-      pend.push(['Notas de entrada (compras com nota)', 'o crédito de CBS e IBS hoje é estimado pelo custo das mercadorias vendidas (relatório 03). Com um relatório de compras/entradas por CFOP de cada empresa (pasta 11, ainda sem rotina), o crédito passa a ser o que de fato entrou com nota. É o dado que mais muda a conta da L2 no híbrido e das empresas do regime normal.']);
+      const semEnt = linhas.filter((l) => !l.real).map((l) => l.e.nome);
+      if (semEnt.length) pend.push(['Entradas do relatório 07', `sem a parte de entradas no período de ${semEnt.join(', ')}: o crédito dessas empresas foi estimado pelo custo das mercadorias vendidas (relatório 03).`]);
+      pend.push(['Crédito das compras de fornecedores do Simples', 'o crédito usa todas as compras com nota da parte de entradas do 07. Compras de fornecedores do Simples (fora do híbrido) dão crédito menor; um mês fechado no seletor dá a leitura mais estável, porque compras grandes num dia pesam muito num mês ainda curto.']);
+      if (linhas.some((l) => l.lr)) pend.push(['Quinteiro no Lucro Real', 'a estimativa usa 18% de ICMS nas vendas sem substituição tributária e as despesas pagas da loja (relatório 05); a contabilidade confirma depreciação, pró-labore e o tratamento do estoque na passagem.']);
       const sem07 = linhas.filter((l) => l.e.semNf && l.e.semNf.length).map((l) => `${l.e.nome} (${l.e.semNf.join(', ')})`);
       if (sem07.length) pend.push(['Notas de venda (07) do período', `faltam de ${sem07.join('; ')}.`]);
       const sem03 = linhas.filter((l) => !(l.e.venda03 > 0)).map((l) => l.e.nome);
