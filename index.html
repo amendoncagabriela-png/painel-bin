@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261112104233';</script>
+<script>window.BIN_BUILD = '20261112111014';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -341,6 +341,12 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .bd-dlg { max-width: min(36rem, calc(100vw - 2rem)); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: 1rem 1.2rem; }
   .bd-dlg::backdrop { background: rgba(0,0,0,.55); }
+  .ft27-resumo { margin: .2rem 0 .8rem; font-size: 1.02rem; line-height: 1.5; }
+  .ft27-tag { display: inline-block; padding: .05rem .45rem; border-radius: 999px; font-size: .78rem; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  #ft-2027-tab td:nth-child(1) { white-space: normal; min-width: 10rem; max-width: 22rem; }
+  #ft-2027-tab td:nth-child(4) { white-space: normal; min-width: 7rem; max-width: 12rem; }
+  .ft27-muda { font-weight: 400; font-size: .82rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; }
+  .ft27-tag.hib { color: var(--bin-gold); } .ft27-tag.das { color: var(--color-fg-muted); } .ft27-tag.reg { color: var(--color-fg); } .ft27-tag.mud { color: var(--color-warn); }
   .bd-dlg h3 { margin: 0 0 .6rem; font-size: var(--cds-font-size-heading); }
   .bd-dlg p { margin: 0 0 .6rem; line-height: 1.5; }
   .bd-dlg button.fechar { margin-top: .4rem; }
@@ -2379,17 +2385,22 @@
           <p class="bd-note" id="ft-proj-glob">—</p>
         </div>
         <div class="bd-card" id="ft-2027">
-          <h3>2027: reforma tributária <span class="per">| leitura da provisão com o que está aprovado</span></h3>
+          <h3>2027: reforma tributária <span class="per">| o que muda em cada empresa, em R$ por mês</span></h3>
           <div id="ft-alerta" class="bd-dev-faixa" role="note" hidden></div>
-          <p class="bd-note" id="ft-2027-nota">—</p>
+          <p class="ft27-resumo" id="ft-2027-resumo">—</p>
           <div class="bd-tablewrap">
             <table id="ft-2027-tab" class="bd-cards">
-              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Regime 2027</th><th>2026 (hoje)</th><th id="ft-27-a">2027 no DAS</th><th>2027 híbrido, transferências com nota</th><th>2027 híbrido, transferências sem nota</th><th class="ic"><span class="sr">Leitura</span></th></tr></thead>
+              <thead><tr><th class="l">Empresa (lojas)</th><th class="l">Em 2027</th><th>Imposto hoje</th><th>Imposto em 2027</th><th>Diferença</th><th class="ic"><span class="sr">Leitura</span></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
-          <h3 style="margin-top: var(--cds-gap-md)">Informativos <span class="per" id="ft-info-per">| consulta semanal</span></h3>
-          <ul class="bd-notes" id="ft-info"></ul>
+          <p class="bd-note" id="ft-2027-nota">—</p>
+          <h3 style="margin-top: var(--cds-gap-md)">Para a análise ficar mais precisa <span class="per">| o que ainda falta</span></h3>
+          <ul class="bd-notes" id="ft-2027-pend"></ul>
+          <details style="margin-top: var(--cds-gap-sm)">
+            <summary><b>Informativos</b> <span class="per" id="ft-info-per">| consulta semanal</span></summary>
+            <ul class="bd-notes" id="ft-info"></ul>
+          </details>
         </div>
         <dialog class="bd-dlg" id="ft-dlg"><h3></h3><div class="txt"></div><form method="dialog"><button class="bd-btn-atu fechar" type="submit">Fechar</button></form></dialog>
         <details class="bd-card" id="ft-nf">
@@ -5018,58 +5029,110 @@
         l.sobra = Math.max(0, credCom - deb);
       }
     }
-    const tot27 = (f) => linhas.reduce((s, l) => s + (f(l) || 0), 0);
-    const tRow = { tot: true, hoje: tot27((l) => l.hoje.v), a27: tot27((l) => l.e.regime === 'Simples' ? (l.hib ? l.hCom : l.a27.v) : l.a27.v), dentro: tot27((l) => l.a27.v),
-      hCom: tot27((l) => l.e.regime === 'Simples' ? l.hCom : l.a27.v), hSem: tot27((l) => l.e.regime === 'Simples' ? l.hSem : l.a27.v) };
-    $('#ft-27-a').textContent = '2027 no DAS';
-    $('#ft-2027-nota').textContent = `CBS de ${pct(cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001))} (${oficial ? 'fixada pelo Senado' : `referência de ${pct(cbsRef)} ainda em projeção; o Senado fixa até 15/12/2026`}) e IBS de teste de 0,1% em 2027. `
-      + `Empresas no Simples híbrido (${hib.length ? linhas.filter((l) => l.hib).map((l) => l.e.lojas.join('+')).join(', ') : 'nenhuma informada'}): o DAS perde a parcela da CBS e a empresa paga CBS e IBS sobre as notas de venda, com crédito do que comprou. `
-      + 'Com nota de compra e venda nas transferências entre lojas do grupo, a loja toma crédito também sobre a mercadoria que veio de outra loja; sem nota, só sobre as compras de fornecedores. Toque no ícone ⓘ de cada empresa para a leitura dela.';
+    // Empresa que vira filial de outra em 2027 (ex.: QUIN>MEND:2027-01): sai do Simples e passa a ser apurada no regime da outra
+    const filial = {}; for (const s of pv('filial_2027').split(',').map((x) => x.trim()).filter(Boolean)) { const m = s.match(/^(\w+)>(\w+)(?::(\d{4}-\d{2}))?$/); if (m) filial[m[1]] = { de: m[2], mes: m[3] || '2027-01' }; }
+    const empDe = (id) => FT_EMP.find((x) => x.id === id);
+    // Tudo em R$ por mês: o período lido do relatório 07 levado a um mês de 30 dias (o mês em curso tem poucos dias lidos)
+    const pm = (v, e) => v * 30 / Math.max(1, ftDias(e.de, e.ate));
+    for (const l of linhas) {
+      const e = l.e, fx = filial[e.loja], mae = fx && empDe(fx.de);
+      l.fil = fx && mae ? { nome: mae.nome, lojas: mae.lojas, regime: mae.regime, mes: fx.mes } : null;
+      l.hojeM = pm(l.hoje.v, e);
+      if (l.fil) {   // vira filial: CBS e IBS pelo regime da empresa que a recebe; IRPJ, CSLL e ICMS passam a ser apurados por ela (fora da conta)
+        l.r27 = ftImposto({ ...e, regime: l.fil.regime }, e.fat, '2027'); l.v27M = pm(l.r27.v, e); l.comp = false;
+        l.tag = ['mud', `Filial da ${l.fil.lojas.join('+')}`]; l.muda = `Sai do Simples em ${mesNome(l.fil.mes)}: vira filial da ${l.fil.nome} (${FT_REG[l.fil.regime]})`;
+      } else if (e.regime === 'Simples' && l.hib) {
+        l.v27M = pm(l.hCom, e); l.comp = true; l.tag = ['hib', 'Simples híbrido'];
+        l.muda = 'CBS e IBS saem do DAS e são pagos sobre as notas de venda, com crédito das compras';
+      } else if (e.regime === 'Simples') {
+        l.v27M = pm(l.a27.v, e); l.comp = true; l.tag = ['das', 'Simples (DAS)'];
+        l.muda = 'Nada muda na conta: CBS e IBS ficam dentro do DAS (sem crédito das compras)';
+      } else {
+        l.v27M = pm(l.a27.v, e); l.comp = true; l.tag = ['reg', FT_REG[e.regime]];
+        l.muda = e.regime === 'Real' ? 'PIS e Cofins viram CBS, com crédito das compras' + (linhas.some((x) => filial[x.e.loja] && filial[x.e.loja].de === e.loja) ? '; recebe a Quinteiro (L4) como filial' : '')
+          : 'PIS e Cofins (3,65% da receita) viram CBS, com crédito das compras';
+      }
+      l.difM = l.comp ? l.v27M - l.hojeM : null;
+    }
+    const cmp = linhas.filter((l) => l.comp), tH = cmp.reduce((s, l) => s + l.hojeM, 0), tM27 = cmp.reduce((s, l) => s + l.v27M, 0);
+    const tRow = { tot: true, hojeM: tH, v27M: tM27, difM: tM27 - tH, n: cmp.length };
+    const cbsTxt = `${pct(cbsRef - (Number(pv('cbs_reducao_2027')) || 0.001))}${oficial ? '' : ', ainda em projeção'}`;
+    // Resumo em linguagem direta
+    {
+      const r = $('#ft-2027-resumo'), maior = cmp.filter((l) => Math.abs(l.difM) > 1).sort((a, b) => Math.abs(b.difM) - Math.abs(a.difM))[0], fil = linhas.filter((l) => l.fil);
+      const frases = [`Em 2027 o PIS e a Cofins viram CBS (${cbsTxt}) e começa o IBS de teste (0,1%). `,
+        `Nas empresas lidas${fil.length ? ' (sem a Quinteiro, que muda de regime)' : ''}, o imposto estimado vai de ${money(tH)} para ${money(tM27)} por mês: ${Math.abs(tM27 - tH) < 1 ? 'praticamente igual' : (tM27 > tH ? `${money(tM27 - tH)} a mais` : `${money(tH - tM27)} a menos`)}. `];
+      if (maior) frases.push(`A maior mudança é na ${maior.e.nome} (${maior.e.lojas.join('+')}): ${maior.difM > 0 ? '+' : '−'}${money(Math.abs(maior.difM))} por mês. `);
+      if (fil.length) frases.push(fil.map((l) => `A ${l.e.nome} (${l.e.lojas.join('+')}) vira filial da ${l.fil.nome} em ${mesNome(l.fil.mes)} e deixa o Simples.`).join(' '));
+      r.textContent = frases.join('');
+    }
+    $('#ft-2027-nota').textContent = `Valores por mês, estimados com as notas de ${dBR(linhas[0] ? linhas[0].e.de : '')} a ${dBR(linhas[0] ? linhas[0].e.ate : '')}. Simples: o DAS inteiro (todos os tributos). Lucro Presumido: PIS, Cofins, IRPJ e CSLL. Lucro Real: só PIS e Cofins (hoje) e CBS e IBS (2027); IRPJ e CSLL dependem do balancete. ICMS fora do Simples não entra. Toque no ⓘ de cada empresa para a conta e os cenários.`;
     const prazo = pv('prazo_regime_regular'), hoje = new Date().toISOString().slice(0, 10), al = $('#ft-alerta');
-    const temSimples = linhas.some((l) => l.e.regime === 'Simples' && !l.hib);
+    const temSimples = linhas.some((l) => l.e.regime === 'Simples' && !l.hib && !l.fil);
     al.hidden = !(prazo && hoje <= prazo && temSimples);
     if (!al.hidden) { const dd = ftDias(hoje, prazo) - 1;
       al.replaceChildren(Object.assign(document.createElement('span'), { className: 'bd-dev', textContent: dd <= 0 ? 'Prazo hoje' : `Faltam ${dd} dias` }),
         document.createTextNode(`Até ${dBRy(prazo)}, a empresa do Simples que ainda não optou pode escolher recolher IBS e CBS de jan a jun/2027 pelo regime regular (Simples híbrido), no Portal do Simples Nacional.`)); }
-    const vp = (v, base) => `${brl.format(v)} (${pct(base > 0 ? v / base : null)})`;
-    fillTable($('#ft-2027-tab'), [...linhas, ...(linhas.length > 1 ? [tRow] : [])], [
-      { cls: 'l nm', fmt: (l) => l.tot ? 'Total (regime de cada empresa)' : ftNome(l.e) },
-      { cls: 'l', fmt: (l) => l.tot ? '' : l.e.regime === 'Simples' ? (l.hib ? 'Simples híbrido' : 'Simples (DAS)') : FT_REG[l.e.regime] },
-      { fmt: (l) => l.tot ? brl.format(l.hoje) : vp(l.hoje.v, l.e.fat) },
-      { cls: (l) => !l.tot && l.e.regime === 'Simples' && !l.hib ? 'sel' : '', fmt: (l) => l.tot ? brl.format(l.dentro) : l.e.regime === 'Simples' ? vp(l.a27.v, l.e.fat) : `${vp(l.a27.v, l.e.fat)} · regime atual` },
-      { cls: (l) => !l.tot && l.hib ? 'sel' : '', fmt: (l) => l.tot ? brl.format(l.hCom) : l.e.regime === 'Simples' ? vp(l.hCom, l.e.fat) + (l.sobra > 1 ? ' ⚠' : '') : '—' },
-      { fmt: (l) => l.tot ? brl.format(l.hSem) : l.e.regime === 'Simples' ? vp(l.hSem, l.e.fat) : '—' },
+    const corDif = (v) => v == null || Math.abs(v) < 1 ? '' : v > 0 ? 'bad' : 'ok';
+    const lin = [...linhas, ...(cmp.length > 1 ? [tRow] : [])];
+    fillTable($('#ft-2027-tab'), lin, [
+      { cls: 'l nm', fmt: (l) => l.tot ? `Total (${l.n} empresas comparáveis)` : ftNome(l.e) },
+      { cls: 'l', fmt: () => '' },
+      { fmt: (l) => money(l.hojeM) },
+      { fmt: (l) => l.tot ? money(l.v27M) : l.fil ? `${money(l.v27M)} + IRPJ, CSLL e ICMS na ${l.fil.lojas.join('+')}` : money(l.v27M) },
+      { cls: (l) => corDif(l.difM), fmt: (l) => l.difM == null ? 'Não comparável' : Math.abs(l.difM) < 1 ? 'Igual' : (l.difM > 0 ? '+ ' : '− ') + money(Math.abs(l.difM)) },
       { cls: 'ic', fmt: () => '' },
     ], tt);
-    // Ícone ⓘ: leitura de cada empresa numa janela
+    // Etiqueta do regime em 2027 e ícone ⓘ com a leitura de cada empresa
     const dlg = $('#ft-dlg');
     [...$('#ft-2027-tab').tBodies[0].rows].forEach((tr, i) => {
-      const l = [...linhas, ...(linhas.length > 1 ? [tRow] : [])][i]; if (!l || l.tot) return;
+      const l = lin[i]; if (!l || l.tot) return;
+      tr.cells[1].replaceChildren(Object.assign(document.createElement('span'), { className: 'ft27-tag ' + l.tag[0], textContent: l.tag[1] }));
+      tr.cells[0].append(Object.assign(document.createElement('div'), { className: 'ft27-muda', textContent: l.muda }));
       const b = document.createElement('button'); b.type = 'button'; b.className = 'bd-info'; b.textContent = 'i'; b.title = 'Leitura da empresa'; b.setAttribute('aria-label', 'Leitura de ' + ftNome(l.e));
       b.addEventListener('click', () => abrirLeitura(l));
       tr.cells[tr.cells.length - 1].replaceChildren(b);
     });
     function abrirLeitura(l) {
-      const e = l.e, p = [];
-      if (e.regime === 'Simples') {
-        p.push(l.hib ? 'Optou pelo Simples híbrido em 2027: IBS e CBS fora do DAS, pagos sobre as notas de venda com crédito das compras.' : 'Segue com IBS e CBS dentro do DAS em 2027: a tabela não muda e não há crédito das compras.');
-        p.push(`Hoje ${pct0(e.vendas > 0 ? e.fat / e.vendas : null)} das vendas do sistema saem em nota. No período, as notas somam ${brl.format(e.fat)} e o custo das mercadorias vendidas (todas as vendas) é de ${brl.format(l.compras)}.`);
-        if (l.sT > 0) p.push(`Cerca de ${pct0(l.sT)} desse custo chega por transferência de outras lojas do grupo. Com nota de compra e venda nas transferências, o crédito de CBS e IBS sobe de ${brl.format(l.credSem)} para ${brl.format(l.credCom)} no período, e o imposto do híbrido cai de ${brl.format(l.hSem)} para ${brl.format(l.hCom)}.`);
-        if (l.sobra > 1) p.push(`Atenção: o crédito das entradas (${brl.format(l.credCom)}) passa do débito das notas de venda (${brl.format(l.deb)}): sobra crédito de ${brl.format(l.sobra)} no período. Entradas com nota muito maiores que as saídas com nota acumulam crédito e chamam a atenção da fiscalização. Com as notas cobrindo o cartão e o Pix, o débito sobe para ${brl.format(l.debCob)}${l.debCob >= l.credCom ? ' e o crédito é todo usado' : ''}.`);
-        p.push(l.hib ? `Comparado a ficar no DAS (${brl.format(l.a27.v)}), o híbrido ${l.hCom > l.a27.v ? `custa ${brl.format(l.hCom - l.a27.v)} a mais` : `custa ${brl.format(l.a27.v - l.hCom)} a menos`} no período, com as transferências com nota. A vantagem do híbrido é dar crédito integral a quem compra da empresa (outras lojas do grupo e clientes empresas).`
-          : `No híbrido, com as transferências com nota, o imposto do período seria de ${brl.format(l.hCom)}, contra ${brl.format(l.a27.v)} no DAS.`);
+      const e = l.e, p = [], M = (v) => money(pm(v, e));
+      p.push(`Em 2027: ${l.tag[1]}. ${l.muda}.`);
+      if (l.fil) {
+        p.push(`Hoje (Simples): cerca de ${money(l.hojeM)} por mês de DAS, com todos os tributos dentro.`);
+        p.push(`Como filial da ${l.fil.nome} (${FT_REG[l.fil.regime]}): CBS e IBS de cerca de ${money(l.v27M)} por mês sobre a venda menos o custo das mercadorias. IRPJ e CSLL passam a sair do lucro da ${l.fil.nome} e o ICMS é apurado fora do Simples: por isso a comparação com o DAS não é direta.`);
+        p.push(`As vendas da ${e.lojas.join('+')} deixam de contar para os limites do Simples. As transferências entre a ${l.fil.lojas.join('+')} e a ${e.lojas.join('+')} passam a ser entre estabelecimentos da mesma empresa.`);
+      } else if (e.regime === 'Simples') {
+        p.push(`Hoje ${pct0(e.vendas > 0 ? e.fat / e.vendas : null)} das vendas do sistema saem em nota. Imposto hoje: ${money(l.hojeM)} por mês.`);
+        if (l.hib) {
+          p.push(`No híbrido, o DAS perde a parcela da CBS e a empresa paga CBS e IBS sobre as notas de venda (${M(l.deb)} por mês), com crédito das compras (${M(l.credCom)} por mês com as transferências do grupo com nota). Resultado: ${money(l.v27M)} por mês.`);
+          if (l.sT > 0) p.push(`Cerca de ${pct0(l.sT)} da mercadoria vendida chega por transferência de outras lojas do grupo. Se essas transferências saíssem sem nota, o crédito cairia para ${M(l.credSem)} por mês e o imposto subiria para ${M(l.hSem)} por mês.`);
+          p.push(`Se tivesse ficado no DAS: ${M(l.a27.v)} por mês. A vantagem do híbrido é dar crédito integral a quem compra da empresa (outras lojas do grupo e clientes empresas).`);
+          if (l.sobra > 1) p.push(`Atenção: o crédito das entradas passa do débito das notas de venda (sobra de ${M(l.sobra)} por mês). Entradas com nota muito maiores que as saídas com nota acumulam crédito e chamam a atenção da fiscalização; com as notas cobrindo o cartão e o Pix, o débito sobe para ${M(l.debCob)} por mês.`);
+        } else {
+          p.push(`Segue no Simples puro: a tabela do DAS não muda e não há crédito das compras. Imposto em 2027: ${money(l.v27M)} por mês. No híbrido (não escolhido), seria ${M(l.hCom)} por mês.`);
+        }
       } else if (e.regime === 'Real') {
-        p.push('Lucro Real: em 2027 PIS e Cofins dão lugar à CBS, com crédito das compras; IRPJ e CSLL seguem iguais.');
-        p.push('É a principal fornecedora das outras lojas. Com nota de venda nas transferências, a CBS que ela destaca vira crédito integral nas lojas do Simples híbrido: para o grupo, o imposto fica na venda ao cliente final. O preço das transferências entre empresas do grupo precisa ser compatível com o de mercado.');
-        p.push(`Estimativa de CBS e IBS no período: ${brl.format(l.a27.v)} (sobre a venda menos o custo das mercadorias).`);
+        p.push(`Lucro Real: PIS e Cofins de hoje (${money(l.hojeM)} por mês, sobre a venda menos o custo) dão lugar à CBS e ao IBS (${money(l.v27M)} por mês). IRPJ e CSLL seguem iguais e dependem do balancete.`);
+        p.push('É a principal fornecedora das outras lojas: com nota de venda nas transferências, a CBS que ela destaca vira crédito na loja do Simples híbrido (L2). O preço das transferências entre empresas do grupo precisa ser compatível com o de mercado.');
+        if (linhas.some((x) => x.fil && x.fil.lojas.includes(e.lojas[0]))) p.push('A partir de jan/2027 recebe a Quinteiro (L4) como filial: as vendas da L4 passam a somar aqui (CBS, IBS, IRPJ, CSLL e ICMS da Mendonça).');
       } else {
-        p.push('Lucro Presumido: em 2027 PIS e Cofins (3,65% sobre a receita) dão lugar à CBS sobre a venda com crédito das compras; IRPJ e CSLL seguem pela presunção.');
-        p.push(`Estimativa do período: ${brl.format(l.a27.v)}, contra ${brl.format(l.hoje.v)} hoje. Compras de outras lojas do grupo com nota também dão crédito.`);
+        p.push(`Lucro Presumido: hoje ${money(l.hojeM)} por mês (PIS, Cofins, IRPJ e CSLL). Em 2027 PIS e Cofins dão lugar à CBS com crédito das compras: ${money(l.v27M)} por mês. IRPJ e CSLL seguem pela presunção.`);
       }
-      if (prazo && hoje <= prazo && e.regime === 'Simples' && !l.hib) p.push(`Prazo: até ${dBRy(prazo)} para optar pelo híbrido no 1º semestre de 2027.`);
       dlg.querySelector('h3').textContent = ftNome(e);
       dlg.querySelector('.txt').replaceChildren(...p.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
       if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    }
+    // O que falta para a análise ficar mais precisa
+    {
+      const pend = [];
+      if (!oficial) pend.push(['Alíquota da CBS de 2027', `ainda é projeção (${pct(cbsRef)} de referência); o Senado fixa até 15/12/2026. Quando sair, o painel atualiza as contas.`]);
+      pend.push(['Notas de entrada (compras com nota)', 'o crédito de CBS e IBS hoje é estimado pelo custo das mercadorias vendidas (relatório 03). Com um relatório de compras/entradas por CFOP de cada empresa (pasta 11, ainda sem rotina), o crédito passa a ser o que de fato entrou com nota. É o dado que mais muda a conta da L2 no híbrido e das empresas do regime normal.']);
+      const sem07 = linhas.filter((l) => l.e.semNf && l.e.semNf.length).map((l) => `${l.e.nome} (${l.e.semNf.join(', ')})`);
+      if (sem07.length) pend.push(['Notas de venda (07) do período', `faltam de ${sem07.join('; ')}.`]);
+      const sem03 = linhas.filter((l) => !(l.e.venda03 > 0)).map((l) => l.e.nome);
+      if (sem03.length) pend.push(['Custo das vendas (03) do período', `sem relatório de ${sem03.join(', ')}: a margem usada é a padrão (33%).`]);
+      if (linhas.some((l) => l.fil)) pend.push(['Quinteiro como filial da Mendonça', 'confirmar com a contabilidade a data exata e como ficam o estoque e os saldos na passagem; a partir daí, a L4 entra nas contas da L3.']);
+      if (linhas.some((l) => l.e.regime === 'Real')) pend.push(['Lucro Real (Mendonça)', 'IRPJ e CSLL dependem do lucro contábil (balancete mensal); sem ele, a comparação da L3 fica só em PIS/Cofins × CBS.']);
+      $('#ft-2027-pend').replaceChildren(...pend.map(([t, x]) => { const li = document.createElement('li'), b = document.createElement('b'); b.textContent = t + ': '; li.append(b, document.createTextNode(x)); return li; }));
     }
     const info = (dash.data('reforma_info').data || []).slice().sort((a, b) => a.data.localeCompare(b.data));
     const atu = par.map((x) => x.atualizado_em).filter(Boolean).sort().pop();
@@ -5164,7 +5227,10 @@
     if (!L.length) { $('#ft-proj-nota').textContent = 'Sem relatório 07 das empresas do Simples no mês.'; fillTable($('#ft-proj-tab'), [], []); return; }
     const ano = L[0].at.ano;
     for (const [id, t] of [['ft-pj-a', `${ano}, ritmo atual`], ["ft-pj-b", `${ano}, cobrindo desde ${MESES[Number(L[0].at.mes.slice(5, 7)) - 1]}`], ['ft-pj-c', `${ano + 1}, ritmo atual`], ["ft-pj-d", `${ano + 1}, cobrindo o ano todo`]]) $('#' + id).textContent = t;
-    const cel = (p, a) => ({ cls: (l) => ftSitSimples(l[p], a).cls, fmt: (l) => money(l[p].total(a)) });
+    // Empresa que vira filial de uma empresa fora do Simples em 2027 (reforma_param filial_2027): sem limite do Simples a partir de então
+    const filAno = {}; { const r = (dash.data('reforma_param').data || []).find((x) => x.chave === 'filial_2027'); for (const s of ((r && r.valor) || '').split(',')) { const m = s.trim().match(/^(\w+)>(\w+)(?::(\d{4})-\d{2})?$/); if (m) filAno[m[1]] = { ano: Number(m[3] || 2027), de: FT_EMP.find((x) => x.id === m[2]) }; } }
+    const virouFilial = (l, a) => filAno[l.e.loja] && a >= filAno[l.e.loja].ano;
+    const cel = (p, a) => ({ cls: (l) => virouFilial(l, a) ? '' : ftSitSimples(l[p], a).cls, fmt: (l) => virouFilial(l, a) ? `Filial da ${filAno[l.e.loja].de ? filAno[l.e.loja].de.lojas.join('+') : 'outra empresa'} (fora do Simples)` : money(l[p].total(a)) });
     fillTable($('#ft-proj-tab'), L, [
       { cls: 'l nm', fmt: (l) => ftNome(l.e) },
       { fmt: (l) => `${pct0(l.at.r)} · ${pct0(l.cb.r)}` },
@@ -5179,6 +5245,7 @@
       b.addEventListener('click', () => {
         const dlg = $('#ft-dlg'), p = cen.map(([k, a, nome]) => `${nome}: ${money(l[k].total(a))} em notas. ${ftSitSimples(l[k], a).txt}.`);
         p.unshift(`Hoje ${pct0(l.at.r)} das vendas do sistema saem em nota; cobrindo o cartão e o Pix, seriam ${pct0(l.cb.r)}. Crescimento de vendas do ano: ${pct(l.at.g - 1, true)}.`);
+        if (filAno[l.e.loja]) p.push(`Em ${filAno[l.e.loja].ano} vira filial da ${filAno[l.e.loja].de ? filAno[l.e.loja].de.nome : 'outra empresa'} e sai do Simples: os cenários de ${filAno[l.e.loja].ano} acima são só referência, não há limite do Simples a observar.`);
         p.push('Limites do Simples por empresa (matriz e filiais juntas): R$ 3,6 mi (acima, o ICMS sai do DAS) e R$ 4,8 mi (acima, a empresa sai do Simples). Passando em até 20%, vale no ano seguinte; acima de 20%, no mês seguinte. Também conta a receita global das empresas em que um mesmo sócio tem mais de 10%.');
         dlg.querySelector('h3').textContent = ftNome(l.e);
         dlg.querySelector('.txt').replaceChildren(...p.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
@@ -5187,7 +5254,7 @@
       tr.cells[tr.cells.length - 1].replaceChildren(b);
     });
     // Risco: só o que a cobertura do cartão e do Pix, do mês corrente em diante, pode levar acima do sublimite (meses fechados ficam como foram)
-    const riscos = L.filter((l) => [[l.cb, ano], [l.cb, ano + 1]].some(([p, a]) => p.total(a) > SN_LIM.sub));
+    const riscos = L.filter((l) => [[l.cb, ano], [l.cb, ano + 1]].some(([p, a]) => !virouFilial(l, a) && p.total(a) > SN_LIM.sub));
     $('#ft-proj-tit').textContent = riscos.length ? `${riscos.map((l) => l.e.lojas.join('+')).join(', ')}: risco de passar do sublimite se cobrir o cartão e o Pix daqui em diante` : 'Nenhuma empresa do Simples perto dos limites';
     $('#ft-proj-nota').textContent = `Notas de venda projetadas por empresa (matriz e filiais juntas). A coluna "Vira nota" é a parcela das vendas do sistema que hoje sai em nota e a que sairia cobrindo o cartão e o Pix, medidas no período lido (${dBR(simples[0].de)} a ${dBR(simples[0].ate)}). `
       + `Meses já fechados não são reabertos: entram com as notas que saíram (relatório 07); só o mês sem 07 completo fica estimado por essa parcela. No cenário "cobrindo", a cobertura do cartão e do Pix vale do mês corrente em diante, e o risco de passar do sublimite só é apontado por ela; ${ano + 1} repete ${ano} com o crescimento de vendas do ano (${L.map((l) => `${l.e.lojas.join('+')} ${pct(l.at.g - 1, true)}`).join(', ')}). `
