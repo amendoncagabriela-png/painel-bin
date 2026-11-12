@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261112102906';</script>
+<script>window.BIN_BUILD = '20261112104233';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -5110,8 +5110,37 @@
       const ant = mm(Number(m.slice(0, 4)) - 1, Number(m.slice(5, 7)));
       return (ant < mesAt ? ven.get(ant) || 0 : vMes(ant)) * g;
     };
+    // Meses já fechados não são reabertos para faturar: valem as notas de venda que saíram (relatório 07, mês inteiro).
+    // Só sem 07 do mês inteiro o mês fechado fica estimado pela parcela que hoje vira nota.
+    const nfMes = new Map();
+    {
+      const per = new Map();   // loja|mês -> período mais completo do 07 (maior "fim", depois menor "início")
+      for (const x of dd('erp_faturado')) {
+        const l = lojaDe(x); if (!emp.lojas.includes(l) || x.ini.slice(0, 7) !== x.fim.slice(0, 7)) continue;
+        const k = l + '|' + x.ini.slice(0, 7), p = per.get(k), pk = x.ini + '|' + x.fim;
+        if (!p || x.fim > p.fim || (x.fim === p.fim && x.ini < p.ini)) per.set(k, { ini: x.ini, fim: x.fim, pk, v: 0 });
+      }
+      for (const x of dd('erp_faturado')) {
+        const l = lojaDe(x), p = per.get(l + '|' + x.ini.slice(0, 7));
+        if (p && p.pk === x.ini + '|' + x.fim && x.tipo === 'venda') p.v += Number(x.valor);
+      }
+      // por empresa: o mês só conta como real se todas as lojas da empresa com venda no mês têm o 07 do mês (a partir do dia 1º)
+      const fimMes = (m) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).toISOString().slice(0, 10);
+      const comVenda = new Set(dd('erp_diario').map((r) => lojaDe(r) + '|' + r.data.slice(0, 7)));
+      const meses = new Set([...per.keys()].map((k) => k.split('|')[1]));
+      for (const m of meses) {
+        if (m >= mesAt) continue;
+        let s = 0, ok = true;
+        for (const l of emp.lojas) {
+          const p = per.get(l + '|' + m), vendeu = comVenda.has(l + '|' + m);
+          if (p && p.ini.slice(8) === '01') { const nD = Number(fimMes(m).slice(8)), dF = Number(p.fim.slice(8)); s += dF >= nD ? p.v : p.v * ftUteis(m, 1, nD) / Math.max(1, ftUteis(m, 1, dF)); }   // 07 que para antes do fim do mês: completa os dias que faltam no mesmo ritmo
+          else if (vendeu) { ok = false; break; }
+        }
+        if (ok) nfMes.set(m, s);
+      }
+    }
     const out = new Map();
-    for (let a = ano - 1; a <= ano + 1; a++) for (let m = 1; m <= 12; m++) { const k = mm(a, m); out.set(k, vMes(k) * (k >= mesAt ? r : ra)); }
+    for (let a = ano - 1; a <= ano + 1; a++) for (let m = 1; m <= 12; m++) { const k = mm(a, m); out.set(k, k < mesAt && nfMes.has(k) ? nfMes.get(k) : vMes(k) * (k >= mesAt ? r : ra)); }
     // mês em curso com relatório 07: as notas reais completadas no ritmo do período
     if (emp.temNf && emp.ate && emp.ate.slice(0, 7) === mesAt && cenario !== 'cobrir') {
       const d = Number(emp.ate.slice(8, 10)); out.set(mesAt, emp.fat * ftUteis(mesAt, 1, N) / Math.max(1, ftUteis(mesAt, 1, d)));
@@ -5157,10 +5186,11 @@
       });
       tr.cells[tr.cells.length - 1].replaceChildren(b);
     });
-    const riscos = L.filter((l) => [[l.at, ano], [l.cb, ano], [l.at, ano + 1], [l.cb, ano + 1]].some(([p, a]) => p.total(a) > SN_LIM.sub));
-    $('#ft-proj-tit').textContent = riscos.length ? `${riscos.map((l) => l.e.lojas.join('+')).join(', ')} com risco de passar do sublimite ou do teto` : 'Nenhuma empresa do Simples perto dos limites';
+    // Risco: só o que a cobertura do cartão e do Pix, do mês corrente em diante, pode levar acima do sublimite (meses fechados ficam como foram)
+    const riscos = L.filter((l) => [[l.cb, ano], [l.cb, ano + 1]].some(([p, a]) => p.total(a) > SN_LIM.sub));
+    $('#ft-proj-tit').textContent = riscos.length ? `${riscos.map((l) => l.e.lojas.join('+')).join(', ')}: risco de passar do sublimite se cobrir o cartão e o Pix daqui em diante` : 'Nenhuma empresa do Simples perto dos limites';
     $('#ft-proj-nota').textContent = `Notas de venda projetadas por empresa (matriz e filiais juntas). A coluna "Vira nota" é a parcela das vendas do sistema que hoje sai em nota e a que sairia cobrindo o cartão e o Pix, medidas no período lido (${dBR(simples[0].de)} a ${dBR(simples[0].ate)}). `
-      + `Meses sem relatório 07 usam essa parcela sobre as vendas do sistema; no cenário "cobrindo", os meses que já passaram ficam como foram e só daqui em diante as notas cobrem o cartão e o Pix; ${ano + 1} repete ${ano} com o crescimento de vendas do ano (${L.map((l) => `${l.e.lojas.join('+')} ${pct(l.at.g - 1, true)}`).join(', ')}). `
+      + `Meses já fechados não são reabertos: entram com as notas que saíram (relatório 07); só o mês sem 07 completo fica estimado por essa parcela. No cenário "cobrindo", a cobertura do cartão e do Pix vale do mês corrente em diante, e o risco de passar do sublimite só é apontado por ela; ${ano + 1} repete ${ano} com o crescimento de vendas do ano (${L.map((l) => `${l.e.lojas.join('+')} ${pct(l.at.g - 1, true)}`).join(', ')}). `
       + 'Limites: até R$ 3,6 mi tudo no DAS; acima, o ICMS sai do DAS; acima de R$ 4,8 mi a empresa sai do Simples. Passando em até 20%, vale no ano seguinte; acima de 20%, no mês seguinte.';
     // Receita global: o Simples também olha a soma das empresas em que um mesmo sócio tem mais de 10% (LC 123, art. 3º, § 4º)
     const glob = rows.filter((e) => e.temNf).map((e) => ({ e, p: ftProjecao(e, 'atual') })).filter((x) => x.p);
