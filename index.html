@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261112130805';</script>
+<script>window.BIN_BUILD = '20261117130312';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -341,6 +341,10 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .bd-dlg { max-width: min(36rem, calc(100vw - 2rem)); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: 1rem 1.2rem; }
   .bd-dlg::backdrop { background: rgba(0,0,0,.55); }
+  .cp-cal { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem; }
+  .cp-passo { border: 1px solid var(--color-border-line); border-left: 4px solid var(--color-border-line); border-radius: var(--cds-radius); padding: .6rem .75rem; }
+  .cp-passo.ok { border-left-color: var(--color-ok); } .cp-passo.mid { border-left-color: var(--color-warn); } .cp-passo.bad { border-left-color: var(--color-bad); }
+  .cp-passo b { display: block; font-size: 1.15rem; } .cp-passo span { display: block; font-size: .82rem; color: var(--color-fg-muted); }
   .ft27-resumo { margin: .2rem 0 .8rem; font-size: 1.02rem; line-height: 1.5; }
   .ft27-tag { display: inline-block; padding: .05rem .45rem; border-radius: 999px; font-size: .78rem; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
   #ft-2027-tab td:nth-child(1) { white-space: normal; min-width: 10rem; max-width: 22rem; }
@@ -572,6 +576,7 @@
     <button class="bd-tab" role="tab" data-area="com" data-tab="raiox" id="aba-raiox" aria-selected="false"><svg><use href="#i-lens"/></svg><span class="longo">Raio-X</span><span class="curto">Raio-X</span></button>
     <button class="bd-tab" role="tab" data-area="com" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas</span><span class="curto">Metas</span></button>
     <button class="bd-tab" role="tab" data-area="com" data-tab="central" id="aba-central" aria-selected="false"><svg><use href="#i-proj"/></svg><span class="longo">Central Comercial</span><span class="curto">Central</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="campanha" id="aba-campanha" aria-selected="false"><svg><use href="#i-cal"/></svg><span class="longo">Campanha</span><span class="curto">Campanha</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="usoloja" id="aba-usoloja" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Uso da loja</span><span class="curto">Uso</span></button>
@@ -2469,6 +2474,51 @@
   </section>
 
   <!-- ===================== USO DA LOJA ===================== -->
+  <section class="bd-page" data-page="campanha" id="campanha" hidden>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Campanha · <span id="cp-quem">—</span></div>
+      <h2 class="bd-headline" id="cp-headline">—</h2>
+      <p class="bd-comp" id="cp-comp">—</p>
+    </div>
+    <div class="bd-layout">
+      <aside class="bd-rail" aria-label="Indicadores da campanha">
+        <div class="bd-goldline"></div>
+        <div class="bd-kpi"><span class="lbl">Itens da campanha</span><span class="ico"><svg><use href="#i-box"/></svg></span><span class="val" data-cp="itens">—</span><span class="sub" data-cp="itens_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Pronto para divulgar</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-cp="ok">—</span><span class="sub" data-cp="ok_sub">estoque cobre as vendas do ano passado</span></div>
+        <div class="bd-kpi"><span class="lbl">Alinhar com compras</span><span class="ico"><svg><use href="#i-cart"/></svg></span><span class="val" data-cp="comprar">—</span><span class="sub" data-cp="comprar_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Rever no mix</span><span class="ico"><svg><use href="#i-lens"/></svg></span><span class="val" data-cp="rever">—</span><span class="sub" data-cp="rever_sub">vendas em queda contra 2 anos atrás</span></div>
+      </aside>
+      <div class="bd-main">
+        <div class="bd-card">
+          <h3>Calendário <span class="per" id="cp-cal-per">| o que fazer e até quando</span></h3>
+          <div class="cp-cal" id="cp-cal"></div>
+          <p class="bd-note" id="cp-cal-nota">—</p>
+        </div>
+        <div class="bd-grid2">
+          <div class="bd-card">
+            <h3>Para o marketing <span class="per">| pode divulgar: estoque e preço confirmados</span></h3>
+            <div class="bd-tablewrap"><table id="cp-mkt" class="bd-cards c2"><thead><tr><th class="l">Produto</th><th>Caixa / fardo</th><th>Pacote / unidade</th></tr></thead><tbody></tbody></table></div>
+          </div>
+          <div class="bd-card">
+            <h3>Alinhar com compras <span class="per">| antes de liberar para o marketing</span></h3>
+            <div class="bd-tablewrap"><table id="cp-cmp" class="bd-cards c2"><thead><tr><th class="l">Produto</th><th>Estoque</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody></tbody></table></div>
+            <p class="bd-note" id="cp-cmp-nota">—</p>
+          </div>
+        </div>
+        <div class="bd-card">
+          <h3>Todos os itens <span class="per" id="cp-tab-per">| vendas do mês no ano passado e dois anos atrás, em caixa/fardo</span></h3>
+          <div class="bd-tablewrap">
+            <table id="cp-tab" class="bd-cards">
+              <thead><tr><th class="l">Produto</th><th>Preço CX · PCT</th><th>Estoque</th><th id="cp-h-2ant">2 anos atrás</th><th id="cp-h-ant">Ano passado</th><th>Variação</th><th>Projeção</th><th>Comprar</th><th class="l">Situação</th><th class="l">Manter?</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="bd-note" id="cp-nota">—</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="bd-page" data-page="usoloja" id="usoloja" hidden>
     <div class="bd-ctl">
       <label class="bd-f"><span>Ano</span><select id="ul-ano" aria-label="Ano"></select></label>
@@ -5541,6 +5591,90 @@
   }
 
   /* ---------- Financeiro > Uso da loja: pedidos para o cliente USO LOJA (CONSUMO), por unidade, com leitura crítica ---------- */
+  /* ---------- Comercial > Campanha: levantamento para o marketing e alinhamento com compras ---------- */
+  // Base: a planilha Produtos_<Mês><Ano>.xlsx da pasta Preços_Mkt (preços e estoque da base PRODUTOS do ERP, vendas do relatório 02).
+  // Prazos padrão (ajustáveis aqui): entrega do fornecedor e tempo para o marketing criar e divulgar antes do início.
+  const CP_PRAZO_COMPRA = 15, CP_PRAZO_MKT = 7, CP_PRAZO_CONFIRMA = 3;
+  const CP_MESES = { janeiro: 1, fevereiro: 2, marco: 3, março: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
+  function renderCampanha() {
+    const x = dash.data('campanha'), rows0 = x.status === 'ok' ? x.data : [];
+    const num = (v) => v === '' || v == null ? null : Number(v);
+    const L = rows0.map((r) => ({ ...r, pcx: num(r.preco_cx), ppct: num(r.preco_pct), est: num(r.estoque), v2: num(r.vendas_2ant), v1: num(r.vendas_ant), var: num(r.variacao), proj: num(r.projecao), comp: num(r.comprar), mg: num(r.margem) }));
+    if (!L.length) {
+      $('#cp-headline').textContent = 'Nenhuma campanha preparada.';
+      $('#cp-comp').textContent = 'Salve a planilha Produtos_<Mês><Ano>.xlsx da campanha na pasta Preços_Mkt com o bloco "Alinhamento com compras" e atualize os dados.';
+      return;
+    }
+    const nome = L[0].campanha, mm = nome.match(/^([A-Za-zçÇ]+)(\d{4})$/), mNum = mm ? CP_MESES[mm[1].toLowerCase()] : null;
+    const ano = mm ? Number(mm[2]) : null, ini = mNum ? `${ano}-${String(mNum).padStart(2, '0')}-01` : null;
+    const mesTxt = mNum ? MESES[mNum - 1] : nome;
+    $('#cp-quem').textContent = `${cap(mesTxt)}/${ano || ''} · ${L.length} itens`;
+    $('#cp-h-ant').textContent = mNum ? `${MESES[mNum - 1].slice(0, 3)}/${String(ano - 1).slice(2)}` : 'Ano passado';
+    $('#cp-h-2ant').textContent = mNum ? `${MESES[mNum - 1].slice(0, 3)}/${String(ano - 2).slice(2)}` : '2 anos atrás';
+    const comprar = L.filter((r) => /Comprar|Aten/.test(r.situacao) || r.comp > 0.5);
+    const ok = L.filter((r) => !comprar.includes(r));
+    const rever = L.filter((r) => /Rever|Queda/.test(r.manter));
+    const custo = (r) => r.pcx != null && r.mg != null ? r.pcx * (1 - r.mg) : null;
+    const invest = comprar.reduce((s, r) => s + (r.comp > 0 && custo(r) ? r.comp * custo(r) : 0), 0);
+    // Calendário
+    const hoje = new Date().toISOString().slice(0, 10);
+    const menos = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - n); return t.toISOString().slice(0, 10); };
+    const dif = (a, b) => Math.round((new Date(a + 'T12:00:00Z') - new Date(b + 'T12:00:00Z')) / 864e5);
+    const passos = ini ? [
+      ['Pedido ao fornecedor', menos(ini, CP_PRAZO_COMPRA), `${CP_PRAZO_COMPRA} dias de entrega antes do início`],
+      ['Compras confirma estoque e preço', menos(ini, CP_PRAZO_MKT + CP_PRAZO_CONFIRMA), 'antes de liberar para o marketing'],
+      ['Liberar para o marketing', menos(ini, CP_PRAZO_MKT), `${CP_PRAZO_MKT} dias para artes e divulgação`],
+      ['Início da campanha', ini, ''],
+    ] : [];
+    $('#cp-cal').replaceChildren(...passos.map(([t, d, s]) => {
+      const n = dif(d, hoje), cls = n < 0 ? (d === ini ? 'ok' : 'bad') : n <= 3 ? 'mid' : 'ok';
+      const div = document.createElement('div'); div.className = 'cp-passo ' + cls;
+      const quando = n < 0 ? (d === ini ? 'em andamento' : `venceu há ${-n} dia${n === -1 ? '' : 's'}`) : n === 0 ? 'hoje' : `faltam ${n} dia${n === 1 ? '' : 's'}`;
+      div.append(Object.assign(document.createElement('span'), { textContent: t }), Object.assign(document.createElement('b'), { textContent: dBRy(d) }), Object.assign(document.createElement('span'), { textContent: quando + (s ? ' · ' + s : '') }));
+      return div;
+    }));
+    $('#cp-cal-nota').textContent = `Prazos padrão: ${CP_PRAZO_COMPRA} dias de entrega do fornecedor, ${CP_PRAZO_CONFIRMA} dias para compras confirmar e ${CP_PRAZO_MKT} dias para o marketing. O prazo real de cada fornecedor muda a data do pedido.`;
+    // Destaque e indicadores
+    const pedidoVenc = passos.length && dif(passos[0][1], hoje) < 0;
+    $('#cp-headline').textContent = comprar.length
+      ? `${comprar.length} de ${L.length} itens precisam de compra antes de divulgar${pedidoVenc ? ': o prazo de pedido já passou' : ''}.`
+      : `Os ${L.length} itens têm estoque para repetir as vendas do ano passado.`;
+    $('#cp-comp').textContent = `Libere para o marketing os ${ok.length} itens com estoque confirmado; os demais dependem de compras${invest > 0 ? ` (cerca de ${money(invest)} a custo)` : ''}.`
+      + (rever.length ? ` ${rever.length} ${rever.length === 1 ? 'item vende' : 'itens vendem'} menos que dois anos atrás: vale rever se ${rever.length === 1 ? 'entra' : 'entram'} na campanha.` : '');
+    const kp = (k, v) => { const el = $(`#campanha [data-cp="${k}"]`); if (el) el.textContent = v; };
+    kp('itens', String(L.length)); kp('itens_sub', `${cap(mesTxt)}/${ano || ''}`);
+    kp('ok', String(ok.length)); kp('comprar', String(comprar.length)); kp('comprar_sub', invest > 0 ? `cerca de ${money(invest)} a custo` : 'sem compra necessária');
+    kp('rever', String(rever.length));
+    $('#campanha [data-cp="comprar"]').className = 'val ' + (comprar.length ? 'down' : 'up');
+    // Listas
+    const f1 = (v, d = 1) => v == null ? '—' : v.toLocaleString('pt-BR', { maximumFractionDigits: d });
+    fillTable($('#cp-mkt'), ok, [
+      { cls: 'l nm', fmt: (r) => r.produto },
+      { fmt: (r) => r.pcx != null ? brl2.format(r.pcx) : '—' },
+      { fmt: (r) => r.ppct != null ? brl2.format(r.ppct) : '—' },
+    ]);
+    fillTable($('#cp-cmp'), comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0)), [
+      { cls: 'l nm', fmt: (r) => r.produto + (r.obs ? ` (${r.obs})` : '') },
+      { fmt: (r) => r.est != null ? f1(r.est) : 'ver anexo' },
+      { cls: 'bad', fmt: (r) => r.comp != null ? f1(r.comp) : '—' },
+      { fmt: (r) => r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : '—' },
+    ]);
+    $('#cp-cmp-nota').textContent = 'Comprar = projeção do mês (vendas do ano passado × a tendência dos dois anos, entre −20% e +30%) + o que ainda falta vender no mês anterior − estoque de hoje, em caixa/fardo. Investimento a preço de custo.';
+    fillTable($('#cp-tab'), L, [
+      { cls: 'l nm', fmt: (r) => r.produto },
+      { fmt: (r) => `${r.pcx != null ? brl2.format(r.pcx) : '—'}${r.ppct != null ? ' · ' + brl2.format(r.ppct) : ''}` },
+      { fmt: (r) => r.est != null ? f1(r.est) : 'ver anexo' },
+      { fmt: (r) => r.v2 ? f1(r.v2) : '—' },
+      { fmt: (r) => r.v1 != null ? f1(r.v1) : '—' },
+      { cls: (r) => r.var == null ? '' : r.var < 0 ? 'down' : 'up', fmt: (r) => r.var == null ? 'sem histórico' : pct(r.var, true) },
+      { fmt: (r) => r.proj != null ? f1(r.proj) : '—' },
+      { cls: (r) => r.comp > 0.5 ? 'bad' : '', fmt: (r) => r.comp > 0.5 ? f1(r.comp) : '—' },
+      { cls: (r) => /Comprar/.test(r.situacao) ? 'l bad' : /Aten/.test(r.situacao) ? 'l mid' : 'l', fmt: (r) => r.situacao || '—' },
+      { cls: (r) => /Rever/.test(r.manter) ? 'l bad' : /Queda/.test(r.manter) ? 'l mid' : 'l', fmt: (r) => r.manter || '—' },
+    ]);
+    $('#cp-nota').textContent = 'Estoque em caixa/fardo, contado uma vez por código (caixa e pacote do mesmo produto têm o estoque vinculado). Vendas do relatório 02 das mesmas lojas nos dois anos. Situação: OK = o estoque cobre as vendas do ano passado; Atenção = 60% a 99%; Comprar = abaixo de 60%.';
+  }
+
   function renderUsoLoja() {
     const dd = (id) => { const x = dash.data(id); return x.status === 'ok' ? x.data : []; };
     const uso = dd('erp_uso_loja').map((r) => ({ ...r, v: r.valor !== '' ? Number(r.valor) : Number(r.venda03 || 0), c: r.custo !== '' ? Number(r.custo) : null, mes: r.data.slice(0, 7) }));
@@ -6100,6 +6234,7 @@
     if (aba === 'demonstracoes') renderDemonstracoes();
     if (aba === 'faturamento') renderFaturamento();
     if (aba === "usoloja") renderUsoLoja();
+    if (aba === 'campanha') renderCampanha();
     renderRelatorios();   // sempre: mantém o alerta da área Relatórios
     if (aba === 'metas') renderMetas();
   }
