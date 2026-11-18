@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261118123223';</script>
+<script>window.BIN_BUILD = '20261118141206';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -5708,7 +5708,7 @@
           ${card('Sem desconto (preço normal na campanha)', 'cinza', semDesc, (r) => `<b>${esc(r.produto)}</b>: margem real de ${P0(r.mg)}${/estoque/.test(r.papel || '') ? ', estoque curto' : ''}`)}
         </div>
         <h2>Todos os itens</h2><p class="nota">Preço da caixa/fardo e, abaixo, do pacote/unidade. Tendência = vendas do mês no ano passado contra dois anos atrás (todas as lojas). Situação: OK = o estoque cobre as vendas do mês no ano passado; Atenção = 60% a 99%; Comprar = abaixo de 60%.</p><div class="rolar">${tabTodos}</div>
-        ${tabLev}
+        <!-- levantamento x sistema: removido a pedido (18/11/2026) -->
       </main>
       <footer>Desconto sugerido: o menor entre o teto do evento (com +5 pontos quando o estoque cobre 2x as vendas do mês) e a margem real menos um piso de 20% (margem bruta do grupo em 2025: 21%), de 5 em 5%; quando falta estoque, no máximo 5%. Margem real = (preço − custo) ÷ preço. Fontes: base PRODUTOS do ERP (preço, custo e estoque), relatório 02 de todas as lojas (vendas) e planilha Produtos_${esc(c.nome)}.xlsx. Painel da Diretoria · BIN Embalagens.</footer>
     </div></body></html>`;
@@ -5748,8 +5748,8 @@
     $('#cp-quem').textContent = `${L[0].evento ? L[0].evento + ' · ' : ''}${cap(mesTxt)}/${ano || ''}${L[0].ini ? ` · ${dBR(L[0].ini)} a ${dBR(L[0].fim)}` : ''} · ${L.length} itens`;
     // Levantamento das lojas x sistema (quando a planilha traz o estoque contado nas lojas)
     const comLev = L.filter((r) => r.lev != null && r.est != null);
-    $('#cp-lev-card').hidden = !comLev.length;
-    if (comLev.length) {
+    $('#cp-lev-card').hidden = true;   // quadro do levantamento x sistema removido a pedido (18/11/2026)
+    if (false && comLev.length) {
       const dif = comLev.filter((r) => Math.abs(r.lev - r.est) >= 0.5).sort((a, b) => Math.abs(b.lev - b.est) / Math.max(1, b.est) - Math.abs(a.lev - a.est) / Math.max(1, a.est));
       fillTable($('#cp-lev'), dif, [
         { cls: 'l nm', fmt: (r) => r.produto },
