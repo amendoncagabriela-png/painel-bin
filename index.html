@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261118150405';</script>
+<script>window.BIN_BUILD = '20261118152618';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -343,6 +343,9 @@
   .bd-dlg::backdrop { background: rgba(0,0,0,.55); }
   .cp-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem; } .cp-ev { text-align: left; border: 1px solid var(--color-border-line); border-left: 4px solid var(--bin-gold); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: .5rem .65rem; cursor: pointer; font: inherit; } .cp-ev b, .cp-ev span, .cp-ev em { display: block; } .cp-ev span { font-size: .82rem; color: var(--color-fg-muted); } .cp-ev em { font-size: .74rem; font-style: normal; color: var(--bin-gold); font-weight: 700; } .cp-ev.sel { outline: 2px solid var(--bin-gold); background: color-mix(in srgb, var(--bin-gold) 10%, transparent); } .cp-ev.passou { opacity: .55; } .cp-ev.agora { border-left-color: var(--color-ok); }
   .cp-sug { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--bin-gold); border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; margin-left: .35rem; white-space: nowrap; } .cp-sim { font-size: .78rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; } .cp-susp { color: var(--color-fg-muted); font-style: italic; }
+  tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
+  tr.cp-totrow td { font-weight: 700; border-top: 1px solid var(--color-border-subtle, #ccc); background: color-mix(in srgb, var(--bin-gold) 12%, transparent); } tr.cp-totrow td.nm { padding-left: 1.4rem; white-space: normal; }
+  .bd-grid2.cp-mc { grid-template-columns: minmax(0, 1fr); } #cp-cmp td.nm { white-space: normal; min-width: 16rem; max-width: 34rem; }
   .cp-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .2rem 0 .6rem; } .cp-acoes .sec { background: transparent; color: var(--color-fg); border: 1px solid var(--color-border-line); } #cp-ap-cont { font-size: .85rem; color: var(--color-fg-muted); }
   #cp-tab tr.cp-ok td { background: color-mix(in srgb, var(--bin-gold) 9%, transparent); } #cp-tab td.cp-ap input { width: 1.15rem; height: 1.15rem; cursor: pointer; } #cp-tab td.nm { min-width: 14rem; white-space: normal; }
   .cp-cal { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem; }
@@ -2516,21 +2519,16 @@
           </details>
           <p class="bd-note" id="cp-sem-nota">—</p>
         </div>
-        <div class="bd-grid2">
+        <div class="bd-grid2 cp-mc">
           <div class="bd-card">
             <h3>Para o marketing <span class="per">| pode divulgar: estoque e preço confirmados</span></h3>
             <div class="bd-tablewrap"><table id="cp-mkt" class="bd-cards c2"><thead><tr><th class="l">Produto</th><th>Caixa / fardo</th><th>Pacote / unidade</th></tr></thead><tbody></tbody></table></div>
           </div>
           <div class="bd-card">
-            <h3>Alinhar com compras <span class="per">| antes de liberar para o marketing</span></h3>
-            <div class="bd-tablewrap"><table id="cp-cmp" class="bd-cards c2"><thead><tr><th class="l">Produto</th><th>Estoque</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody></tbody></table></div>
+            <h3>Alinhar com compras <span class="per">| antes de liberar para o marketing · ↳ similar em estoque e o total dos dois</span></h3>
+            <div class="bd-tablewrap"><table id="cp-cmp" class="bd-cards"><thead><tr><th class="l">Produto</th><th>Estoque</th><th>Projeção</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody></tbody></table></div>
             <p class="bd-note" id="cp-cmp-nota">—</p>
           </div>
-        </div>
-        <div class="bd-card" id="cp-sim-card" hidden>
-          <h3 id="cp-sim-tit">Comprar ou usar o similar? <span class="per">| estoque e vendas do item e dos similares somados, em unidades</span></h3>
-          <div class="bd-tablewrap"><table id="cp-simtab" class="bd-cards"><thead><tr><th class="l">Produto da campanha</th><th>Falta do item</th><th class="l">Similar em estoque</th><th>Similar vende no mês</th><th>Cobertura juntos</th><th class="l">Decisão</th><th>Comprar (ajustado)</th></tr></thead><tbody></tbody></table></div>
-          <p class="bd-note" id="cp-sim-nota">—</p>
         </div>
         <div class="bd-card" id="cp-lev-card">
           <h3>Levantamento das lojas x sistema <span class="per">| estoque contado nas lojas contra a base do ERP</span></h3>
@@ -5678,7 +5676,13 @@
     const passos = c.passos.map(([t, d, s]) => { const n = Math.round((new Date(d + 'T12:00:00Z') - new Date(c.hoje + 'T12:00:00Z')) / 864e5);
       const cls = n < 0 && d !== c.ini ? 'v' : n <= 3 ? 'a' : 'o'; return `<div class="passo ${cls}"><span>${esc(t)}</span><b>${dBRy(d)}</b><em>${n < 0 ? (d === c.ini ? 'em andamento' : `venceu há ${-n} dia(s)`) : n === 0 ? 'hoje' : `faltam ${n} dia(s)`}</em></div>`; }).join('');
     const card = (titulo, cor, itens, linha) => `<div class="bloco ${cor}"><h3>${titulo} <small>${itens.length}</small></h3>${itens.length ? '<ul>' + itens.map((r) => `<li>${linha(r)}</li>`).join('') + '</ul>' : '<p class="vazio">Nenhum item.</p>'}</div>`;
-    const tabCompras = comprar.length ? `<table><thead><tr><th class="l">Produto</th><th>Estoque hoje</th><th>Vendeu no mês (ano passado)</th><th>Projeção</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody>${comprar.map((r) => `<tr><td class="l">${esc(r.produto)}${r.obs ? `<br><small>${esc(r.obs)}</small>` : ''}${(() => { const al = window.__cpAlternativas ? window.__cpAlternativas(r) : []; return al.length ? `<br><small><b>Similar em estoque:</b> ${al.map((x) => esc(x.produto) + ' (' + Number(x.estoque).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ')').join(' · ')}</small>` : ''; })()}</td><td>${r.est != null ? N1(r.est) : 'ver anexo'}</td><td>${N1(r.v1)}</td><td>${N1(r.proj)}</td><td class="forte">${N1(r.comp)}</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="vazio">Nada a comprar: o estoque cobre a campanha.</p>';
+    const comprarX = [...comprar, ...L.filter((r) => r.simDec && !comprar.includes(r))], nUx = (v) => Math.round(v).toLocaleString('pt-BR') + ' un.';
+    const linhaC = (r) => `<tr><td class="l">${esc(r.produto)}${r.obs ? `<br><small>${esc(r.obs)}</small>` : ''}${(() => { if (r.simRows) return ''; const al = window.__cpAlternativas ? window.__cpAlternativas(r) : []; return al.length ? `<br><small><b>Similar em estoque:</b> ${al.map((x) => esc(x.produto) + ' (' + Number(x.estoque).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ')').join(' · ')}</small>` : ''; })()}</td><td>${r.est != null ? N1(r.est) : 'ver anexo'}</td><td>${N1(r.v1)}</td><td>${N1(r.proj)}</td>`
+      + (r.simDec ? `<td>${N1(r.simDec.compOrig)} sozinho</td><td>—</td></tr>`
+        + r.simRows.map((s) => `<tr class="sim"><td class="l">↳ ${esc(s.produto)} <small>(similar em estoque, entra na campanha)</small></td><td>${N1(s.est)}</td><td>${N1(s.v1)}</td><td>${N1(s.proj)}</td><td>não comprar</td><td>—</td></tr>`).join('')
+        + `<tr class="tot"><td class="l">Total com o similar · cobertura ${Math.round(Math.min(r.simDec.cob, 9.99) * 100)}%</td><td>${nUx(r.simDec.estItem + r.simDec.simEst)}</td><td></td><td>${nUx(r.simDec.demItem + r.simDec.simDem)}</td><td class="forte">${r.comp ? N1(r.comp) : 'nada'} (antes ${N1(r.simDec.compOrig)})</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : 'R$ 0'}</td></tr>`
+        : `<td class="forte">${N1(r.comp)}</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : '—'}</td></tr>`);
+    const tabCompras = comprarX.length ? `<table><thead><tr><th class="l">Produto</th><th>Estoque hoje</th><th>Vendeu no mês (ano passado)</th><th>Projeção</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody>${comprarX.map(linhaC).join('')}</tbody></table>${comprarX.some((r) => r.simDec) ? '<p class="nota">↳ Similar: mesmo tipo, tamanho e formato, de outra marca. O total soma o estoque do item e do similar contra a projeção do item mais o que o similar vendeu no mês do ano passado, em unidades; a compra cai para a diferença. Confirmar com compras a aceitação do similar.</p>' : ''}` : '<p class="vazio">Nada a comprar: o estoque cobre a campanha.</p>';
     const tabTodos = `<table><thead><tr><th class="l">Produto</th><th>Preço hoje</th><th>Desconto</th><th>Preço promocional</th><th>Margem depois</th><th>Estoque</th><th>Situação</th><th>Tendência</th><th class="l">Papel na campanha</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l">${esc(r.produto)}</td><td>${R(r.pcx)}${r.ppct != null ? `<br><small>${R(r.ppct)}</small>` : ''}</td><td class="forte">${r.dsug == null ? '—' : r.dsug ? P0(r.dsug) : 'sem'}</td><td>${R(r.promo)}${r.promoPct != null ? `<br><small>${R(r.promoPct)}</small>` : ''}</td><td>${P0(r.mpos)}</td><td>${r.est != null ? N1(r.est) : 'anexo'}</td><td><span class="tag ${/Comprar/.test(r.situacao) ? 'v' : /Aten/.test(r.situacao) ? 'a' : 'o'}">${esc(r.situacao || '—')}</span></td><td class="${r.var == null ? '' : r.var < 0 ? 'neg' : 'pos'}">${r.var == null ? 'sem histórico' : pct(r.var, true)}</td><td class="l">${esc(r.papel || '')}</td></tr>`).join('')}</tbody></table>`;
     const lev = L.filter((r) => r.lev != null && r.est != null && Math.abs(r.lev - r.est) >= 0.5);
     const tabLev = lev.length ? `<h2>Levantamento das lojas x sistema</h2><p class="nota">Estoque contado nas lojas contra a base do ERP. Diferença de 10% ou mais (em vermelho) pede recontagem antes de anunciar quantidade.</p><table><thead><tr><th class="l">Produto</th><th>Sistema</th><th>Lojas</th><th>Diferença</th></tr></thead><tbody>${lev.map((r) => `<tr><td class="l">${esc(r.produto)}</td><td>${N1(r.est)}</td><td>${N1(r.lev)}</td><td class="${Math.abs(r.lev / r.est - 1) >= 0.1 ? 'neg forte' : ''}">${r.lev > r.est ? '+' : '−'}${N1(Math.abs(r.lev - r.est))} (${pct(r.lev / r.est - 1, true)})</td></tr>`).join('')}</tbody></table>` : '';
@@ -5702,7 +5706,7 @@
       .forte { font-weight: 700; } .neg { color: #A62A2E; } .pos { color: #2f7d3b; }
       .tag { border-radius: 10px; padding: 1px 8px; font-size: 11.5px; font-weight: 700; border: 1px solid; white-space: nowrap; } .tag.v { color: #A62A2E; } .tag.a { color: #b4720f; } .tag.o { color: #2f7d3b; }
       .rolar { overflow-x: auto; } .pag { overflow-x: hidden; } td.l { min-width: 150px; }
-      .nota { font-size: 12px; color: #555; margin: 4px 0 8px; } footer { padding: 12px 32px 22px; font-size: 11px; color: #666; border-top: 1px solid #e3ddd0; }
+      tr.sim td { background: #fbf8ef; font-size: 12px; color: #444; } tr.tot td { font-weight: 700; background: #f6efdc; border-top: 1px solid #d9cfb8; } .nota { font-size: 12px; color: #555; margin: 4px 0 8px; } footer { padding: 12px 32px 22px; font-size: 11px; color: #666; border-top: 1px solid #e3ddd0; }
       .acoes { position: fixed; right: 18px; top: 18px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
       @media print { body { background: #fff; } .acoes { display: none; } .pag { max-width: none; } h2 { break-after: avoid; } tr, .bloco, .kpi, .passo { break-inside: avoid; } @page { size: A4 landscape; margin: 10mm; } header, th, .kpi, .passo, .bloco { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
       @media (max-width: 760px) { .kpis, .cal, .blocos { grid-template-columns: 1fr 1fr; } header { padding: 16px; } main { padding: 16px; } }
@@ -5845,10 +5849,40 @@
     }
     $('#cp-h-ant').textContent = mNum ? `${MESES[mNum - 1].slice(0, 3)}/${String(ano - 1).slice(2)}` : 'Ano passado';
     $('#cp-h-2ant').textContent = mNum ? `${MESES[mNum - 1].slice(0, 3)}/${String(ano - 2).slice(2)}` : '2 anos atrás';
+    const custo = (r) => r.pcx != null && r.mg != null ? r.pcx * (1 - r.mg) : null;
+    // Comprar ou usar o similar? Para cada item que pede compra: estoque do item + dos similares (mesmo tipo, tamanho e formato, outra marca)
+    // contra a projeção do item + o que os similares venderam no mesmo mês do ano passado, em unidades. O similar entra como linha da
+    // campanha (anunciar os dois) e a compra do item cai para a diferença (nunca sobe).
+    const sim = (() => { const z = dash.data('similares'); return z.status === 'ok' ? z.data : []; })();
+    const porChave = new Map(); for (const x of sim) { if (!porChave.has(x.chave)) porChave.set(x.chave, []); porChave.get(x.chave).push(x); }
+    const simDe = new Map(sim.map((x) => [x.ref, x]));
+    const mesC = mNum || Number((ini || hoje0).slice(5, 7));
+    const forma = (d) => { const s = d.toUpperCase(); return [/\bRET(ANG\w*)?\b/.test(s) ? 'RET' : /\bOVAL\b/.test(s) ? 'OVAL' : /\bQUAD/.test(s) ? 'QUAD' : /\bRED(ONDO|ONDA)?\b/.test(s) ? 'RED' : '', /C\/\s?TAMPA|TAMPA TRANS/.test(s) ? 'T' : ''].join('|'); };
+    const baseN = (d) => d.toUpperCase().replace(/\([^)]*\)/g, ' ').replace(/\s*-\s*(\d+\s*)?(CX|FD|UND|UN|PCT|KG|CJ|UNDS)\s*\**\s*$/, '').replace(/\s+/g, ' ').trim();
+    const naCamp = new Set(L.map((r) => String(r.ref_cx)));
+    for (const r of L) {
+      if (!(r.comp > 0.5)) continue;
+      const me = simDe.get(String(r.ref_cx)), u = me ? Number(me.unid) : 0; if (!(u > 0)) continue;
+      const demItem = (r.proj != null ? r.proj : r.v1 || 0) * u, estItem = Math.max(0, r.est || 0) * u;
+      // até 2 similares que façam diferença (estoque de pelo menos 2% da demanda do item)
+      const al = porChave.get(me.chave).filter((x) => x.ref !== me.ref && !naCamp.has(x.ref) && Number(x.est_u) >= Math.max(1, demItem * 0.02) && Number(x.unid) > 0 && baseN(x.produto) !== baseN(me.produto) && forma(x.produto) === forma(me.produto))
+        .sort((a, b) => Number(b.est_u) - Number(a.est_u)).slice(0, 2);
+      if (!al.length) continue;
+      const simEst = al.reduce((s, x) => s + Number(x.est_u), 0), simDem = al.reduce((s, x) => s + Number(x['qu' + mesC] || 0), 0);
+      const cob = (estItem + simEst) / Math.max(1, demItem + simDem), faltaU = Math.max(0, demItem + simDem - estItem - simEst);
+      const ajust = Math.min(r.comp, faltaU / u), compOrig = r.comp;
+      if (ajust > compOrig * 0.95) continue;   // o similar não muda a compra: fica como está
+      r.simDec = { u, demItem, estItem, simEst, simDem, cob, ajust, compOrig };
+      r.comp = ajust < 0.05 ? 0 : ajust;
+      r.situacao = r.comp ? 'Comprar a diferença (com o similar)' : 'OK com o similar: anunciar os dois';
+      r.simRows = al.map((x) => { const ux = Number(x.unid), ped = Number(x['qu' + mesC] || 0) / ux;
+        return { simDe: r, produto: x.produto, ref_cx: x.ref, item: 'sim', pcx: Number(x.preco) || null, ppct: null, est: Number(x.estoque), estU: Number(x.est_u), v1: ped, v2: null, var: null, proj: ped, projU: Number(x['qu' + mesC] || 0),
+          comp: 0, situacao: 'Similar: entra na campanha', manter: '', dsug: null, promo: null, parado: Number(x['qu' + mesC] || 0) * 3 < Number(x.est_u) }; });
+    }
+    const Lx = L.flatMap((r) => [r, ...(r.simRows || [])]);   // itens da campanha com os similares sugeridos logo abaixo
     const comprar = L.filter((r) => /Comprar/.test(r.situacao) || r.comp > 0.5);
     const ok = L.filter((r) => !comprar.includes(r));
     const rever = L.filter((r) => /Rever/.test(r.manter)), queda = L.filter((r) => /Queda/.test(r.manter));
-    const custo = (r) => r.pcx != null && r.mg != null ? r.pcx * (1 - r.mg) : null;
     const invest = comprar.reduce((s, r) => s + (r.comp > 0 && custo(r) ? r.comp * custo(r) : 0), 0);
     // Calendário
     const hoje = new Date().toISOString().slice(0, 10);
@@ -5882,22 +5916,29 @@
     $('#campanha [data-cp="comprar"]').className = 'val ' + (comprar.length ? 'down' : 'up');
     // Listas
     const f1 = (v, d = 1) => v == null ? '—' : v.toLocaleString('pt-BR', { maximumFractionDigits: d });
-    fillTable($('#cp-mkt'), ok, [
-      { cls: 'l nm', fmt: (r) => r.produto },
+    const nU = (v) => Math.round(v).toLocaleString('pt-BR') + ' un.';
+    fillTable($('#cp-mkt'), ok.flatMap((r) => [r, ...(r.simRows || [])]), [
+      { cls: 'l nm', fmt: (r) => r.simDe ? `↳ ${r.produto} (similar, anunciar junto)` : r.produto },
       { fmt: (r) => r.pcx != null ? brl2.format(r.pcx) : '—' },
       { fmt: (r) => r.ppct != null ? brl2.format(r.ppct) : '—' },
-    ]);
-    fillTable($('#cp-cmp'), comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0)), [
-      { cls: 'l nm', fmt: (r) => r.produto + (r.obs ? ` (${r.obs})` : '') },
-      { fmt: (r) => r.est != null ? f1(r.est) : 'ver anexo' },
-      { cls: 'bad', fmt: (r) => r.comp != null ? f1(r.comp) : '—' },
-      { fmt: (r) => r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : '—' },
-    ]);
-    $('#cp-cmp-nota').textContent = 'Comprar = projeção do mês (vendas do ano passado × a tendência dos dois anos, entre −20% e +30%) + o que ainda falta vender no mês anterior − estoque de hoje, em caixa/fardo. Investimento a preço de custo.';
-    fillTable($('#cp-tab'), L, [
+    ], { rowCls: (r) => r.simDe ? 'cp-simrow' : '' });
+    // Compras: o item, o similar logo abaixo (estoque e projeção dele) e o total dos dois em unidades, com a compra ajustada
+    const cmpBase = [...comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0)), ...L.filter((r) => r.simDec && !comprar.includes(r))];
+    const cmpRows = cmpBase.flatMap((r) => r.simDec ? [{ t: 'item', r }, ...r.simRows.map((s) => ({ t: 'sim', r: s })), { t: 'tot', r }] : [{ t: 'item', r }]);
+    fillTable($('#cp-cmp'), cmpRows, [
+      { cls: 'l nm', fmt: ({ t, r }) => t === 'tot' ? `Total com o similar · cobertura ${pct0(Math.min(r.simDec.cob, 9.99))} · ${r.comp ? 'comprar só a diferença' : 'não comprar: anunciar os dois'}` : t === 'sim' ? `↳ ${r.produto} (similar em estoque${r.parado ? ', parado' : ''})` : r.produto + (r.obs ? ` (${r.obs})` : '') },
+      { fmt: ({ t, r }) => t === 'tot' ? nU(r.simDec.estItem + r.simDec.simEst) : r.est != null ? f1(r.est) : 'ver anexo' },
+      { fmt: ({ t, r }) => t === 'tot' ? nU(r.simDec.demItem + r.simDec.simDem) : r.proj != null ? f1(r.proj) : r.v1 != null ? f1(r.v1) : '—' },
+      { cls: ({ t, r }) => t === 'sim' ? 'mid' : t === 'item' && r.simDec ? 'mid' : (r.comp > 0.5 ? 'bad' : 'up'), fmt: ({ t, r }) => t === 'sim' ? 'não comprar' : t === 'item' && r.simDec ? `${f1(r.simDec.compOrig)} sozinho` : t === 'tot' ? (r.comp ? `${f1(r.comp)} (antes ${f1(r.simDec.compOrig)})` : `nada (antes ${f1(r.simDec.compOrig)})`) : r.comp != null ? f1(r.comp) : '—' },
+      { fmt: ({ t, r }) => t === 'sim' || (t === 'item' && r.simDec) ? '—' : r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : t === 'tot' ? 'R$ 0' : '—' },
+    ], { rowCls: ({ t }) => t === 'sim' ? 'cp-simrow' : t === 'tot' ? 'cp-totrow' : '' });
+    const comSim = L.filter((r) => r.simDec), econ = comSim.reduce((s, r) => s + (r.simDec.compOrig - r.comp) * (custo(r) || 0), 0);
+    $('#cp-cmp-nota').textContent = 'Comprar = projeção do mês (vendas do ano passado × a tendência dos dois anos, entre −20% e +30%) + o que ainda falta vender no mês anterior − estoque de hoje, em caixa/fardo. Investimento a preço de custo.'
+      + (comSim.length ? ` Similar (↳): mesmo tipo, tamanho e formato, de outra marca, com estoque. O total soma o estoque do item e do similar e compara com a projeção do item mais o que o similar vendeu em ${MESES[mesC - 1]} do ano passado, em unidades (fardo de 20 e de 25 não são iguais). Com 100% ou mais não precisa comprar: anuncie os dois ou, quando o anunciado acabar, o atendente oferece o similar. Com o similar, a compra cai cerca de ${money(econ)} a custo e o estoque da outra marca gira. Confira com compras a aceitação do similar (marca, gramatura e preço).` : '');
+    fillTable($('#cp-tab'), Lx, [
       { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l cp-ds', fmt: () => '' },
-      { cls: 'l nm', fmt: (r) => r.produto },
-      { cls: (r) => /Comprar/.test(r.situacao) ? 'l bad' : /Aten/.test(r.situacao) ? 'l mid' : 'l', fmt: (r) => r.situacao || '—' },
+      { cls: 'l nm', fmt: (r) => r.simDe ? `↳ ${r.produto}` : r.produto },
+      { cls: (r) => /Comprar/.test(r.situacao) ? 'l bad' : /Aten/.test(r.situacao) ? 'l mid' : /similar/i.test(r.situacao || '') ? 'l up' : 'l', fmt: (r) => r.situacao || '—' },
       { cls: (r) => /Rever/.test(r.manter) ? 'l bad' : /Queda/.test(r.manter) ? 'l mid' : 'l', fmt: (r) => r.manter || '—' },
       { fmt: (r) => `${r.pcx != null ? brl2.format(r.pcx) : '—'}${r.ppct != null ? ' · ' + brl2.format(r.ppct) : ''}` },
       { fmt: (r) => r.est != null ? f1(r.est) : 'ver anexo' },
@@ -5905,8 +5946,8 @@
       { fmt: (r) => r.v1 != null ? f1(r.v1) : '—' },
       { cls: (r) => r.var == null ? '' : r.var < 0 ? 'down' : 'up', fmt: (r) => r.var == null ? 'sem histórico' : pct(r.var, true) },
       { fmt: (r) => r.proj != null ? f1(r.proj) : '—' },
-      { cls: (r) => r.comp > 0.5 ? 'bad' : '', fmt: (r) => r.comp > 0.5 ? f1(r.comp) : '—' },
-    ]);
+      { cls: (r) => r.comp > 0.5 ? 'bad' : r.simDec ? 'up' : '', fmt: (r) => r.simDec ? (r.comp > 0.5 ? `${f1(r.comp)} (antes ${f1(r.simDec.compOrig)})` : `nada (antes ${f1(r.simDec.compOrig)})`) : r.comp > 0.5 ? f1(r.comp) : '—' },
+    ], { rowCls: (r) => r.simDe ? 'cp-simrow' : '' });
     // Aprovação para o marketing: marcar os itens aprovados e o destaque de cada um na arte (fica guardado neste aparelho)
     const chaveAp = 'bin_cp_aprov_' + nome;
     const lerAp = () => { try { return JSON.parse(localStorage.getItem(chaveAp) || '{}'); } catch (e) { return {}; } };
@@ -5915,7 +5956,7 @@
     const kAp = (r) => (r.ref_cx || '') + '|' + r.item;
     const aprov = lerAp(), ctrls = [];
     [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => {
-      const r = L[i]; if (!r) return; const k = kAp(r), st = aprov[k] || {};
+      const r = Lx[i]; if (!r) return; const k = kAp(r), st = aprov[k] || {};
       const cb = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!st.ok, title: 'Aprovado para a arte' }); cb.setAttribute('aria-label', 'Aprovar ' + r.produto);
       const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Destaque de ' + r.produto);
       for (const o of ['Alto', 'Médio', 'Baixo']) sel.append(new Option(o, o, false, (st.dest || destPadrao(r)) === o));
@@ -5924,56 +5965,20 @@
       tr.cells[0].replaceChildren(cb); tr.cells[1].replaceChildren(sel); tr.classList.toggle('cp-ok', cb.checked);
       ctrls.push({ k, cb, sel, tr });
     });
-    // Similares: o mesmo produto e tamanho de outra marca, com estoque (opção de venda e estoque extra para a campanha)
+    // Similares: tag de sugestão e, para os itens sem a linha de similar (↳), a lista de similares em estoque como referência
     {
-      const sim = (() => { const z = dash.data('similares'); return z.status === 'ok' ? z.data : []; })();
-      const chaveDe = new Map(sim.map((r) => [r.ref, r.chave])), porChave = new Map();
-      for (const r of sim) { if (!porChave.has(r.chave)) porChave.set(r.chave, []); porChave.get(r.chave).push(r); }
-      const alternativas = (r) => { const k = chaveDe.get(String(r.ref_cx)); if (!k) return []; const nb = (s) => s.replace(/\s+/g, ' ').trim();
+      const chaveDe = new Map(sim.map((x) => [x.ref, x.chave]));
+      const alternativas = (r) => { if (r.simRows) return r.simRows.map((s) => ({ produto: s.produto, estoque: s.est })); const k = chaveDe.get(String(r.ref_cx)); if (!k) return []; const nb = (s) => s.replace(/\s+/g, ' ').trim();
         return porChave.get(k).filter((x) => x.ref !== String(r.ref_cx) && Number(x.estoque) > 0 && nb(x.produto) !== nb(r.produto)).sort((a, b) => Number(b.estoque) - Number(a.estoque)).slice(0, 3); };
-      const linhaSim = (r) => { const al = alternativas(r); if (!al.length) return null;
+      const linhaSim = (r) => { if (r.simDe || r.simRows) return null; const al = alternativas(r); if (!al.length) return null;
         return Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: 'Similar em estoque: ' + al.map((x) => `${x.produto} (${Number(x.estoque).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} · ${brl2.format(Number(x.preco))})`).join(' | ') }); };
-      const marca = (td, r) => { if (ehSug) td.append(Object.assign(document.createElement('span'), { className: 'cp-sug', textContent: 'sugestão da análise de vendas', title: r.papel || '' })); const s = linhaSim(r); if (s) td.append(s); };
-      [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => { if (L[i]) marca(tr.cells[2], L[i]); });
-      const ordCmp = comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0));
-      [...$('#cp-cmp').tBodies[0].rows].forEach((tr, i) => { const r = ordCmp[i]; if (r) { const s = linhaSim(r); if (s) tr.cells[0].append(s); } });
+      const tag = (txt, title) => Object.assign(document.createElement('span'), { className: 'cp-sug', textContent: txt, title: title || '' });
+      const marca = (td, r) => {
+        if (r.simDe) { td.append(tag('similar sugerido para a campanha', `Mesmo tipo e tamanho de ${r.simDe.produto}. Estoque ${Math.round(r.estU).toLocaleString('pt-BR')} un.; vendeu ${Math.round(r.projU).toLocaleString('pt-BR')} un. em ${MESES[mesC - 1]} do ano passado.`)); return; }
+        if (ehSug) td.append(tag('sugestão da análise de vendas', r.papel)); const s = linhaSim(r); if (s) td.append(s); };
+      [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => { if (Lx[i]) marca(tr.cells[2], Lx[i]); });
+      [...$('#cp-cmp').tBodies[0].rows].forEach((tr, i) => { const c = cmpRows[i]; if (c && c.t === 'item') { const s = linhaSim(c.r); if (s) tr.cells[0].append(s); } });
       window.__cpAlternativas = alternativas;
-      // Comprar ou usar o similar? Para cada item que pede compra: estoque do item + dos similares (mesmo tipo e tamanho) contra a
-      // demanda do item na campanha + o que os próprios similares costumam vender no mês (ano passado). Tudo em unidades.
-      const linhaDe = new Map(sim.map((r) => [r.ref, r]));
-      const mesC = mNum || Number((ini || hoje0).slice(5, 7));
-      // similar = outro produto (nome base diferente, não só outra embalagem) com o mesmo formato e tampa (retangular x oval, com tampa x sem)
-      const forma = (d) => { const s = d.toUpperCase(); return [/\bRET(ANG\w*)?\b/.test(s) ? 'RET' : /\bOVAL\b/.test(s) ? 'OVAL' : /\bQUAD/.test(s) ? 'QUAD' : /\bRED(ONDO|ONDA)?\b/.test(s) ? 'RED' : '', /C\/\s?TAMPA|TAMPA TRANS/.test(s) ? 'T' : ''].join('|'); };
-      const baseN = (d) => d.toUpperCase().replace(/\([^)]*\)/g, ' ').replace(/\s*-\s*(\d+\s*)?(CX|FD|UND|UN|PCT|KG|CJ|UNDS)\s*\**\s*$/, '').replace(/\s+/g, ' ').trim();
-      const dec = comprar.filter((r) => r.comp > 0.5 && linhaDe.has(String(r.ref_cx))).map((r) => {
-        const me = linhaDe.get(String(r.ref_cx)), u = Number(me.unid); if (!(u > 0)) return null;
-        const al = porChave.get(me.chave).filter((x) => x.ref !== me.ref && Number(x.est_u) > 0 && baseN(x.produto) !== baseN(me.produto) && forma(x.produto) === forma(me.produto));
-        if (!al.length) return null;
-        const demItem = (r.proj != null ? r.proj : r.v1 || 0) * u, estItem = Math.max(0, r.est || 0) * u;
-        const simEst = al.reduce((s, x) => s + Number(x.est_u || 0), 0), simDem = al.reduce((s, x) => s + Number(x['qu' + mesC] || 0), 0);
-        const cob = (estItem + simEst) / Math.max(1, demItem + simDem), faltaU = Math.max(0, demItem + simDem - estItem - simEst), ajust = Math.min(r.comp, faltaU / u);   // o similar só reduz a compra, nunca aumenta
-        const parado = al.filter((x) => Number(x['qu' + mesC] || 0) * 3 < Number(x.est_u || 0));
-        const decisao = cob >= 1 ? 'Não comprar: anunciar os dois e oferecer o similar quando acabar' : ajust < r.comp * 0.8 ? 'Comprar só a diferença e anunciar os dois' : 'Comprar (o similar não cobre)';
-        return { r, al, u, demItem, estItem, simEst, simDem, cob, ajust, parado, decisao };
-      }).filter(Boolean);
-      $('#cp-sim-card').hidden = !dec.length;
-      if (dec.length) {
-        const nU = (v) => Math.round(v).toLocaleString('pt-BR');
-        fillTable($('#cp-simtab'), dec.sort((a, b) => b.cob - a.cob), [
-          { cls: 'l nm', fmt: (d) => d.r.produto },
-          { fmt: (d) => `${f1(d.r.comp)} (${nU(d.r.comp * d.u)} un.)` },
-          { cls: 'l', fmt: (d) => d.al.map((x) => `${x.produto}: ${nU(Number(x.est_u))} un.`).join(' | ') },
-          { fmt: (d) => d.simDem > 0 ? nU(d.simDem) + ' un.' : 'quase nada' },
-          { cls: (d) => d.cob >= 1 ? 'up' : d.cob >= 0.6 ? 'mid' : 'down', fmt: (d) => pct0(Math.min(d.cob, 9.99)) },
-          { cls: (d) => d.cob >= 1 ? 'l up' : 'l', fmt: (d) => d.decisao + (d.parado.length ? ' · similar parado: dar visibilidade a ele' : '') },
-          { cls: 'forte', fmt: (d) => d.ajust > 0.05 ? `${f1(d.ajust)} (antes ${f1(d.r.comp)})` : 'nada' },
-        ]);
-        const econ = dec.reduce((s, d) => s + Math.max(0, d.r.comp - d.ajust) * (custo(d.r) || 0), 0);
-        $('#cp-sim-nota').textContent = `Cobertura juntos = (estoque do item + dos similares) ÷ (projeção do item na campanha + o que os similares venderam em ${MESES[mesC - 1]} do ano passado), em unidades (fardo de 20 e de 25 pratos não são iguais). `
-          + `Com 100% ou mais, não precisa comprar: anuncie os dois ou, quando o anunciado acabar, o atendente oferece o similar. Abaixo disso, compre só a diferença. `
-          + (econ > 0 ? `Usando os similares, a compra cai cerca de ${money(econ)} a custo, e o estoque parado de outra marca gira. ` : '')
-          + 'Confira com compras a aceitação do similar (marca, gramatura e preço) antes de trocar.';
-      }
     }
     if (ehSug) $('#cp-comp').textContent = 'Sugestão da análise de dados de vendas (relatório 02 de 2024 a 2026): itens da curva A que vendem mais nesta época, itens da curva B/C em alta e estoque parado que combina com a data. Confirme estoque e preço com compras antes de liberar. ' + $('#cp-comp').textContent;
     // Aprovar todos de uma vez (cada um pode ser desmarcado depois) ou limpar a aprovação
@@ -6025,12 +6030,12 @@
           + 'Itens: curva B/C em alta (ago a out/26 pelo menos 15% acima de 2025), margem de 30% ou mais e com estoque; até 10% de desconto, mantendo margem de 25%.';
       }
     }
-    const contarAp = () => { const a = lerAp(), n = L.filter((r) => a[kAp(r)] && a[kAp(r)].ok).length; $('#cp-mkt-exp').textContent = `Orientação para o marketing (${n} ${n === 1 ? 'item aprovado' : 'itens aprovados'})`; $('#cp-ap-cont').textContent = `${n} de ${L.length} aprovados`; $('#cp-mkt-exp').disabled = !n; };
+    const contarAp = () => { const a = lerAp(), n = Lx.filter((r) => a[kAp(r)] && a[kAp(r)].ok).length; $('#cp-mkt-exp').textContent = `Orientação para o marketing (${n} ${n === 1 ? 'item aprovado' : 'itens aprovados'})`; $('#cp-ap-cont').textContent = `${n} de ${Lx.length} aprovados`; $('#cp-mkt-exp').disabled = !n; };
     contarAp();
     $('#cp-nota').textContent = 'Estoque em caixa/fardo, contado uma vez por código (caixa e pacote do mesmo produto têm o estoque vinculado). Vendas do relatório 02 das mesmas lojas nos dois anos. Situação: OK = o estoque cobre as vendas do ano passado; Atenção = 60% a 99%; Comprar = abaixo de 60%. '
       + 'Marque em "Aprovar" os itens liberados e ajuste o destaque na arte; a escolha fica guardada neste aparelho e vira a orientação para o marketing.';
     const titulo = L[0].evento ? `${L[0].evento} ${ano || ''}`.trim() : mNum === 11 ? `Black Friday ${ano}` : mNum === 12 ? `Natal e Réveillon ${ano}` : `${cap(mesTxt)} ${ano || ''}`;
-    $('#cp-mkt-exp').onclick = () => { const a = lerAp(); exportarMkt({ titulo, ini, fim: L[0].fim, hoje, itens: L.filter((r) => a[kAp(r)] && a[kAp(r)].ok).map((r) => ({ ...r, dest: a[kAp(r)].dest || destPadrao(r) })) }); };
+    $('#cp-mkt-exp').onclick = () => { const a = lerAp(); exportarMkt({ titulo, ini, fim: L[0].fim, hoje, itens: Lx.filter((r) => a[kAp(r)] && a[kAp(r)].ok).map((r) => ({ ...r, dest: a[kAp(r)].dest || destPadrao(r) })) }); };
     $('#cp-exp').onclick = () => exportarCampanha({ nome, titulo, L, passos, comprar, ok, invest, ini, fim: L[0].fim, hoje, headline: $('#cp-headline').textContent, comp: $('#cp-comp').textContent });
   }
 
