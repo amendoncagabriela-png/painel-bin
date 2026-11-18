@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261118143654';</script>
+<script>window.BIN_BUILD = '20261118150405';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -2526,6 +2526,11 @@
             <div class="bd-tablewrap"><table id="cp-cmp" class="bd-cards c2"><thead><tr><th class="l">Produto</th><th>Estoque</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody></tbody></table></div>
             <p class="bd-note" id="cp-cmp-nota">—</p>
           </div>
+        </div>
+        <div class="bd-card" id="cp-sim-card" hidden>
+          <h3 id="cp-sim-tit">Comprar ou usar o similar? <span class="per">| estoque e vendas do item e dos similares somados, em unidades</span></h3>
+          <div class="bd-tablewrap"><table id="cp-simtab" class="bd-cards"><thead><tr><th class="l">Produto da campanha</th><th>Falta do item</th><th class="l">Similar em estoque</th><th>Similar vende no mês</th><th>Cobertura juntos</th><th class="l">Decisão</th><th>Comprar (ajustado)</th></tr></thead><tbody></tbody></table></div>
+          <p class="bd-note" id="cp-sim-nota">—</p>
         </div>
         <div class="bd-card" id="cp-lev-card">
           <h3>Levantamento das lojas x sistema <span class="per">| estoque contado nas lojas contra a base do ERP</span></h3>
@@ -5933,6 +5938,42 @@
       const ordCmp = comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0));
       [...$('#cp-cmp').tBodies[0].rows].forEach((tr, i) => { const r = ordCmp[i]; if (r) { const s = linhaSim(r); if (s) tr.cells[0].append(s); } });
       window.__cpAlternativas = alternativas;
+      // Comprar ou usar o similar? Para cada item que pede compra: estoque do item + dos similares (mesmo tipo e tamanho) contra a
+      // demanda do item na campanha + o que os próprios similares costumam vender no mês (ano passado). Tudo em unidades.
+      const linhaDe = new Map(sim.map((r) => [r.ref, r]));
+      const mesC = mNum || Number((ini || hoje0).slice(5, 7));
+      // similar = outro produto (nome base diferente, não só outra embalagem) com o mesmo formato e tampa (retangular x oval, com tampa x sem)
+      const forma = (d) => { const s = d.toUpperCase(); return [/\bRET(ANG\w*)?\b/.test(s) ? 'RET' : /\bOVAL\b/.test(s) ? 'OVAL' : /\bQUAD/.test(s) ? 'QUAD' : /\bRED(ONDO|ONDA)?\b/.test(s) ? 'RED' : '', /C\/\s?TAMPA|TAMPA TRANS/.test(s) ? 'T' : ''].join('|'); };
+      const baseN = (d) => d.toUpperCase().replace(/\([^)]*\)/g, ' ').replace(/\s*-\s*(\d+\s*)?(CX|FD|UND|UN|PCT|KG|CJ|UNDS)\s*\**\s*$/, '').replace(/\s+/g, ' ').trim();
+      const dec = comprar.filter((r) => r.comp > 0.5 && linhaDe.has(String(r.ref_cx))).map((r) => {
+        const me = linhaDe.get(String(r.ref_cx)), u = Number(me.unid); if (!(u > 0)) return null;
+        const al = porChave.get(me.chave).filter((x) => x.ref !== me.ref && Number(x.est_u) > 0 && baseN(x.produto) !== baseN(me.produto) && forma(x.produto) === forma(me.produto));
+        if (!al.length) return null;
+        const demItem = (r.proj != null ? r.proj : r.v1 || 0) * u, estItem = Math.max(0, r.est || 0) * u;
+        const simEst = al.reduce((s, x) => s + Number(x.est_u || 0), 0), simDem = al.reduce((s, x) => s + Number(x['qu' + mesC] || 0), 0);
+        const cob = (estItem + simEst) / Math.max(1, demItem + simDem), faltaU = Math.max(0, demItem + simDem - estItem - simEst), ajust = Math.min(r.comp, faltaU / u);   // o similar só reduz a compra, nunca aumenta
+        const parado = al.filter((x) => Number(x['qu' + mesC] || 0) * 3 < Number(x.est_u || 0));
+        const decisao = cob >= 1 ? 'Não comprar: anunciar os dois e oferecer o similar quando acabar' : ajust < r.comp * 0.8 ? 'Comprar só a diferença e anunciar os dois' : 'Comprar (o similar não cobre)';
+        return { r, al, u, demItem, estItem, simEst, simDem, cob, ajust, parado, decisao };
+      }).filter(Boolean);
+      $('#cp-sim-card').hidden = !dec.length;
+      if (dec.length) {
+        const nU = (v) => Math.round(v).toLocaleString('pt-BR');
+        fillTable($('#cp-simtab'), dec.sort((a, b) => b.cob - a.cob), [
+          { cls: 'l nm', fmt: (d) => d.r.produto },
+          { fmt: (d) => `${f1(d.r.comp)} (${nU(d.r.comp * d.u)} un.)` },
+          { cls: 'l', fmt: (d) => d.al.map((x) => `${x.produto}: ${nU(Number(x.est_u))} un.`).join(' | ') },
+          { fmt: (d) => d.simDem > 0 ? nU(d.simDem) + ' un.' : 'quase nada' },
+          { cls: (d) => d.cob >= 1 ? 'up' : d.cob >= 0.6 ? 'mid' : 'down', fmt: (d) => pct0(Math.min(d.cob, 9.99)) },
+          { cls: (d) => d.cob >= 1 ? 'l up' : 'l', fmt: (d) => d.decisao + (d.parado.length ? ' · similar parado: dar visibilidade a ele' : '') },
+          { cls: 'forte', fmt: (d) => d.ajust > 0.05 ? `${f1(d.ajust)} (antes ${f1(d.r.comp)})` : 'nada' },
+        ]);
+        const econ = dec.reduce((s, d) => s + Math.max(0, d.r.comp - d.ajust) * (custo(d.r) || 0), 0);
+        $('#cp-sim-nota').textContent = `Cobertura juntos = (estoque do item + dos similares) ÷ (projeção do item na campanha + o que os similares venderam em ${MESES[mesC - 1]} do ano passado), em unidades (fardo de 20 e de 25 pratos não são iguais). `
+          + `Com 100% ou mais, não precisa comprar: anuncie os dois ou, quando o anunciado acabar, o atendente oferece o similar. Abaixo disso, compre só a diferença. `
+          + (econ > 0 ? `Usando os similares, a compra cai cerca de ${money(econ)} a custo, e o estoque parado de outra marca gira. ` : '')
+          + 'Confira com compras a aceitação do similar (marca, gramatura e preço) antes de trocar.';
+      }
     }
     if (ehSug) $('#cp-comp').textContent = 'Sugestão da análise de dados de vendas (relatório 02 de 2024 a 2026): itens da curva A que vendem mais nesta época, itens da curva B/C em alta e estoque parado que combina com a data. Confirme estoque e preço com compras antes de liberar. ' + $('#cp-comp').textContent;
     // Aprovar todos de uma vez (cada um pode ser desmarcado depois) ou limpar a aprovação
