@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261118165308';</script>
+<script>window.BIN_BUILD = '20261118172805';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -5750,7 +5750,7 @@
   const cpPascoa = (y) => { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1; return cpD(y, mes, dia); };
   const cpNesimo = (y, m, dow, n) => { const p = new Date(Date.UTC(y, m - 1, 1)); const off = (dow - p.getUTCDay() + 7) % 7; return cpD(y, m, 1 + off + 7 * (n - 1)); };   // n-ésimo dia da semana do mês
   const cpCalendario = [
-    { cod: 'Verao', nome: () => 'Verão e volta às aulas', datas: (y) => [cpNesimo(y, 1, 1, 1), cpD(y, 1, 31)] },
+    { cod: 'Verao', nome: () => 'Verão e volta às aulas', datas: (y) => { const s = cpNesimo(y, 1, 1, 1); return [s < cpD(y, 1, 3) ? cpMais(s, 7) : s, cpD(y, 1, 31)]; } },
     { cod: 'Carnaval', nome: () => 'Carnaval', datas: (y) => { const t = cpMais(cpPascoa(y), -47); return [cpMais(t, -15), t]; } },
     { cod: 'Consumidor', nome: () => 'Dia do Consumidor', datas: (y) => [cpD(y, 3, 8), cpD(y, 3, 15)] },
     { cod: 'Pascoa', nome: () => 'Páscoa', datas: (y) => { const p = cpPascoa(y); return [cpMais(p, -20), cpMais(p, -1)]; } },
@@ -5761,8 +5761,11 @@
     { cod: 'Cliente', nome: () => 'Dia do Cliente', datas: (y) => [cpD(y, 9, 8), cpD(y, 9, 15)] },
     { cod: 'Outubro', nome: (y) => `Aniversário BIN ${y - 2015} anos + Semana das Crianças`, datas: (y) => [cpD(y, 10, 1), cpD(y, 10, 31)] },
     { cod: 'Black', nome: () => 'Black Friday', datas: (y) => { const f = cpMais(cpNesimo(y, 11, 4, 4), 1); return [cpMais(f, -4), cpMais(f, 1)]; } },
-    { cod: 'Natal', nome: () => 'Natal e Réveillon', datas: (y) => [cpD(y, 12, 1), cpD(y, 12, 31)] },
+    { cod: 'Natal', nome: () => 'Natal e Réveillon', datas: (y) => [cpD(y, 12, 1), cpD(y, 12, 27)] },
   ];
+  // 28/12 a 02/01: sem promoção (semana reservada ao fechamento do ano)
+  const cpFechamento = (a, b) => { const ma = a.slice(5), mb = b.slice(5); return ma >= '12-28' || mb <= '01-02' || mb >= '12-28' || (ma.slice(0, 2) === '12' && mb.slice(0, 2) === '01'); };
+  const cpCorta = (r) => { if (r.fim && r.fim.slice(5) >= '12-28') r.fim = r.fim.slice(0, 4) + '-12-27'; if (r.ini && r.ini.slice(5) <= '01-02') r.ini = r.ini.slice(0, 4) + '-01-03'; return r; };
   // Promoção da semana x campanha principal: suspende nas semanas de campanha; segue só nas campanhas longas com movimento
   // normal (verão e festa junina), com item que não está na campanha.
   const CP_SEMANA_SEGUE = ['Verao', 'Junina'];
@@ -5773,7 +5776,7 @@
     const num = (v) => v === '' || v == null ? null : Number(v);
     const iso = (s) => { const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; };
     const TODAS = rows0.map((r) => ({ ...r, pcx: num(r.preco_cx), ppct: num(r.preco_pct), est: num(r.estoque), v2: num(r.vendas_2ant), v1: num(r.vendas_ant), var: num(r.variacao), proj: num(r.projecao), comp: num(r.comprar), mg: num(r.margem),
-      lev: num(r.estoque_lev), dsug: num(r.desc_sug), promo: num(r.promo_cx), promoPct: num(r.promo_pct), mpos: num(r.margem_pos), dmax: num(r.desc_max), ini: iso(r.inicio), fim: iso(r.fim) }));
+      lev: num(r.estoque_lev), dsug: num(r.desc_sug), promo: num(r.promo_cx), promoPct: num(r.promo_pct), mpos: num(r.margem_pos), dmax: num(r.desc_max), ini: iso(r.inicio), fim: iso(r.fim) })).map(cpCorta);   // nada de campanha de 28/12 a 02/01
     // Ajustes por item (campanha_ajustes.csv): descrição fiel ao cadastro, estoque somado de itens com vários códigos (ex.: balão por número e cor) e a leitura do item
     { const z = dash.data('campanha_ajustes'); for (const a of (z.status === 'ok' ? z.data : [])) for (const r of TODAS) if (r.campanha === a.campanha && String(r.item) === String(a.item)) {
       if (a.produto) r.produto = a.produto; if (a.estoque !== '' && a.estoque != null) r.est = Number(a.estoque); if (a.nota) r.nota = a.nota; } }
@@ -5821,7 +5824,7 @@
         Object.assign(document.createElement('em'), { textContent: c.prep ? 'planilha preparada' : c.fim < hoje0 ? 'já passou' : 'sugestão da análise de vendas' }));
       b.addEventListener('click', () => dash.setParams({ cp_camp: c.nome })); return b;
     }));
-    $('#cp-ano-nota').textContent = `Datas de ${anoSel}: Carnaval e Páscoa pela data da Páscoa; Mães e Pais no 2º domingo de maio e de agosto; Black Friday na sexta seguinte à 4ª quinta de novembro; as demais em datas fixas. Outubro é o mês do aniversário da BIN (${anoSel - 2015} anos): uma campanha só, com a Semana das Crianças dentro dela (até 12/10).`;
+    $('#cp-ano-nota').textContent = `Datas de ${anoSel}: Carnaval e Páscoa pela data da Páscoa; Mães e Pais no 2º domingo de maio e de agosto; Black Friday na sexta seguinte à 4ª quinta de novembro; as demais em datas fixas. Outubro é o mês do aniversário da BIN (${anoSel - 2015} anos): uma campanha só, com a Semana das Crianças dentro dela (até 12/10). De 28/12 a 02/01 não há promoção (fechamento do ano): o Natal vai até 27/12 e o verão começa depois de 02/01. Cada evento traz itens temáticos (a cara da data) e complementares (o que o cliente usa na data), além da curva A, dos itens em alta e da queima de estoque.`;
     const L = TODAS.filter((r) => r.campanha === escolhida);
     const nome = escolhida, mm = nome.match(/^([A-Za-zçÇ]+)(\d{4})$/), mNum = (mm && CP_MESES[mm[1].toLowerCase()]) || (L[0].ini ? Number(L[0].ini.slice(5, 7)) : null);
     const ano = L[0].ini ? Number(L[0].ini.slice(0, 4)) : mm ? Number(mm[2]) : null, ini = L[0].ini || (mNum ? `${ano}-${String(mNum).padStart(2, '0')}-01` : null);
@@ -6025,7 +6028,7 @@
     const chaveAp = 'bin_cp_aprov_' + nome;
     const lerAp = () => { try { return JSON.parse(localStorage.getItem(chaveAp) || '{}'); } catch (e) { return {}; } };
     const gravarAp = (o) => { try { localStorage.setItem(chaveAp, JSON.stringify(o)); } catch (e) {} };
-    const destPadrao = (r) => r.dsug >= 0.15 || /Chamariz|curva A/.test(r.papel || '') ? 'Alto' : /Destaque|Em alta|em alta/.test(r.papel || '') || (r.var != null && r.var >= 0.3) ? 'Médio' : 'Baixo';
+    const destPadrao = (r) => r.dsug >= 0.15 || /Chamariz|curva A|Temático/.test(r.papel || '') ? 'Alto' : /Destaque|Em alta|em alta|Complementar/.test(r.papel || '') || (r.var != null && r.var >= 0.3) ? 'Médio' : 'Baixo';
     const kAp = (r) => (r.ref_cx || '') + '|' + r.item;
     const aprov = lerAp(), ctrls = [];
     [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => {
@@ -6048,7 +6051,7 @@
       const tag = (txt, title) => Object.assign(document.createElement('span'), { className: 'cp-sug', textContent: txt, title: title || '' });
       const marca = (td, r) => {
         if (r.simDe) { td.append(tag('similar sugerido para a campanha', `Mesmo tipo e tamanho de ${r.simDe.produto}. Estoque ${Math.round(r.estU).toLocaleString('pt-BR')} un.; vendeu ${Math.round(r.projU).toLocaleString('pt-BR')} un. em ${MESES[mesC - 1]} do ano passado.`)); return; }
-        if (ehSug) td.append(tag('sugestão da análise de vendas', r.papel)); const s = linhaSim(r); if (s) td.append(s); if (r.nota) td.append(Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: r.nota })); };
+        if (ehSug) td.append(tag(/Temático|Complementar/.test(r.papel || '') ? `sugestão da análise de vendas · ${r.papel.replace(/ (.*)/, '')}` : 'sugestão da análise de vendas', r.papel)); const s = linhaSim(r); if (s) td.append(s); if (r.nota) td.append(Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: r.nota })); };
       [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => { if (Lx[i]) marca(tr.cells[2], Lx[i]); });
       [...$('#cp-cmp').tBodies[0].rows].forEach((tr, i) => { const c = cmpRows[i]; if (c && c.t === 'item') { const s = linhaSim(c.r); if (s) tr.cells[0].append(s); for (const n of [c.r.obs, c.r.nota]) if (n) tr.cells[0].append(Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: n })); } });
       window.__cpAlternativas = alternativas;
@@ -6078,14 +6081,20 @@
         const semanas = []; let s = cpMais(cpD(anoS, mesSem, 1), -((new Date(Date.UTC(anoS, mesSem - 1, 1)).getUTCDay() + 6) % 7));
         while (s.slice(0, 7) <= `${anoS}-${String(mesSem).padStart(2, '0')}`) { const f = cpMais(s, 5); if (f.slice(5, 7) === String(mesSem).padStart(2, '0') || s.slice(5, 7) === String(mesSem).padStart(2, '0')) semanas.push([s, f]); s = cpMais(s, 7); }
         const diasTxt = [...new Set(dias.map((r) => r.dia))].map((d) => `${d.slice(0, 3)}: ${dias.filter((r) => r.dia === d).map((r) => r.loja).join(', ')}`).join(' · ');
-        const linhas = semanas.map(([a, b], i) => {
-          const camp = camps.find((c) => c.ini <= b && c.fim >= a);
+        // um item diferente por semana dentro do mês (sem repetir); faltando item livre no mês, usa um do mês vizinho que ainda não saiu
+        const usadosSem = new Set();
+        const linhas = semanas.map(([a, b]) => {
+          const fecha = cpFechamento(a, b);
+          const camp = fecha ? null : camps.find((c) => c.ini <= b && c.fim >= a);
           const cod = camp ? camp.nome.replace(/\d{4}$/, '') : null, segue = camp && CP_SEMANA_SEGUE.includes(cod);
+          if (fecha) return { a, b, it: null, camp: null, fecha: true, susp: true, segue: false };
+          if (camp && !segue) return { a, b, it: null, camp, susp: true, segue };
           const naCamp = camp ? new Set(TODAS.filter((r) => r.campanha === camp.nome).map((r) => r.ref_cx)) : new Set();
           const viz = sem.filter((r) => r.mes === (mesSem % 12) + 1 || r.mes === ((mesSem + 10) % 12) + 1);
-          let opc = doMes.filter((r) => !naCamp.has(r.ref)); if (!opc.length) opc = viz.filter((r) => !naCamp.has(r.ref));   // sem item livre no mês: usa o do mês vizinho
-          const it = opc.length ? opc[i % opc.length] : null;
-          return { a, b, it, camp, susp: camp && !segue, segue };
+          const livre = (r) => !naCamp.has(r.ref) && !usadosSem.has(r.ref);
+          const it = doMes.find(livre) || viz.find(livre) || null;
+          if (it) usadosSem.add(it.ref);
+          return { a, b, it, camp, susp: false, segue };
         });
         $('#cp-sem-per').textContent = `| ${cap(MESES[mesSem - 1])}/${anoS}: uma promoção por semana, no dia mais fraco de cada loja · sugestão da análise de vendas`;
         fillTable($('#cp-sem'), linhas, [
@@ -6093,14 +6102,14 @@
           { cls: (r) => r.susp ? 'l cp-susp' : 'l', fmt: (r) => r.susp ? '—' : r.it ? r.it.produto : 'sem item' },
           { fmt: (r) => r.susp || !r.it ? '—' : brl2.format(r.it.preco) },
           { cls: (r) => r.susp ? '' : 'up', fmt: (r) => r.susp || !r.it ? '—' : `${brl2.format(r.it.promo)} (−${Math.round(r.it.desconto * 100)}%)` },
-          { cls: (r) => r.susp ? 'l mid' : 'l', fmt: (r) => r.susp ? `Promoção semanal suspensa (${r.camp.evento || r.camp.nome.replace(/(\d{4})$/, '/$1')})` : r.segue ? `Segue junto da campanha ${r.camp.evento}, com item fora dela` : `Ativa · ${diasTxt}` },
+          { cls: (r) => r.susp ? 'l mid' : 'l', fmt: (r) => r.fecha ? 'Sem promoção: semana de fechamento do ano (28/12 a 02/01)' : r.susp ? `Promoção semanal suspensa (${r.camp.evento || r.camp.nome.replace(/(\d{4})$/, '/$1')})` : r.segue ? `Segue junto da campanha ${r.camp.evento}, com item fora dela` : `Ativa · ${diasTxt}` },
         ]);
         fillTable($('#cp-sem-ano'), sem, [{ cls: 'l nm', fmt: (r) => cap(MESES[r.mes - 1]) },
           { cls: 'l', fmt: (r) => r.produto }, { fmt: (r) => brl2.format(r.preco) }, { cls: 'up', fmt: (r) => `${brl2.format(r.promo)} (−${Math.round(r.desconto * 100)}%)` }, { cls: 'l', fmt: (r) => r.motivo }]);
         const seg = dias.filter((r) => r.dia === 'segunda').map((r) => r.loja), nSusp = linhas.filter((r) => r.susp).length;
         $('#cp-sem-nota').textContent = `Sugestão da análise de vendas. A mesma promoção vale para todas as lojas, cada uma no seu dia mais fraco (média de nov/25 a out/26). ${seg.length > 1 ? `${seg.join(', ')} caem na segunda: dá para fazer uma "Segunda BIN" conjunta. ` : ''}`
           + `Regra com campanha principal: na semana em que uma campanha está no ar, a promoção semanal fica suspensa, para não dividir a atenção do cliente nem empilhar descontos (${nSusp} de ${linhas.length} semanas neste mês). Exceção: verão e festa junina, que duram o mês todo com movimento normal; aí a semanal segue, sempre com um item que não está na campanha. `
-          + 'Itens: curva B/C em alta (ago a out/26 pelo menos 15% acima de 2025), margem de 30% ou mais e com estoque; até 10% de desconto, mantendo margem de 25%.';
+          + 'Itens: curva B/C em alta (ago a out/26 pelo menos 15% acima de 2025), margem de 30% ou mais e com estoque; até 10% de desconto, mantendo margem de 25%. Um item diferente por semana, sem repetir no mês (a rotação traz motivo novo para o cliente voltar no dia fraco). De 28/12 a 02/01 não há promoção (fechamento do ano).';
       }
     }
     const contarAp = () => { const a = lerAp(), n = Lx.filter((r) => a[kAp(r)] && a[kAp(r)].ok).length; $('#cp-mkt-exp').textContent = `Orientação para o marketing (${n} ${n === 1 ? 'item aprovado' : 'itens aprovados'})`; $('#cp-ap-cont').textContent = `${n} de ${Lx.length} aprovados`; $('#cp-mkt-exp').disabled = !n; };
