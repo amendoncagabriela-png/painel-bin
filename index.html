@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261118160832';</script>
+<script>window.BIN_BUILD = '20261118161944';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -5681,13 +5681,14 @@
     const passos = c.passos.map(([t, d, s]) => { const n = Math.round((new Date(d + 'T12:00:00Z') - new Date(c.hoje + 'T12:00:00Z')) / 864e5);
       const cls = n < 0 && d !== c.ini ? 'v' : n <= 3 ? 'a' : 'o'; return `<div class="passo ${cls}"><span>${esc(t)}</span><b>${dBRy(d)}</b><em>${n < 0 ? (d === c.ini ? 'em andamento' : `venceu há ${-n} dia(s)`) : n === 0 ? 'hoje' : `faltam ${n} dia(s)`}</em></div>`; }).join('');
     const card = (titulo, cor, itens, linha) => `<div class="bloco ${cor}"><h3>${titulo} <small>${itens.length}</small></h3>${itens.length ? '<ul>' + itens.map((r) => `<li>${linha(r)}</li>`).join('') + '</ul>' : '<p class="vazio">Nenhum item.</p>'}</div>`;
-    const comprarX = [...comprar, ...L.filter((r) => r.simDec && !comprar.includes(r))], nUx = (v) => Math.round(v).toLocaleString('pt-BR') + ' un.';
-    const linhaC = (r) => `<tr><td class="l">${esc(r.produto)}${r.obs ? `<br><small>${esc(r.obs)}</small>` : ''}${r.nota ? `<br><small>${esc(r.nota)}</small>` : ''}${(() => { if (r.simRows) return ''; const al = window.__cpAlternativas ? window.__cpAlternativas(r) : []; return al.length ? `<br><small><b>Similar em estoque:</b> ${al.map((x) => esc(x.produto) + ' (' + Number(x.estoque).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ')').join(' · ')}</small>` : ''; })()}</td><td>${r.est != null ? N1(r.est) : '—'}</td><td>${N1(r.v1)}</td><td>${N1(r.proj)}</td>`
+    const comprarX = [...comprar, ...L.filter((r) => r.simDec && !comprar.includes(r))], nUx = (v) => Math.round(v).toLocaleString('pt-BR') + ' un.', nPx = (v) => Math.round(v).toLocaleString('pt-BR') + ' pct';
+    const linhaC = (r) => `<tr><td class="l">${esc(r.produto)}${r.obs ? `<br><small>${esc(r.obs)}</small>` : ''}${r.nota ? `<br><small>${esc(r.nota)}</small>` : ''}${(() => { if (r.simRows) return ''; const al = window.__cpAlternativas ? window.__cpAlternativas(r) : []; return al.length ? `<br><small><b>Similar em estoque:</b> ${al.map((x) => esc(x.produto) + ' (' + Number(x.estoque).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ')').join(' · ')}</small>` : ''; })()}${r.simDec && r.simDec.pk.tam ? `<br><small>pct de ${r.simDec.pk.tam}</small>` : ''}</td><td>${r.simDec ? nPx(r.est * r.simDec.pk.n) : r.est != null ? N1(r.est) : '—'}</td><td>${r.simDec ? nPx(r.v1 * r.simDec.pk.n) : N1(r.v1)}</td><td>${r.simDec ? nPx(r.proj * r.simDec.pk.n) : N1(r.proj)}</td>`
       + (r.simDec ? `<td>—</td><td>—</td></tr>`
-        + r.simRows.map((s) => `<tr class="sim"><td class="l">↳ ${esc(s.produto)} <small>(${s.copo ? "copo do mesmo tamanho, outra marca" : "similar: só muda a marca"}, entra na campanha${s.parte != null ? ` · ${Math.round(s.parte * 100)}% das vendas recentes` : ""}${s.vitrine ? " · destaque: melhor preço" : ""})</small></td><td>${N1(s.est)}</td><td>${N1(s.v1)}</td><td>${s.novo ? 'marca nova' : N1(s.proj)}</td><td>não comprar</td><td>—</td></tr>`).join('')
-        + `<tr class="tot"><td class="l">Total com o similar · cobertura ${Math.round(Math.min(r.simDec.cob, 9.99) * 100)}%</td><td>${nUx(r.simDec.estItem + r.simDec.simEst)}</td><td></td><td>${nUx(r.simDec.demItem + r.simDec.simDem)}</td><td class="forte">${r.comp ? N1(r.comp) : 'nada'}</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : 'R$ 0'}</td></tr>`
+        + r.simRows.map((s) => `<tr class="sim"><td class="l">↳ ${esc(s.produto)} <small>(${s.copo ? "copo do mesmo tamanho, outra marca" : "similar: só muda a marca"}${s.pk.tam ? ` · pct de ${s.pk.tam}` : ''}, entra na campanha${s.parte != null ? ` · hoje: ${Math.round(s.parte * 100)}% das vendas` : ""}${s.vitrine ? " · destaque: melhor preço" : ""})</small></td><td>${nPx(s.estU * r.simDec.pk.n / r.simDec.u)}</td><td>${nPx(s.projU * r.simDec.pk.n / r.simDec.u)}</td><td>${s.novo ? 'marca nova' : nPx(s.projU * r.simDec.pk.n / r.simDec.u)}</td><td>não comprar</td><td>—</td></tr>`).join('')
+        + (() => { const f = r.simDec.pk.n / r.simDec.u, e = (r.simDec.estItem + r.simDec.simEst) * f, p = (r.simDec.demItem + r.simDec.simDem) * f;
+          return `<tr class="tot"><td class="l">Total com o similar · cobertura ${Math.round(Math.min(r.simDec.cob, 9.99) * 100)}%</td><td>${nPx(e)}</td><td></td><td>${nPx(p)}</td><td class="forte">${r.comp ? `${nPx(r.comp * r.simDec.pk.n)} = ${N1(r.comp)} ${r.simDec.un}` : 'nada'}</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : 'R$ 0'}</td></tr>`; })()
         : `<td class="forte">${N1(r.comp)}</td><td>${r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : '—'}</td></tr>`);
-    const tabCompras = comprarX.length ? `<table><thead><tr><th class="l">Produto</th><th>Estoque hoje</th><th>Vendeu no mês (ano passado)</th><th>Projeção</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody>${comprarX.map(linhaC).join('')}</tbody></table>${comprarX.some((r) => r.simDec) ? '<p class="nota">↳ Similar: mesmo tipo, tamanho e formato, de outra marca. O total soma o estoque do item e do similar contra a projeção do item mais o que o similar vendeu no mês do ano passado, em unidades; a compra cai para a diferença. Confirmar com compras a aceitação do similar.</p>' : ''}` : '<p class="vazio">Nada a comprar: o estoque cobre a campanha.</p>';
+    const tabCompras = comprarX.length ? `<table><thead><tr><th class="l">Produto</th><th>Estoque hoje</th><th>Vendeu no mês (ano passado)</th><th>Projeção</th><th>Comprar</th><th>Investimento</th></tr></thead><tbody>${comprarX.map(linhaC).join('')}</tbody></table>${comprarX.some((r) => r.simDec) ? '<p class="nota">↳ Similar: mesmo tipo, tamanho e formato, de outra marca. O total soma o estoque do item e do similar contra a projeção do item mais o que o similar vendeu no mês do ano passado, em pacotes (o pacote de uma marca vale o mesmo que o da outra); a compra cai para a diferença. Confirmar com compras a aceitação do similar.</p>' : ''}` : '<p class="vazio">Nada a comprar: o estoque cobre a campanha.</p>';
     const tabTodos = `<table><thead><tr><th class="l">Produto</th><th>Preço hoje</th><th>Desconto</th><th>Preço promocional</th><th>Margem depois</th><th>Estoque</th><th>Situação</th><th>Tendência</th><th class="l">Papel na campanha</th></tr></thead><tbody>${L.map((r) => `<tr><td class="l">${esc(r.produto)}</td><td>${R(r.pcx)}${r.ppct != null ? `<br><small>${R(r.ppct)}</small>` : ''}</td><td class="forte">${r.dsug == null ? '—' : r.dsug ? P0(r.dsug) : 'sem'}</td><td>${R(r.promo)}${r.promoPct != null ? `<br><small>${R(r.promoPct)}</small>` : ''}</td><td>${P0(r.mpos)}</td><td>${r.est != null ? N1(r.est) : 'anexo'}</td><td><span class="tag ${/Comprar/.test(r.situacao) ? 'v' : /Aten/.test(r.situacao) ? 'a' : 'o'}">${esc(r.situacao || '—')}</span></td><td class="${r.var == null ? '' : r.var < 0 ? 'neg' : 'pos'}">${r.var == null ? 'sem histórico' : pct(r.var, true)}</td><td class="l">${esc(r.papel || '')}</td></tr>`).join('')}</tbody></table>`;
     const lev = L.filter((r) => r.lev != null && r.est != null && Math.abs(r.lev - r.est) >= 0.5);
     const tabLev = lev.length ? `<h2>Levantamento das lojas x sistema</h2><p class="nota">Estoque contado nas lojas contra a base do ERP. Diferença de 10% ou mais (em vermelho) pede recontagem antes de anunciar quantidade.</p><table><thead><tr><th class="l">Produto</th><th>Sistema</th><th>Lojas</th><th>Diferença</th></tr></thead><tbody>${lev.map((r) => `<tr><td class="l">${esc(r.produto)}</td><td>${N1(r.est)}</td><td>${N1(r.lev)}</td><td class="${Math.abs(r.lev / r.est - 1) >= 0.1 ? 'neg forte' : ''}">${r.lev > r.est ? '+' : '−'}${N1(Math.abs(r.lev - r.est))} (${pct(r.lev / r.est - 1, true)})</td></tr>`).join('')}</tbody></table>` : '';
@@ -5866,6 +5867,8 @@
     const sim = (() => { const z = dash.data('similares'); return z.status === 'ok' ? z.data : []; })();
     const porChave = new Map(); for (const x of sim) { if (!porChave.has(x.chave)) porChave.set(x.chave, []); porChave.get(x.chave).push(x); }
     const simDe = new Map(sim.map((x) => [x.ref, x]));
+    // pacotes por caixa/fardo pelo nome do cadastro: (10X25UND) = 10 pacotes de 25; sem esse padrão, a caixa conta como 1
+    const pctDe = (d) => { const m = String(d || '').toUpperCase().match(/\((\d+)\s*X\s*(\d+)/); return m ? { n: Number(m[1]), tam: Number(m[2]) } : { n: 1, tam: null }; };
     const mesC = mNum || Number((ini || hoje0).slice(5, 7));
     const forma = (d) => { const s = d.toUpperCase(); return [/\bRET(ANG\w*)?\b/.test(s) ? 'RET' : /\bOVAL\b/.test(s) ? 'OVAL' : /\bQUAD/.test(s) ? 'QUAD' : /\bRED(ONDO|ONDA)?\b/.test(s) ? 'RED' : '', /C\/\s?TAMPA|TAMPA TRANS/.test(s) ? 'T' : ''].join('|'); };
     const baseN = (d) => d.toUpperCase().replace(/\([^)]*\)/g, ' ').replace(/\s*-\s*(\d+\s*)?(CX|FD|UND|UN|PCT|KG|CJ|UNDS)\s*\**\s*$/, '').replace(/\s+/g, ' ').trim();
@@ -5886,27 +5889,29 @@
     for (const r of L) {
       if (!(r.comp > 0.5)) continue;
       const ehCopo = copoDe.has(String(r.ref_cx)), me = copoDe.get(String(r.ref_cx)) || simDe.get(String(r.ref_cx)), u = me ? Number(me.unid) : 0; if (!(u > 0)) continue;
-      const demItem = (r.proj != null ? r.proj : r.v1 || 0) * u, estItem = Math.max(0, r.est || 0) * u;
+      // conta em PACOTES: pacote de uma marca = pacote da outra para o cliente e para a venda (ex.: 20 ou 25 pratos, 25 ou 50 copos)
+      // preço do pacote do similar: o código de pacote do mesmo produto no cadastro (para anunciar caixa e pacote, como na Black)
+      const precoPct = (x) => { const b = baseN(x.produto), p = sim.find((y) => y.ref !== x.ref && baseN(y.produto) === b && !/\(\s*\d+\s*X/i.test(y.produto) && Number(y.preco) > 0); return p ? Number(p.preco) : null; };
+      const kI = pctDe(me.produto), upX = (x) => Number(x.unid) / pctDe(x.produto).n;   // unidades por pacote do similar
+      const demItem = (r.proj != null ? r.proj : r.v1 || 0) * kI.n, estItem = Math.max(0, r.est || 0) * kI.n;
       // similares que façam diferença (estoque de pelo menos 2% da demanda do item): até 2; nos copos, todas as marcas do tamanho, a de preço mais atrativo primeiro
-      const al = ehCopo ? copos.filter((x) => x.tam === me.tam && x.ref !== me.ref && !naCamp.has(x.ref) && x.est_u >= Math.max(1, demItem * 0.02)).sort((a, b) => (a.preco_u || 9) - (b.preco_u || 9))
-        : porChave.get(me.chave).filter((x) => !naCamp.has(x.ref) && Number(x.unid) > 0 && Number(x.est_u) >= Math.max(1, demItem * 0.02) && ehSim(me, x))
+      const al = ehCopo ? copos.filter((x) => x.tam === me.tam && x.ref !== me.ref && !naCamp.has(x.ref) && x.est_u / upX(x) >= Math.max(1, demItem * 0.02)).sort((a, b) => (a.preco_u || 9) - (b.preco_u || 9))
+        : porChave.get(me.chave).filter((x) => !naCamp.has(x.ref) && Number(x.unid) > 0 && Number(x.est_u) / upX(x) >= Math.max(1, demItem * 0.02) && ehSim(me, x))
         .sort((a, b) => Number(b.est_u) - Number(a.est_u)).slice(0, 2);
       if (!al.length) continue;
-      const simEst = al.reduce((s, x) => s + Number(x.est_u), 0), simDem = al.reduce((s, x) => s + Number(x['qu' + mesC] || 0), 0);
+      const simEst = al.reduce((s, x) => s + Number(x.est_u) / upX(x), 0), simDem = al.reduce((s, x) => s + Number(x['qu' + mesC] || 0) / upX(x), 0);
       const totDem = demItem + simDem, cob = (estItem + simEst) / Math.max(1, totDem), faltaU = Math.max(0, totDem - estItem - simEst);
-      const ajust = Math.min(r.comp, faltaU / u), compOrig = r.comp;
+      const ajust = Math.min(r.comp, faltaU / kI.n), compOrig = r.comp;
       if (ajust > compOrig * 0.95) continue;   // o similar não muda a compra: fica como está
-      // projeção de cada marca: a demanda total do produto dividida pelo ritmo recente de vendas de cada uma (marca nova sem histórico no mês ganha projeção)
       const qrI = Number(me.qr || 0), qrS = al.reduce((s, x) => s + Number(x.qr || 0), 0), qrT = qrI + qrS;
-      const projItemU = qrT > 0 ? totDem * qrI / qrT : demItem;
-      r.simDec = { u, demItem, estItem, simEst, simDem, cob, ajust, compOrig, projItemU, partItem: qrT > 0 ? qrI / qrT : null };
+      r.simDec = { pk: kI, un: /-\s*FD\b/i.test(me.produto) ? 'FD' : 'CX', u: kI.n, demItem, estItem, simEst, simDem, cob, ajust, compOrig, partItem: qrT > 0 ? qrI / qrT : null };
       r.comp = ajust < 0.05 ? 0 : ajust;
       r.situacao = r.comp ? 'Comprar a diferença (com o similar)' : 'OK com o similar: anunciar os dois';
-      const vit = ehCopo ? copoPromo(me.tam, totDem) : null;   // copo: a marca de preço mais atrativo com estoque vai para a vitrine
+      const vit = ehCopo ? copoPromo(me.tam, totDem * u / kI.n) : null;   // copo: a marca de preço mais atrativo com estoque vai para a vitrine
       r.simDec.copo = ehCopo; r.simDec.vitrine = vit && vit.ref === me.ref;
-      r.simRows = al.map((x) => { const ux = Number(x.unid), pU = qrT > 0 ? totDem * Number(x.qr || 0) / qrT : Number(x['qu' + mesC] || 0), v = !!(vit && vit.ref === x.ref);
-        return { simDe: r, produto: x.produto, ref_cx: x.ref, item: 'sim', pcx: Number(x.preco) || null, ppct: null, est: Number(x.estoque), estU: Number(x.est_u), v1: Number(x['qu' + mesC] || 0) / ux, v2: null, var: null, proj: Number(x['qu' + mesC] || 0) / ux, projU: Number(x['qu' + mesC] || 0), novo: !(Number(x['qu' + mesC]) > 0) && Number(x.qr) > 0, copo: ehCopo, vitrine: v, pu: Number(x.preco) > 0 ? Number(x.preco) / ux : null,
-          parte: qrT > 0 ? Number(x.qr || 0) / qrT : null, comp: 0, situacao: v ? 'Similar: entra na campanha · destaque (melhor preço)' : 'Similar: entra na campanha', manter: '', dsug: null, promo: null, parado: Number(x.qr || 0) * 3 < Number(x.est_u), falta: Math.max(0, pU - Number(x.est_u)) }; });
+      r.simRows = al.map((x) => { const ux = Number(x.unid), estP = Number(x.est_u) / upX(x), venP = Number(x['qu' + mesC] || 0) / upX(x), v = !!(vit && vit.ref === x.ref);
+        return { simDe: r, produto: x.produto, ref_cx: x.ref, item: 'sim', pcx: Number(x.preco) || null, ppct: precoPct(x), est: estP / kI.n, estOrig: Number(x.estoque), estU: estP, v1: venP / kI.n, v2: null, var: null, proj: venP / kI.n, projU: venP, novo: !(venP > 0) && Number(x.qr) > 0, copo: ehCopo, vitrine: v, pk: pctDe(x.produto), pu: Number(x.preco) > 0 ? Number(x.preco) / ux : null,
+          parte: qrT > 0 ? Number(x.qr || 0) / qrT : null, comp: 0, situacao: v ? 'Similar: entra na campanha · destaque (melhor preço)' : 'Similar: entra na campanha', manter: '', dsug: null, promo: null, parado: Number(x.qr || 0) * 3 < Number(x.est_u) }; });
     }
     const Lx = L.flatMap((r) => [r, ...(r.simRows || [])]);   // itens da campanha com os similares sugeridos logo abaixo
     const comprar = L.filter((r) => /Comprar/.test(r.situacao) || r.comp > 0.5);
@@ -5956,16 +5961,20 @@
     // Compras: o item, o similar logo abaixo (estoque e projeção dele) e o total dos dois em unidades, com a compra ajustada
     const cmpBase = [...comprar.slice().sort((a, b) => (b.comp || 0) * (custo(b) || 0) - (a.comp || 0) * (custo(a) || 0)), ...L.filter((r) => r.simDec && !comprar.includes(r))];
     const cmpRows = cmpBase.flatMap((r) => r.simDec ? [{ t: 'item', r }, ...r.simRows.map((s) => ({ t: 'sim', r: s })), { t: 'tot', r }] : [{ t: 'item', r }]);
+    // item com similar: tudo em pacotes (fardos de marcas diferentes têm tamanhos diferentes: 10x20 x 10x25)
+    const nP = (v) => Math.round(v).toLocaleString('pt-BR') + ' pct';
+    const pkTxt = (pk) => pk && pk.tam ? ` · pct de ${pk.tam}` : '';
+    const fP = (r) => r.simDec.pk.n / r.simDec.u;   // pacotes do item da campanha por unidade: o similar é convertido para o mesmo pacote
     fillTable($('#cp-cmp'), cmpRows, [
-      { cls: 'l nm', fmt: ({ t, r }) => t === 'tot' ? `Total com o similar · cobertura ${pct0(Math.min(r.simDec.cob, 9.99))} · ${r.comp ? 'comprar só a diferença' : (r.simRows.length > 1 ? 'não comprar: anunciar juntos' : 'não comprar: anunciar os dois')}` : t === 'sim' ? `↳ ${r.produto} (${r.copo ? 'copo do mesmo tamanho, outra marca' : 'similar: só muda a marca'}${r.pu ? ` · ${brl4(r.pu)}/un.` : ''}${r.parte != null ? ` · hoje: ${pct0(r.parte)} das vendas do produto` : ''}${r.parado ? ' · estoque parado' : ''}${r.vitrine ? ' · DESTAQUE: melhor preço com estoque' : ''})` : r.produto + (r.simDec && r.simDec.partItem != null ? ` (hoje: ${pct0(r.simDec.partItem)} das vendas do produto${r.simDec.vitrine ? ' · DESTAQUE: melhor preço com estoque' : ''})` : '') },
-      { fmt: ({ t, r }) => t === 'tot' ? nU(r.simDec.estItem + r.simDec.simEst) : r.est != null ? f1(r.est) : '—' },
-      { fmt: ({ t, r }) => t === 'tot' ? nU(r.simDec.demItem + r.simDec.simDem) : t === 'sim' && r.novo ? `marca nova: sem venda em ${mesAP}` : r.proj != null ? f1(r.proj) : r.v1 != null ? f1(r.v1) : '—' },
-      { cls: ({ t, r }) => t === 'sim' ? 'mid' : t === 'item' && r.simDec ? '' : (r.comp > 0.5 ? 'bad' : 'up'), fmt: ({ t, r }) => t === 'sim' ? 'não comprar' : t === 'item' && r.simDec ? '—' : t === 'tot' ? (r.comp ? f1(r.comp) : 'nada') : r.comp != null ? f1(r.comp) : '—' },
+      { cls: 'l nm', fmt: ({ t, r }) => t === 'tot' ? `Total com o similar · cobertura ${pct0(Math.min(r.simDec.cob, 9.99))} · ${r.comp ? 'comprar só a diferença' : (r.simRows.length > 1 ? 'não comprar: anunciar juntos' : 'não comprar: anunciar os dois')}` : t === 'sim' ? `↳ ${r.produto} (${r.copo ? 'copo do mesmo tamanho, outra marca' : 'similar: só muda a marca'}${r.pk.tam ? ` · pct de ${r.pk.tam}` : ''}${r.pu ? ` · ${brl4(r.pu)}/un.` : ''}${r.parte != null ? ` · hoje: ${pct0(r.parte)} das vendas do produto` : ''}${r.parado ? ' · estoque parado' : ''}${r.vitrine ? ' · DESTAQUE: melhor preço com estoque' : ''})` : r.produto + (r.simDec && r.simDec.partItem != null ? ` (${pkTxt(r.simDec.pk).slice(3)} · hoje: ${pct0(r.simDec.partItem)} das vendas do produto${r.simDec.vitrine ? ' · DESTAQUE: melhor preço com estoque' : ''})` : '') },
+      { fmt: ({ t, r }) => t === 'tot' ? nP((r.simDec.estItem + r.simDec.simEst) * fP(r)) : t === 'sim' ? nP(r.estU * fP(r.simDe)) : r.simDec ? nP(r.est * r.simDec.pk.n) : r.est != null ? f1(r.est) : '—' },
+      { fmt: ({ t, r }) => t === 'tot' ? nP((r.simDec.demItem + r.simDec.simDem) * fP(r)) : t === 'sim' ? (r.novo ? `marca nova: sem venda em ${mesAP}` : nP(r.projU * fP(r.simDe))) : r.simDec ? nP(r.proj * r.simDec.pk.n) : r.proj != null ? f1(r.proj) : r.v1 != null ? f1(r.v1) : '—' },
+      { cls: ({ t, r }) => t === 'sim' ? 'mid' : t === 'item' && r.simDec ? '' : (r.comp > 0.5 ? 'bad' : 'up'), fmt: ({ t, r }) => t === 'sim' ? 'não comprar' : t === 'item' && r.simDec ? '—' : t === 'tot' ? (r.comp ? `${nP(r.comp * r.simDec.pk.n)} = ${f1(r.comp)} ${r.simDec.un}` : 'nada') : r.comp != null ? f1(r.comp) : '—' },
       { fmt: ({ t, r }) => t === 'sim' || (t === 'item' && r.simDec) ? '—' : r.comp > 0 && custo(r) ? money(r.comp * custo(r)) : t === 'tot' ? 'R$ 0' : '—' },
     ], { rowCls: ({ t }) => t === 'sim' ? 'cp-simrow' : t === 'tot' ? 'cp-totrow' : '' });
     const comSim = L.filter((r) => r.simDec), econ = comSim.reduce((s, r) => s + (r.simDec.compOrig - r.comp) * (custo(r) || 0), 0);
     $('#cp-cmp-nota').textContent = 'Comprar = projeção do mês (vendas do ano passado × a tendência dos dois anos, entre −20% e +30%) + o que ainda falta vender no mês anterior − estoque de hoje, em caixa/fardo. Investimento a preço de custo.'
-      + (comSim.length ? ` Similar (↳): só muda a marca (mesmo tipo, tamanho, formato e espessura, preço por unidade até 30% diferente), com estoque; nos copos, todas as marcas do mesmo tamanho, com destaque para a de melhor preço. Cada linha mostra a projeção daquele código (o que vendeu em ${MESES[mesC - 1]} do ano passado); "hoje" é a participação de cada marca nas vendas de ${perRec}, para saber qual está girando e merece destaque. Marca nova não tem venda no ano passado: a venda dela sai da mesma projeção do produto. O total soma o estoque do item e do similar e compara com a projeção do item mais o que o similar vendeu em ${MESES[mesC - 1]} do ano passado, em unidades (fardo de 20 e de 25 não são iguais). Com 100% ou mais não precisa comprar: anuncie os dois ou, quando o anunciado acabar, o atendente oferece o similar. Com o similar, a compra cai cerca de ${money(econ)} a custo e o estoque da outra marca gira. Confira com compras a aceitação do similar (marca, gramatura e preço).` : '');
+      + (comSim.length ? ` Similar (↳): só muda a marca (mesmo tipo, tamanho, formato e espessura, preço por unidade até 30% diferente), com estoque; nos copos, todas as marcas do mesmo tamanho, com destaque para a de melhor preço. Cada linha mostra a projeção daquele código (o que vendeu em ${MESES[mesC - 1]} do ano passado); "hoje" é a participação de cada marca nas vendas de ${perRec}, para saber qual está girando e merece destaque. Marca nova não tem venda no ano passado: a venda dela sai da mesma projeção do produto. O total soma o estoque do item e do similar e compara com a projeção do item mais o que o similar vendeu em ${MESES[mesC - 1]} do ano passado, em pacotes: o pacote de uma marca vale o mesmo que o da outra para o cliente e para a venda, mesmo com 20 ou 25 pratos, 25 ou 50 copos. Com 100% ou mais não precisa comprar: anuncie os dois ou, quando o anunciado acabar, o atendente oferece o similar. Com o similar, a compra cai cerca de ${money(econ)} a custo e o estoque da outra marca gira. Confira com compras a aceitação do similar (marca, gramatura e preço).` : '');
     // Copos até o fim do ano: todas as marcas por tamanho. A promoção e a vitrine vão para a marca de preço mais atrativo com estoque;
     // as mais caras sobram por último quando os promocionais acabam.
     $('#cp-copo-card').hidden = true;   // oculto na campanha: fica como base para o futuro módulo de suporte a compras
@@ -5998,7 +6007,7 @@
     }
     fillTable($('#cp-tab'), Lx, [
       { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l cp-ds', fmt: () => '' },
-      { cls: 'l nm', fmt: (r) => r.simDe ? `↳ ${r.produto}` : r.produto },
+      { cls: 'l nm', fmt: (r) => r.simDe ? `↳ ${r.produto}${r.pk.n !== r.simDe.simDec.pk.n ? ` (em ${r.simDe.simDec.un} de ${r.simDe.simDec.pk.n} pct como o item; no cadastro ${f1(r.estOrig)} com ${r.pk.n} pct)` : ''}` : r.produto },
       { cls: (r) => /Comprar/.test(r.situacao) ? 'l bad' : /Aten/.test(r.situacao) ? 'l mid' : /similar/i.test(r.situacao || '') ? 'l up' : 'l', fmt: (r) => r.situacao || '—' },
       { cls: (r) => /Rever/.test(r.manter) ? 'l bad' : /Queda/.test(r.manter) ? 'l mid' : 'l', fmt: (r) => r.manter || '—' },
       { fmt: (r) => `${r.pcx != null ? brl2.format(r.pcx) : '—'}${r.ppct != null ? ' · ' + brl2.format(r.ppct) : ''}` },
