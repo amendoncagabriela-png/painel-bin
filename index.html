@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261120170109';</script>
+<script>window.BIN_BUILD = '20261120174156';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -343,6 +343,7 @@
   .bd-dlg::backdrop { background: rgba(0,0,0,.55); }
   .cp-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem; } .cp-ev { text-align: left; border: 1px solid var(--color-border-line); border-left: 4px solid var(--bin-gold); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: .5rem .65rem; cursor: pointer; font: inherit; } .cp-ev b, .cp-ev span, .cp-ev em { display: block; } .cp-ev span { font-size: .82rem; color: var(--color-fg-muted); } .cp-ev em { font-size: .74rem; font-style: normal; color: var(--bin-gold); font-weight: 700; } .cp-ev.sel { outline: 2px solid var(--bin-gold); background: color-mix(in srgb, var(--bin-gold) 10%, transparent); } .cp-ev.passou { opacity: .55; } .cp-ev.agora { border-left-color: var(--color-ok); }
   .cp-sug { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--bin-gold); border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; margin-left: .35rem; white-space: nowrap; } .cp-sim { font-size: .78rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; } .cp-susp { color: var(--color-fg-muted); font-style: italic; }
+  .cp-qtd input { font: inherit; font-size: .8rem; padding: .1rem .3rem; width: 11rem; border: 1px solid var(--color-border-subtle, #ccc); border-radius: 4px; } .cp-qtd.falta span { color: var(--bin-red, #A62A2E); font-weight: 700; }
   tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
   tr.cp-totrow td { font-weight: 700; border-top: 1px solid var(--color-border-subtle, #ccc); background: color-mix(in srgb, var(--bin-gold) 12%, transparent); } tr.cp-totrow td.nm { padding-left: 1.4rem; white-space: normal; }
   .bd-grid2.cp-mc { grid-template-columns: minmax(0, 1fr); } #cp-cmp td.nm { white-space: normal; min-width: 16rem; max-width: 34rem; }
@@ -5645,23 +5646,30 @@
   // Quantidade da embalagem pela descrição do cadastro: (10X20UND) - FD = fardo com 10 pacotes de 20 un.; "- 20 UND" = pacote com 20 un.
   let cpRefsMap = null;
   const cpDescRef = (ref) => { if (!cpRefsMap) { const z = dash.data('campanha_refs'); cpRefsMap = new Map((z.status === 'ok' ? z.data : []).map((x) => [String(x.ref), x.descricao])); } return cpRefsMap.get(String(ref || '').trim()) || ''; };
-  const cpQtd = (r) => {
-    const dc = cpDescRef(r.ref_cx) || (r.simDe ? r.produto : ''), dp = cpDescRef(r.ref_pct), n = (s) => Number(String(s).replace(',', '.'));
-    const nivel = (d) => /-\s*FD\s*\**\s*$/i.test(d) ? 'Fardo' : /-\s*CX\b/i.test(d) ? 'Caixa' : /-\s*(UND|UN|UNID)\s*\**\s*$/i.test(d) ? 'Unidade' : /-\s*KG\s*$/i.test(d) ? 'Quilo' : 'Embalagem';
-    const pctUn = (d) => { const m = String(d).toUpperCase().match(/-\s*(\d+)\s*(UND|UN|UNDS|UNID)\b/) || String(d).toUpperCase().match(/\((\d+)\s*(UND|UN|UNDS)\)/); return m ? n(m[1]) : null; };
-    const partes = [];
-    if (dc) {
-      const s = dc.toUpperCase(), ax = s.match(/\((\d+)\s*X\s*(\d+)/), tot = s.match(/\((\d+)\s*(UND|UN|UNDS|UNID|CJ)\b/), lv = nivel(dc), up = dp ? pctUn(dp) : null;
-      if (ax) partes.push(`${lv} com ${n(ax[1])} pct de ${n(ax[2])} un. (${(n(ax[1]) * n(ax[2])).toLocaleString('pt-BR')} un.)`);
-      else if (tot && up && n(tot[1]) % up === 0 && n(tot[1]) > up) partes.push(`${lv} com ${n(tot[1]) / up} pct de ${up} un. (${n(tot[1]).toLocaleString('pt-BR')} un.)`);
-      else if (tot) partes.push(`${lv} com ${n(tot[1]).toLocaleString('pt-BR')} un.`);
-      else if (lv === 'Unidade') partes.push('Vendido por unidade');
-      else if (pctUn(dc)) partes.push(`Pacote com ${pctUn(dc)} un.`);
-    }
-    if (!dc && /-\s*(UND|UN|CADA)\b/i.test(r.produto || '')) partes.push('Vendido por unidade');
-    if (dp && pctUn(dp)) partes.push(`pacote com ${pctUn(dp)} un.`);
-    return partes.join(' · ');
+  // Quantidade da embalagem pelo cadastro, só quando está explícita:
+  //   (10X20UND) - FD  = fardo com 10 pacotes de 20 un.  (pacotes só quando o cadastro diz AxB; não divide o total pelo pacote)
+  //   (100UND) - FD    = fardo com 100 un.               ("- 5 UND" do código de pacote é fracionamento da empresa: não entra)
+  //   ... - 100 UND    = fardo com 100 un.               (medidas como (23X13X30) não são quantidade)
+  //   - UND / - CADA   = vendido por unidade; - 2 KG = unidade de 2 kg
+  // Sem padrão claro: "a confirmar" (a quantidade é preenchida no painel, em Todos os itens).
+  const cpQtdAuto = (r) => {
+    const dc = cpDescRef(r.ref_cx) || (r.simDe ? r.produto : ''), n = (x) => Number(String(x).replace(',', '.'));
+    const base = dc || (/-\s*(UND|UN|UNID|CADA)\s*\**\s*$/i.test(r.produto || '') ? r.produto : '');
+    if (!base) return !dc && /-\s*(UND|UN|UNID|CADA)\b/i.test(r.produto || '') ? 'Vendido por unidade' : '';
+    const s = base.toUpperCase().trim(), lv = /-\s*FD\s*\**\s*$/.test(s) ? 'Fardo' : /-\s*CX\b/.test(s) ? 'Caixa' : 'Fardo';
+    const ax = s.match(/\((\d+)\s*X\s*(\d+)\s*(UND|UN|UNDS)?\s*\)/);
+    if (ax) return `${lv} com ${n(ax[1])} pct de ${n(ax[2])} un. (${(n(ax[1]) * n(ax[2])).toLocaleString('pt-BR')} un.)`;
+    const tot = s.match(/\((\d+)\s*(UND|UN|UNDS|UNID)\b/);
+    if (tot) return `${lv} com ${n(tot[1]).toLocaleString('pt-BR')} un.`;
+    const suf = s.match(/-\s*(\d+)\s*(UND|UN|UNDS|UNID)\s*\**\s*$/);
+    if (suf) return `Fardo com ${n(suf[1]).toLocaleString('pt-BR')} un.`;
+    if (/-\s*(UND|UN|UNID|CADA)\s*\**\s*$/.test(s)) return 'Vendido por unidade';
+    const kg = s.match(/-\s*(\d+(?:[.,]\d+)?)\s*KG\s*$/);
+    if (kg) return `Unidade de ${kg[1]} kg`;
+    return '';
   };
+  // quantidade preenchida à mão no painel (quando o cadastro não deixa claro) vale mais que a lida do cadastro
+  const cpQtd = (r) => r.qtdManual || cpQtdAuto(r);
   function exportarMkt(c) {
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
     const R = (v) => v == null ? '' : brl2.format(v);
@@ -5673,7 +5681,7 @@
     const bloco = (tp) => { const g = it.filter((r) => r.tipo === tp).sort((a, b) => ordem[a.dest] - ordem[b.dest] || a.produto.localeCompare(b.produto));
       return `<h2>${esc(tp)} <small>${g.length} ${g.length === 1 ? 'item' : 'itens'}</small></h2><div class="cards">${g.map((r) => { const p = cpPromo(r); return `
         <div class="card d-${ordem[r.dest]}"><div class="selo">${selo[r.dest]}</div><div class="tag">${r.dsug ? Math.round(r.dsug * 100) + '% OFF' : 'PREÇO DE CAMPANHA'}</div><h3>${esc(r.produto)}</h3>
-        ${r.qtd ? `<div class="qtd">${esc(r.qtd)}</div>` : ''}
+        ${r.qtd ? `<div class="qtd">${esc(r.qtd)}</div>` : '<div class="qtd falta">Quantidade da embalagem: a confirmar</div>'}
         <div class="precos">${r.dsug ? `<span class="de">de ${R(r.pcx)}</span>` : ''}<span class="por">${r.dsug ? 'por ' : ''}${R(p.cx)}</span></div>
         ${r.ppct != null ? `<div class="unid">Pacote/unidade: ${r.dsug && p.pct != null ? `de ${R(r.ppct)} por <b>${R(p.pct)}</b>` : `<b>${R(r.ppct)}</b>`}</div>` : ''}
         <div class="ref">Cód. ${esc(r.ref_cx || '')}</div></div>`; }).join('')}</div>`; };
@@ -5686,7 +5694,7 @@
       .card { border: 1px solid #e3ddd0; border-radius: 10px; padding: 12px 14px; position: relative; break-inside: avoid; overflow: hidden; } .card.d-0 { border: 3px solid #A62A2E; background: #fff8f6; } .card.d-1 { border: 2px solid #AF6839; }
       .selo { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #777; margin-bottom: 6px; } .d-0 .selo { color: #fff; background: #A62A2E; margin: -12px -14px 8px; padding: 6px 14px; } .d-1 .selo { color: #AF6839; }
       .tag { display: inline-block; background: #A62A2E; color: #fff; font-weight: 700; font-size: 12px; border-radius: 4px; padding: 2px 8px; } .card h3 { font-size: 15px; margin: 8px 0 4px; line-height: 1.3; } .d-0 h3 { font-size: 17px; }
-      .qtd { font-size: 13px; font-weight: 700; color: #191919; background: #FAF4B4; border-radius: 4px; padding: 3px 6px; margin: 4px 0 6px; display: inline-block; }
+      .qtd.falta { background: #F7E1E2; color: #A62A2E; }       .qtd { font-size: 13px; font-weight: 700; color: #191919; background: #FAF4B4; border-radius: 4px; padding: 3px 6px; margin: 4px 0 6px; display: inline-block; }
       .precos .de { display: block; color: #777; text-decoration: line-through; font-size: 13px; } .precos .por { font-size: 22px; font-weight: 700; color: #191919; } .d-0 .precos .por { font-size: 28px; color: #A62A2E; }
       .unid { font-size: 13px; color: #333; margin-top: 4px; } .ref { font-size: 11px; color: #888; margin-top: 6px; }
       footer { padding: 12px 32px 22px; font-size: 11px; color: #666; border-top: 1px solid #e3ddd0; } .acoes { position: fixed; right: 18px; top: 18px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
@@ -5706,7 +5714,7 @@
     const R = (v) => v == null ? '—' : brl2.format(v);
     const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
     const it = c.itens.map((r) => ({ ...r, tipo: cpTipo(r.produto), pc: Math.round((r.dsug || 0) * 100), p: cpPromo(r), qtd: cpQtd(r) }));
-    const linha = (r) => `<tr><td class="pc ${r.pc ? '' : 'zero'}">${r.pc}%</td><td class="l"><b>${esc(r.produto)}</b><br><small>Cód. caixa ${esc(r.ref_cx || '—')}${r.ref_pct ? ` · pacote ${esc(r.ref_pct)}` : ''}${r.qtd ? ` · ${esc(r.qtd)}` : ''}</small></td>`
+    const linha = (r) => `<tr><td class="pc ${r.pc ? '' : 'zero'}">${r.pc}%</td><td class="l"><b>${esc(r.produto)}</b><br><small>Cód. caixa ${esc(r.ref_cx || '—')}${r.ref_pct ? ` · pacote ${esc(r.ref_pct)}` : ''}${r.qtd ? ` · ${esc(r.qtd)}` : ' · <b class="falta">quantidade a confirmar</b>'}</small></td>`
       + `<td>${r.pc ? `<s>${R(r.pcx)}</s><br>` : ''}<b>${R(r.p.cx)}</b></td><td>${r.ppct != null ? `${r.pc ? `<s>${R(r.ppct)}</s><br>` : ''}<b>${R(r.p.pct)}</b>` : '—'}</td></tr>`;
     const cab = '<table><thead><tr><th>Desconto</th><th class="l">Produto</th><th>Caixa / fardo<br><small>de → por</small></th><th>Pacote / unidade<br><small>de → por</small></th></tr></thead><tbody>';
     const pcs = [...new Set(it.map((r) => r.pc))].sort((a, b) => b - a);
@@ -5724,7 +5732,7 @@
       h2 { font-size: 17px; margin: 22px 0 8px; display: flex; align-items: center; gap: 12px; break-after: avoid; } h2 small { font-weight: 400; color: #555; font-size: 13px; }
       .big { background: #A62A2E; color: #fff; font-size: 28px; font-weight: 900; padding: 4px 16px; border-radius: 6px; } .big.zero { background: #777; font-size: 20px; }
       table { width: 100%; border-collapse: collapse; font-size: 14px; } th { background: #f1ece2; font-size: 12px; text-align: right; padding: 6px 8px; } td { border-bottom: 1px solid #e6e0d4; padding: 7px 8px; text-align: right; vertical-align: middle; } tr { break-inside: avoid; }
-      .l { text-align: left; } th:first-child, td.pc { text-align: center; width: 100px; } td.pc { font-size: 32px; font-weight: 900; color: #A62A2E; } td.pc.zero { font-size: 20px; color: #888; } small { color: #555; } s { color: #888; font-size: 12px; } td b { font-size: 15px; }
+      .l { text-align: left; } th:first-child, td.pc { text-align: center; width: 100px; } td.pc { font-size: 32px; font-weight: 900; color: #A62A2E; } td.pc.zero { font-size: 20px; color: #888; } .falta { color: #A62A2E; } small { color: #555; } s { color: #888; font-size: 12px; } td b { font-size: 15px; }
       footer { padding: 12px 28px 20px; font-size: 11px; color: #666; border-top: 1px solid #e3ddd0; } .acoes { position: fixed; right: 18px; top: 18px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
       @media print { body { background: #fff; } .acoes, .modo { display: none; } @page { size: A4; margin: 10mm; } header, .big, td.pc, th, .chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div><div class="pag">
@@ -6123,6 +6131,20 @@
         if (r.simDe) { td.append(tag('similar sugerido para a campanha', `Mesmo tipo e tamanho de ${r.simDe.produto}. Estoque ${Math.round(r.estU).toLocaleString('pt-BR')} un.; vendeu ${Math.round(r.projU).toLocaleString('pt-BR')} un. em ${MESES[mesC - 1]} do ano passado.`)); return; }
         if (ehSug) td.append(tag(/Temático|Complementar/.test(r.papel || '') ? `sugestão da análise de vendas · ${r.papel.replace(/ (.*)/, '')}` : 'sugestão da análise de vendas', r.papel)); const s = linhaSim(r); if (s) td.append(s); if (r.nota) td.append(Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: r.nota })); };
       [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => { if (Lx[i]) marca(tr.cells[2], Lx[i]); });
+      // Quantidade da embalagem (vai para o marketing e para as lojas): lida do cadastro; quando não está clara, campo para preencher (fica guardado neste aparelho)
+      const chaveQ = 'bin_cp_qtd_' + nome, lerQ = () => { try { return JSON.parse(localStorage.getItem(chaveQ) || '{}'); } catch (e) { return {}; } };
+      const qMan = lerQ();
+      [...$('#cp-tab').tBodies[0].rows].forEach((tr, i) => {
+        const r = Lx[i]; if (!r) return; const k = (r.ref_cx || '') + '|' + r.item, auto = cpQtdAuto(r);
+        if (qMan[k]) r.qtdManual = qMan[k];
+        const box = Object.assign(document.createElement('div'), { className: 'cp-sim cp-qtd' });
+        if (auto && !qMan[k]) { box.textContent = 'Embalagem: ' + auto; tr.cells[2].append(box); return; }
+        const inp = Object.assign(document.createElement('input'), { type: 'text', value: qMan[k] || '', placeholder: 'ex.: Fardo com 100 un.' });
+        inp.setAttribute('aria-label', 'Quantidade da embalagem de ' + r.produto);
+        inp.addEventListener('change', () => { const q = lerQ(), v = inp.value.trim(); if (v) q[k] = v; else delete q[k]; try { localStorage.setItem(chaveQ, JSON.stringify(q)); } catch (e) {} r.qtdManual = v || undefined; lb.textContent = v ? 'Embalagem (preenchida): ' : 'Embalagem a confirmar: '; });
+        const lb = Object.assign(document.createElement('span'), { textContent: qMan[k] ? 'Embalagem (preenchida): ' : 'Embalagem a confirmar: ' });
+        box.classList.add(qMan[k] ? 'ok' : 'falta'); box.append(lb, inp); tr.cells[2].append(box);
+      });
       [...$('#cp-cmp').tBodies[0].rows].forEach((tr, i) => { const c = cmpRows[i]; if (c && c.t === 'item') { const s = linhaSim(c.r); if (s) tr.cells[0].append(s); for (const n of [c.r.obs, c.r.nota]) if (n) tr.cells[0].append(Object.assign(document.createElement('div'), { className: 'cp-sim', textContent: n })); } });
       window.__cpAlternativas = alternativas;
     }
