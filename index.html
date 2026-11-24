@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261124160540';</script>
+<script>window.BIN_BUILD = '20261124185433';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -2572,6 +2572,7 @@
       <label class="bd-f"><span>Loja</span><select id="br-loja" aria-label="Loja"></select></label>
       <label class="bd-f"><span>Brindes no grupo</span><input id="br-total" type="number" min="0" step="1" inputmode="numeric" style="width:7rem" aria-label="Total de brindes do grupo"></label>
       <button type="button" class="bd-btn-atu" id="br-exp">Lista dos escolhidos (PDF / imprimir)</button>
+      <button type="button" class="bd-btn-atu sec" id="br-nomes" hidden>Ver nomes dos clientes (conta Google)</button>
     </div>
     <div class="bd-hero">
       <div class="bd-eyebrow">Brindes · clientes relevantes do exercício · <span id="br-quem">—</span></div>
@@ -6817,7 +6818,23 @@
   let brMostrar = 50; const brVer = new Set();
   // nomes dos clientes: arquivo só do computador (local/clientes_nomes.js, gerado por nomes_clientes.ps1); no painel web não existe
   if (!window.BIN_WEB && !window.BIN_NOMES) { const s = document.createElement('script'); s.src = 'local/clientes_nomes.js'; s.onload = () => { if ($('#brindes') && !$('#brindes').hidden) renderBrindes(); }; s.onerror = () => {}; document.head.append(s); }
+  // Painel web: os nomes vêm de um arquivo trancado separado na pasta privada do Drive, lido com a conta Google de quem tem acesso
+  let brNomesEst = '';   // '' | lendo | ok | precisa | sem | erro
+  function brCarregarNomes(forcar) {
+    if (!window.BIN_WEB || !window.BIN_WEB.lerNomes || window.BIN_NOMES || brNomesEst === 'lendo' || (brNomesEst && !forcar)) return;
+    brNomesEst = 'lendo';
+    window.BIN_WEB.lerNomes().then((r) => { if (r.nomes) { window.BIN_NOMES = r.nomes; brNomesEst = 'ok'; } else brNomesEst = r.precisaAcesso ? 'precisa' : 'sem'; })
+      .catch(() => { brNomesEst = 'erro'; }).finally(() => { if ($('#brindes') && !$('#brindes').hidden) renderBrindes(); });
+  }
+  function brBotaoNomes() {
+    const b = $('#br-nomes'); if (!b) return;
+    b.hidden = !window.BIN_WEB || brNomesEst === 'ok' || brNomesEst === 'sem' || brNomesEst === '';
+    b.textContent = brNomesEst === 'lendo' ? 'Buscando os nomes…' : 'Ver nomes dos clientes (conta Google)';
+    b.disabled = brNomesEst === 'lendo';
+    b.onclick = () => { brNomesEst = 'lendo'; brBotaoNomes(); window.BIN_WEB.acessoNomes(() => { brNomesEst = ''; brCarregarNomes(true); }); };
+  }
   function renderBrindes() {
+    brCarregarNomes(); brBotaoNomes();
     const z = dash.data('clientes_mes'), base = z.status === 'ok' ? z.data : [];
     if (!base.length) { $('#br-headline').textContent = 'Sem a base de clientes por loja (relatório 01 com o código do cliente). Atualize os dados do ERP.'; return; }
     const linhas = base.map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
@@ -6923,7 +6940,7 @@
     const celNome = (td, c, sel) => {
       const ver = sel || brVer.has(c.k), nm = nomeDe(c), cod = td.dataset.cod || td.textContent; td.dataset.cod = cod;
       td.replaceChildren(document.createTextNode(cod));
-      if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: nm === null ? 'nome só no painel do computador' : nm || 'nome não encontrado nos relatórios' }));
+      if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: nm === null ? (window.BIN_WEB ? (brNomesEst === 'sem' ? 'esta conta Google não tem acesso aos nomes' : brNomesEst === 'lendo' ? 'buscando o nome…' : 'toque em "Ver nomes dos clientes" no topo') : 'nome não carregado') : nm || 'nome não encontrado nos relatórios' }));
       td.title = ver ? '' : 'Clique para ver o nome do cliente'; td.classList.add('br-cod');
       td.onclick = () => { if (brVer.has(c.k)) brVer.delete(c.k); else brVer.add(c.k); celNome(td, c, sel); };
     };
@@ -7355,6 +7372,20 @@
         let dados = null; try { dados = await destrancar(env, senhaSessao); } catch (e) { dados = null; }
         return { dados, podeEscrever, versao: f.modifiedTime, id: f.id, senhaErrada: !dados };
       },
+      // Nomes dos clientes (aba Brindes): arquivo trancado SEPARADO, na pasta privada do Drive (sem link público). Só a conta Google
+      // com acesso a ele consegue ler. { nomes } | { precisaAcesso } (sem o acesso do Google agora) | { semAcesso } (a conta não vê o arquivo)
+      async lerNomes() {
+        if (!token) token = tokenGuardado() || tokenGravar;
+        if (!token || !senhaSessao) return { precisaAcesso: true };
+        const q = `name = 'clientes_nomes.enc.json' and trashed = false`;
+        const l = await (await api('https://www.googleapis.com/drive/v3/files?' + new URLSearchParams({ q, orderBy: 'modifiedTime desc', pageSize: '1', fields: 'files(id,modifiedTime)', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' }))).json();
+        const f = (l.files || [])[0]; if (!f) return { semAcesso: true };
+        const env = await (await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`)).json();
+        let nomes = null; try { nomes = await destrancar(env, senhaSessao); } catch (e) { nomes = null; }
+        return nomes ? { nomes, versao: f.modifiedTime } : { semAcesso: true };
+      },
+      // Pede o acesso do Google num toque (para ler os nomes) e chama de volta
+      acessoNomes(depois) { depoisDoToken = () => { if (typeof depois === 'function') depois(); }; pedirToken(false, false, true); },
       // "Liberar edição" da Central: renova o acesso do Google num toque e chama de volta quando estiver pronto
       liberarEdicao(depois) { depoisDoToken = () => { if (typeof depois === 'function') depois(); conferirNovidade(); }; pedirToken(false, false, true); },
       // Pede a permissão de gravação (precisa vir de um toque do usuário) e grava o objeto inteiro, trancado
