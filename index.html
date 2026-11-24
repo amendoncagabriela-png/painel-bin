@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261124142638';</script>
+<script>window.BIN_BUILD = '20261124160540';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -344,6 +344,7 @@
   .cp-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem; } .cp-ev { text-align: left; border: 1px solid var(--color-border-line); border-left: 4px solid var(--bin-gold); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: .5rem .65rem; cursor: pointer; font: inherit; } .cp-ev b, .cp-ev span, .cp-ev em { display: block; } .cp-ev span { font-size: .82rem; color: var(--color-fg-muted); } .cp-ev em { font-size: .74rem; font-style: normal; color: var(--bin-gold); font-weight: 700; } .cp-ev.sel { outline: 2px solid var(--bin-gold); background: color-mix(in srgb, var(--bin-gold) 10%, transparent); } .cp-ev.passou { opacity: .55; } .cp-ev.agora { border-left-color: var(--color-ok); }
   .cp-sug { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--bin-gold); border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; margin-left: .35rem; white-space: nowrap; } .cp-sim { font-size: .78rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; } .cp-susp { color: var(--color-fg-muted); font-style: italic; }
   .cp-qtd input { font: inherit; font-size: .8rem; padding: .1rem .3rem; width: 11rem; border: 1px solid var(--color-border-subtle, #ccc); border-radius: 4px; } .cp-qtd.falta span { color: var(--bin-red, #A62A2E); font-weight: 700; }
+  td.br-cod { cursor: pointer; } td.br-cod .br-nome { font-weight: 700; font-size: .85rem; color: var(--color-fg, #191919); margin-top: .1rem; } td.br-cod:not(:has(.br-nome)) { text-decoration: underline dotted; }
   tr.br-obrig td.nm { font-weight: 700; } tr.br-obrig td.nm::before { content: "★ "; color: var(--bin-red, #A62A2E); }
   tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
   tr.cp-totrow td { font-weight: 700; border-top: 1px solid var(--color-border-subtle, #ccc); background: color-mix(in srgb, var(--bin-gold) 12%, transparent); } tr.cp-totrow td.nm { padding-left: 1.4rem; white-space: normal; }
@@ -6813,7 +6814,9 @@
   // 1ª lista: ranking de compras no exercício (até o mês escolhido). 2ª lista: crescimento contra o mesmo período do ano anterior e número de compras.
   // As escolhas (brinde sim/não, motivo, observação), o total de brindes do grupo ficam guardados neste aparelho.
   const BR_MOTIVOS = ['', 'Ranking de compras', 'Crescimento', 'Fidelidade (anos de casa)', 'Vínculo diário/semanal', 'Indica outros clientes', 'Outro'];
-  let brMostrar = 50;
+  let brMostrar = 50; const brVer = new Set();
+  // nomes dos clientes: arquivo só do computador (local/clientes_nomes.js, gerado por nomes_clientes.ps1); no painel web não existe
+  if (!window.BIN_WEB && !window.BIN_NOMES) { const s = document.createElement('script'); s.src = 'local/clientes_nomes.js'; s.onload = () => { if ($('#brindes') && !$('#brindes').hidden) renderBrindes(); }; s.onerror = () => {}; document.head.append(s); }
   function renderBrindes() {
     const z = dash.data('clientes_mes'), base = z.status === 'ok' ? z.data : [];
     if (!base.length) { $('#br-headline').textContent = 'Sem a base de clientes por loja (relatório 01 com o código do cliente). Atualize os dados do ERP.'; return; }
@@ -6914,7 +6917,17 @@
       cb.addEventListener('change', salvar); sel.addEventListener('change', salvar);
       return [cb, sel];
     };
-    const comCtrl = (table, lst, motivoPadrao, colsCtrl) => { [...table.tBodies[0].rows].forEach((tr, i) => { const c = lst[i]; if (!c) return; const [cb, sel] = ctrl(c, motivoPadrao(c)); tr.cells[0].replaceChildren(cb); if (colsCtrl > 1) tr.cells[1].replaceChildren(sel); tr.classList.toggle('cp-ok', cb.checked); }); };
+    // Nome do cliente: só no painel do computador (arquivo local, fora do Drive e do painel web) e só quando o cliente é selecionado
+    // (caixa "Brinde" marcada) ou quando se clica no código; clicar de novo esconde.
+    const nomeDe = (c) => window.BIN_NOMES ? window.BIN_NOMES[c.k] || '' : null;
+    const celNome = (td, c, sel) => {
+      const ver = sel || brVer.has(c.k), nm = nomeDe(c), cod = td.dataset.cod || td.textContent; td.dataset.cod = cod;
+      td.replaceChildren(document.createTextNode(cod));
+      if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: nm === null ? 'nome só no painel do computador' : nm || 'nome não encontrado nos relatórios' }));
+      td.title = ver ? '' : 'Clique para ver o nome do cliente'; td.classList.add('br-cod');
+      td.onclick = () => { if (brVer.has(c.k)) brVer.delete(c.k); else brVer.add(c.k); celNome(td, c, sel); };
+    };
+    const comCtrl = (table, lst, motivoPadrao, colsCtrl) => { [...table.tBodies[0].rows].forEach((tr, i) => { const c = lst[i]; if (!c) return; const [cb, sel] = ctrl(c, motivoPadrao(c)); tr.cells[0].replaceChildren(cb); if (colsCtrl > 1) tr.cells[1].replaceChildren(sel); tr.classList.toggle('cp-ok', cb.checked); const td = tr.querySelector('td.nm'); if (td) celNome(td, c, cb.checked); }); };
     const daLoja = (c) => lojaSel === 'Todas' || c.loja === lojaSel;
     // não podem ficar de fora
     const obrig = doAno.filter((c) => c.obrig && daLoja(c)).sort((a, b) => a.loja.localeCompare(b.loja, 'pt-BR', { numeric: true }) || a.pos - b.pos);
@@ -6963,11 +6976,11 @@
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · clientes escolhidos</title><style>
       body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
       main { padding: 16px 26px; } h2 { font-size: 17px; border-bottom: 2px solid #AF6839; padding-bottom: 4px; margin: 18px 0 6px; break-after: avoid; } table { width: 100%; border-collapse: collapse; font-size: 14px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 6px 8px; text-align: left; } th { background: #f1ece2; font-size: 12px; }
-      td.nome { width: 45%; color: #999; } .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      td.nome { width: 45%; } .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
       <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · clientes escolhidos</h1><p>${lst.length} clientes · compras de jan a ${MESES[ate - 1]}/${ano}</p></div></header>
       <main><p>Lista pelo código do cliente no ERP de cada loja. A coluna "Nome" fica em branco para a loja preencher ao separar o brinde.</p>
-      ${lojas.map((lj) => { const g = lst.filter((r) => r.loja === lj); return `<h2>${esc2(nomeLoja(lj))} · ${g.length} ${g.length === 1 ? 'brinde' : 'brindes'}</h2><table><thead><tr><th>Código do cliente</th><th>Motivo</th><th>Nome (preencher)</th></tr></thead><tbody>${g.map((r) => `<tr><td><b>${esc2(r.cli)}</b></td><td>${esc2(r.motivo)}</td><td class="nome">&nbsp;</td></tr>`).join('')}</tbody></table>`; }).join('')}</main></body></html>`;
+      ${lojas.map((lj) => { const g = lst.filter((r) => r.loja === lj); return `<h2>${esc2(nomeLoja(lj))} · ${g.length} ${g.length === 1 ? 'brinde' : 'brindes'}</h2><table><thead><tr><th>Código do cliente</th><th>Motivo</th><th>Nome${window.BIN_NOMES ? '' : ' (preencher)'}</th></tr></thead><tbody>${g.map((r) => `<tr><td><b>${esc2(r.cli)}</b></td><td>${esc2(r.motivo)}</td><td class="nome">${window.BIN_NOMES && window.BIN_NOMES[r.loja + '|' + r.cli] ? esc2(window.BIN_NOMES[r.loja + '|' + r.cli]) : '&nbsp;'}</td></tr>`).join('')}</tbody></table>`; }).join('')}</main></body></html>`;
     const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
     w.document.open(); w.document.write(html); w.document.close();
   }
