@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261120174156';</script>
+<script>window.BIN_BUILD = '20261124142638';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -344,6 +344,7 @@
   .cp-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem; } .cp-ev { text-align: left; border: 1px solid var(--color-border-line); border-left: 4px solid var(--bin-gold); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: .5rem .65rem; cursor: pointer; font: inherit; } .cp-ev b, .cp-ev span, .cp-ev em { display: block; } .cp-ev span { font-size: .82rem; color: var(--color-fg-muted); } .cp-ev em { font-size: .74rem; font-style: normal; color: var(--bin-gold); font-weight: 700; } .cp-ev.sel { outline: 2px solid var(--bin-gold); background: color-mix(in srgb, var(--bin-gold) 10%, transparent); } .cp-ev.passou { opacity: .55; } .cp-ev.agora { border-left-color: var(--color-ok); }
   .cp-sug { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--bin-gold); border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; margin-left: .35rem; white-space: nowrap; } .cp-sim { font-size: .78rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; } .cp-susp { color: var(--color-fg-muted); font-style: italic; }
   .cp-qtd input { font: inherit; font-size: .8rem; padding: .1rem .3rem; width: 11rem; border: 1px solid var(--color-border-subtle, #ccc); border-radius: 4px; } .cp-qtd.falta span { color: var(--bin-red, #A62A2E); font-weight: 700; }
+  tr.br-obrig td.nm { font-weight: 700; } tr.br-obrig td.nm::before { content: "★ "; color: var(--bin-red, #A62A2E); }
   tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
   tr.cp-totrow td { font-weight: 700; border-top: 1px solid var(--color-border-subtle, #ccc); background: color-mix(in srgb, var(--bin-gold) 12%, transparent); } tr.cp-totrow td.nm { padding-left: 1.4rem; white-space: normal; }
   .bd-grid2.cp-mc { grid-template-columns: minmax(0, 1fr); } #cp-cmp td.nm { white-space: normal; min-width: 16rem; max-width: 34rem; }
@@ -585,6 +586,7 @@
     <button class="bd-tab" role="tab" data-area="com" data-tab="metas" id="aba-metas" aria-selected="false"><svg><use href="#i-target"/></svg><span class="longo">Metas</span><span class="curto">Metas</span></button>
     <button class="bd-tab" role="tab" data-area="com" data-tab="central" id="aba-central" aria-selected="false"><svg><use href="#i-proj"/></svg><span class="longo">Central Comercial</span><span class="curto">Central</span></button>
     <button class="bd-tab" role="tab" data-area="com" data-tab="campanha" id="aba-campanha" aria-selected="false"><svg><use href="#i-cal"/></svg><span class="longo">Campanha</span><span class="curto">Campanha</span></button>
+    <button class="bd-tab" role="tab" data-area="com" data-tab="brindes" id="aba-brindes" aria-selected="false"><svg><use href="#i-flag"/></svg><span class="longo">Brindes</span><span class="curto">Brindes</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="produtos" id="aba-produtos" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Produtos e markup</span><span class="curto">Produtos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="gastos" id="aba-gastos" aria-selected="false" hidden><svg><use href="#i-coin"/></svg><span class="longo">Gastos</span><span class="curto">Gastos</span></button>
     <button class="bd-tab" role="tab" data-area="fin" data-tab="usoloja" id="aba-usoloja" aria-selected="false" hidden><svg><use href="#i-cart"/></svg><span class="longo">Uso da loja</span><span class="curto">Uso</span></button>
@@ -2556,6 +2558,54 @@
             </table>
           </div>
           <p class="bd-note" id="cp-nota">—</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BRINDES (clientes relevantes do exercício) ===================== -->
+  <section class="bd-page" data-page="brindes" id="brindes" hidden>
+    <div class="bd-ctl">
+      <label class="bd-f"><span>Exercício</span><select id="br-ano" aria-label="Exercício"></select></label>
+      <label class="bd-f"><span>Até o mês</span><select id="br-ate" aria-label="Até o mês"></select></label>
+      <label class="bd-f"><span>Loja</span><select id="br-loja" aria-label="Loja"></select></label>
+      <label class="bd-f"><span>Brindes no grupo</span><input id="br-total" type="number" min="0" step="1" inputmode="numeric" style="width:7rem" aria-label="Total de brindes do grupo"></label>
+      <button type="button" class="bd-btn-atu" id="br-exp">Lista dos escolhidos (PDF / imprimir)</button>
+    </div>
+    <div class="bd-hero">
+      <div class="bd-eyebrow">Brindes · clientes relevantes do exercício · <span id="br-quem">—</span></div>
+      <h2 class="bd-headline" id="br-headline">—</h2>
+      <p class="bd-comp" id="br-comp">—</p>
+    </div>
+    <div class="bd-layout">
+      <aside class="bd-rail" aria-label="Indicadores dos brindes">
+        <div class="bd-goldline"></div>
+        <div class="bd-kpi"><span class="lbl">Clientes identificados</span><span class="ico"><svg><use href="#i-box"/></svg></span><span class="val" data-br="cli">—</span><span class="sub" data-br="cli_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Sugestão de brindes</span><span class="ico"><svg><use href="#i-target"/></svg></span><span class="val" data-br="sug">—</span><span class="sub" data-br="sug_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Não podem ficar de fora</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-br="obrig">—</span><span class="sub" data-br="obrig_sub">—</span></div>
+        <div class="bd-kpi"><span class="lbl">Escolhidos</span><span class="ico"><svg><use href="#i-proj"/></svg></span><span class="val" data-br="esc">—</span><span class="sub" data-br="esc_sub">—</span></div>
+      </aside>
+      <div class="bd-main">
+        <div class="bd-card">
+          <h3>Distribuição por loja <span class="per" id="br-dist-per">| quanto cada loja recebe do total do grupo</span></h3>
+          <div class="bd-tablewrap"><table id="br-dist" class="bd-cards"><thead><tr><th class="l">Loja</th><th>Clientes identificados</th><th>Venda a clientes identificados</th><th>Parte do grupo</th><th>Relevantes</th><th>Não podem ficar de fora</th><th>Sugestão do sistema</th><th>Escolhidos</th><th>Faltam</th></tr></thead><tbody></tbody></table></div>
+          <p class="bd-note" id="br-dist-nota">—</p>
+        </div>
+        <div class="bd-card">
+          <h3>Não podem ficar de fora <span class="per" id="br-obrig-per">| pontos importantes de cada cliente</span></h3>
+          <div class="bd-tablewrap"><table id="br-obrig" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Loja</th><th class="l">Cliente (código)</th><th>Posição</th><th>Compras no exercício</th><th class="l">Por que não pode ficar de fora</th></tr></thead><tbody></tbody></table></div>
+          <p class="bd-note" id="br-obrig-nota">—</p>
+        </div>
+        <div class="bd-card">
+          <h3>Ranking de compras <span class="per" id="br-rank-per">| 1ª lista: quem mais comprou no exercício</span></h3>
+          <div class="bd-tablewrap"><table id="br-rank" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Motivo</th><th>#</th><th class="l">Cliente (código)</th><th>Compras no exercício</th><th>Pedidos</th><th>Dias com compra</th><th>Meses com compra</th><th class="l">Frequência</th><th id="br-h-ant">Ano anterior</th><th>Crescimento</th><th class="l">Cliente desde</th><th class="l">Pontos</th></tr></thead><tbody></tbody></table></div>
+          <div class="cp-acoes"><button type="button" class="bd-btn-atu sec" id="br-mais">Mostrar mais 50</button></div>
+          <p class="bd-note" id="br-rank-nota">—</p>
+        </div>
+        <div class="bd-card">
+          <h3>Sugestão por crescimento e número de compras <span class="per">| 2ª lista: fora do topo do ranking, mas crescendo e comprando sempre</span></h3>
+          <div class="bd-tablewrap"><table id="br-cresc" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Motivo</th><th class="l">Cliente (código)</th><th>Posição no ranking</th><th>Compras no exercício</th><th>Crescimento</th><th>Dias com compra</th><th>Meses com compra</th><th class="l">Evolução nos anos</th><th class="l">Por que sugerir</th></tr></thead><tbody></tbody></table></div>
+          <p class="bd-note" id="br-cresc-nota">—</p>
         </div>
       </div>
     </div>
@@ -6758,6 +6808,169 @@
     $('#sb-sair').addEventListener('click', () => window.BIN_WEB && window.BIN_WEB.sair());
   }
 
+  // ===================== BRINDES: clientes relevantes do exercício, por loja =====================
+  // Base: clientes_mes.csv (loja, código do cliente, mês, valor líquido, pedidos, dias com compra), só clientes identificados, sem nome.
+  // 1ª lista: ranking de compras no exercício (até o mês escolhido). 2ª lista: crescimento contra o mesmo período do ano anterior e número de compras.
+  // As escolhas (brinde sim/não, motivo, observação), o total de brindes do grupo ficam guardados neste aparelho.
+  const BR_MOTIVOS = ['', 'Ranking de compras', 'Crescimento', 'Fidelidade (anos de casa)', 'Vínculo diário/semanal', 'Indica outros clientes', 'Outro'];
+  let brMostrar = 50;
+  function renderBrindes() {
+    const z = dash.data('clientes_mes'), base = z.status === 'ok' ? z.data : [];
+    if (!base.length) { $('#br-headline').textContent = 'Sem a base de clientes por loja (relatório 01 com o código do cliente). Atualize os dados do ERP.'; return; }
+    const linhas = base.map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
+    const anos = [...new Set(linhas.map((r) => r.ano))].sort();
+    const ano = anos.includes(Number(P().br_ano)) ? Number(P().br_ano) : anos[anos.length - 1];
+    opcoes($('#br-ano'), anos.map((a) => [String(a), String(a)]), String(ano));
+    const mesesAno = [...new Set(linhas.filter((r) => r.ano === ano).map((r) => r.m))].sort((a, b) => a - b);
+    const ate = mesesAno.includes(Number(P().br_ate)) ? Number(P().br_ate) : mesesAno[mesesAno.length - 1];
+    opcoes($('#br-ate'), mesesAno.map((m) => [String(m), `${cap(MESES[m - 1])}/${ano}`]), String(ate));
+    const lojas = [...new Set(linhas.map((r) => r.loja))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    const lojaSel = lojas.includes(P().br_loja) ? P().br_loja : 'Todas';
+    opcoes($('#br-loja'), [['Todas', 'Todas as lojas'], ...lojas.map((l) => [l, nomeLoja(l)])], lojaSel);
+    const nMeses = mesesAno.filter((m) => m <= ate).length;
+    // por cliente (loja + código): exercício, mesmo período dos anos anteriores e primeiro mês na base
+    const cli = new Map();
+    for (const r of linhas) {
+      const k = r.loja + '|' + r.cli; let c = cli.get(k);
+      if (!c) { c = { k, loja: r.loja, cli: r.cli, v: 0, p: 0, d: 0, meses: new Set(), ant: {}, prim: r.mes }; cli.set(k, c); }
+      if (r.mes < c.prim) c.prim = r.mes;
+      if (r.m > ate) continue;
+      if (r.ano === ano) { c.v += r.v; c.p += r.p; c.d += r.d; if (r.v > 0) c.meses.add(r.m); }
+      else if (r.ano < ano) c.ant[r.ano] = (c.ant[r.ano] || 0) + r.v;
+    }
+    const doAno = [...cli.values()].filter((c) => c.v > 0 && c.prim.slice(0, 4) <= String(ano));
+    const primBase = linhas.reduce((a, r) => r.mes < a ? r.mes : a, '9999');
+    // frequência média de dias com compra por mês ativo no exercício
+    const freq = (c) => { const pm = c.d / Math.max(1, nMeses); return pm >= 3.5 ? 'Semanal' : pm >= 1.8 ? 'Quinzenal' : c.meses.size >= nMeses * 0.75 ? 'Mensal' : c.meses.size >= nMeses * 0.4 ? 'Regular' : 'Esporádica'; };
+    // ranking, crescimento e pontos por loja
+    const porLoja = new Map(lojas.map((l) => [l, []]));
+    for (const c of doAno) porLoja.get(c.loja).push(c);
+    const resumo = [];
+    for (const [lj, lst] of porLoja) {
+      lst.sort((a, b) => b.v - a.v); const tot = lst.reduce((s, c) => s + c.v, 0); let acc = 0;
+      const dias = lst.map((c) => c.d).sort((a, b) => a - b), p75 = dias[Math.floor(dias.length * 0.75)] || 0;
+      lst.forEach((c, i) => {
+        c.pos = i + 1; acc += c.v; c.pareto = acc - c.v < tot * 0.5;   // quem forma os primeiros 50% das compras dos clientes identificados da loja
+        c.va = c.ant[ano - 1]; c.cresc = c.va > 0 ? c.v / c.va - 1 : null; c.fr = freq(c);
+        c.anosCasa = ano - Number(c.prim.slice(0, 4)); c.desdeBase = c.prim === primBase;
+        const pts = [];
+        if (c.pos <= 5) pts.push(`top ${c.pos} da loja`);
+        if (c.meses.size >= nMeses && nMeses >= 3) pts.push(`comprou todos os ${nMeses} meses`);
+        if (c.fr === 'Semanal') pts.push('compra toda semana');
+        if (c.anosCasa >= 2 && c.cresc != null && c.cresc >= 0.1) pts.push(`${c.desdeBase ? 'desde o início da base' : `${c.anosCasa} anos de casa`} e crescendo ${pct0(c.cresc)}`);
+        c.pontos = pts; c.obrig = c.pos <= 5 || (c.meses.size >= nMeses && nMeses >= 3 && c.fr === 'Semanal' && c.pareto);
+        c.relev = c.pareto || c.obrig || c.fr === 'Semanal';
+        // 2ª lista: crescimento relevante ou muitas compras, fora do grupo do topo
+        c.aum = c.v - (c.va || 0); c.cresceu = c.va >= 500 && c.cresc >= 0.3 && c.v >= tot / Math.max(1, lst.length); c.novoForte = !(c.va >= 500) && c.anosCasa <= 1 && c.v >= 2 * tot / Math.max(1, lst.length) && c.meses.size >= Math.min(3, nMeses);
+        c.sugCresc = !c.pareto && (c.cresceu || c.novoForte || (c.d >= p75 && p75 >= 4 && c.meses.size >= nMeses * 0.75));
+      });
+      resumo.push({ loja: lj, n: lst.length, tot, relev: lst.filter((c) => c.relev).length, obrig: lst.filter((c) => c.obrig).length });
+    }
+    const totGrupo = resumo.reduce((s, r) => s + r.tot, 0), relevGrupo = resumo.reduce((s, r) => s + r.relev, 0), obrigGrupo = resumo.reduce((s, r) => s + r.obrig, 0);
+    // total de brindes: o digitado (guardado neste aparelho) ou a sugestão (os relevantes do grupo, arredondado para cima de 10 em 10)
+    const chT = 'bin_brinde_total_' + ano, sugTotal = Math.ceil(relevGrupo / 10) * 10;
+    let total = sugTotal; try { const t = Number(localStorage.getItem(chT)); if (t > 0) total = t; } catch (e) {}
+    const inpT = $('#br-total'); if (document.activeElement !== inpT) inpT.value = total;
+    inpT.onchange = () => { const v = Math.max(0, Math.round(Number(inpT.value) || 0)); try { if (v > 0) localStorage.setItem(chT, String(v)); else localStorage.removeItem(chT); } catch (e) {} renderBrindes(); };
+    // divisão do total: metade pela parte da loja na venda a clientes identificados, metade pela parte nos clientes relevantes (maiores restos),
+    // nunca abaixo dos que não podem ficar de fora quando o total permite
+    const pesos = resumo.map((r) => 0.5 * (totGrupo ? r.tot / totGrupo : 0) + 0.5 * (relevGrupo ? r.relev / relevGrupo : 0));
+    const bruto = pesos.map((w) => w * total); const cota = bruto.map(Math.floor); let sobra = total - cota.reduce((a, b) => a + b, 0);
+    bruto.map((b, i) => [b - Math.floor(b), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (sobra > 0) { cota[i]++; sobra--; } });
+    if (total >= obrigGrupo) { resumo.forEach((r, i) => { while (cota[i] < r.obrig) { const j = cota.map((q, x) => [q - resumo[x].obrig, x]).sort((a, b) => b[0] - a[0])[0][1]; if (cota[j] <= resumo[j].obrig) break; cota[j]--; cota[i]++; } }); }
+    resumo.forEach((r, i) => { r.cota = cota[i]; });
+    // escolhas guardadas neste aparelho
+    const chE = 'bin_brinde_' + ano, lerE = () => { try { return JSON.parse(localStorage.getItem(chE) || '{}'); } catch (e) { return {}; } };
+    const gravarE = (o) => { try { localStorage.setItem(chE, JSON.stringify(o)); } catch (e) {} };
+    let esc = lerE();
+    const escolhidos = (lj) => Object.entries(esc).filter(([k, v]) => v && v.ok && (!lj || k.startsWith(lj + '|'))).length;
+    resumo.forEach((r) => { r.esc = escolhidos(r.loja); });
+    const nEsc = escolhidos(null);
+    // indicadores
+    $('#br-quem').textContent = `${lojaSel === 'Todas' ? 'todas as lojas' : nomeLoja(lojaSel)} · jan a ${MESES[ate - 1]}/${ano}`;
+    const vis = lojaSel === 'Todas' ? resumo : resumo.filter((r) => r.loja === lojaSel);
+    const kb = (k, v) => { const el = $(`#brindes [data-br="${k}"]`); if (el) el.textContent = v; };
+    kb('cli', vis.reduce((s, r) => s + r.n, 0).toLocaleString('pt-BR')); kb('cli_sub', `compraram de jan a ${MESES[ate - 1]}/${ano}`);
+    kb('sug', String(lojaSel === 'Todas' ? total : vis[0] ? vis[0].cota : 0)); kb('sug_sub', lojaSel === 'Todas' ? `sistema sugere ${sugTotal} (${relevGrupo} clientes relevantes)` : `parte da loja nos ${total} do grupo`);
+    kb('obrig', String(vis.reduce((s, r) => s + r.obrig, 0))); kb('obrig_sub', 'top 5 da loja ou todo mês e toda semana');
+    const escVis = vis.reduce((s, r) => s + r.esc, 0), cotaVis = vis.reduce((s, r) => s + r.cota, 0);
+    kb('esc', String(escVis)); kb('esc_sub', escVis > cotaVis ? `${escVis - cotaVis} acima da cota` : `faltam ${cotaVis - escVis} da cota`);
+    $('#br-headline').textContent = `${total} brindes no grupo${total === sugTotal ? ' (sugestão do sistema)' : ` (o sistema sugere ${sugTotal})`}: ${obrigGrupo} clientes não podem ficar de fora e ${nEsc} já foram escolhidos.`;
+    $('#br-comp').textContent = `A divisão por loja segue a venda a clientes identificados e o número de clientes relevantes de cada uma. Comece pelo ranking (1ª lista), confira os que não podem ficar de fora e complete com a 2ª lista (crescimento e frequência) e com o que só a loja sabe: vínculo do dia a dia, fidelidade e indicações.`;
+    // distribuição
+    fillTable($('#br-dist'), resumo.filter((r) => r.n), [
+      { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) }, { fmt: (r) => r.n.toLocaleString('pt-BR') }, { fmt: (r) => money(r.tot) }, { fmt: (r) => pct0(totGrupo ? r.tot / totGrupo : 0) },
+      { fmt: (r) => String(r.relev) }, { fmt: (r) => String(r.obrig) }, { cls: 'forte', fmt: (r) => String(r.cota) }, { fmt: (r) => String(r.esc) },
+      { cls: (r) => r.esc > r.cota ? 'down' : r.esc === r.cota ? 'up' : '', fmt: (r) => r.esc > r.cota ? `${r.esc - r.cota} a mais` : String(r.cota - r.esc) },
+    ], { onClick: (r) => dash.setParams({ br_loja: r.loja }), selected: (r) => r.loja === lojaSel });
+    $('#br-dist-nota').textContent = `Relevantes = clientes que formam os primeiros 50% das compras dos clientes identificados da loja, mais os que não podem ficar de fora e os que compram toda semana. Sugestão do sistema = metade pela parte da loja na venda a clientes identificados, metade pela parte nos relevantes, sem ficar abaixo dos que não podem ficar de fora. Clique numa loja para ver os clientes dela. Venda de balcão sem cadastro (varejo) fica fora. Na L3 (até 2025) e na L8 (desde 2026) entram também os clientes da M N.`;
+    // controles de escolha (brinde, motivo)
+    const ctrl = (c, motivoPadrao) => {
+      const st = esc[c.k] || {}, wrap = document.createElement('span');
+      const cb = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!st.ok, title: 'Recebe brinde' }); cb.setAttribute('aria-label', `Brinde para o cliente ${c.cli} da ${c.loja}`);
+      const sel = document.createElement('select'); sel.setAttribute('aria-label', `Motivo do cliente ${c.cli}`);
+      for (const m of BR_MOTIVOS) sel.append(new Option(m || 'motivo…', m, false, (st.motivo || '') === m));
+      const salvar = () => { esc = lerE(); esc[c.k] = { ok: cb.checked, motivo: sel.value || (cb.checked ? motivoPadrao : ''), obs: (esc[c.k] || {}).obs || '' }; if (!esc[c.k].ok && !esc[c.k].motivo) delete esc[c.k]; gravarE(esc); sel.value = (esc[c.k] || {}).motivo || ''; renderBrindes(); };
+      cb.addEventListener('change', salvar); sel.addEventListener('change', salvar);
+      return [cb, sel];
+    };
+    const comCtrl = (table, lst, motivoPadrao, colsCtrl) => { [...table.tBodies[0].rows].forEach((tr, i) => { const c = lst[i]; if (!c) return; const [cb, sel] = ctrl(c, motivoPadrao(c)); tr.cells[0].replaceChildren(cb); if (colsCtrl > 1) tr.cells[1].replaceChildren(sel); tr.classList.toggle('cp-ok', cb.checked); }); };
+    const daLoja = (c) => lojaSel === 'Todas' || c.loja === lojaSel;
+    // não podem ficar de fora
+    const obrig = doAno.filter((c) => c.obrig && daLoja(c)).sort((a, b) => a.loja.localeCompare(b.loja, 'pt-BR', { numeric: true }) || a.pos - b.pos);
+    fillTable($('#br-obrig'), obrig, [
+      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: (c) => c.loja }, { cls: 'l nm', fmt: (c) => c.cli }, { fmt: (c) => `${c.pos}º` }, { fmt: (c) => money(c.v) },
+      { cls: 'l', fmt: (c) => c.pontos.join(' · ') || 'grupo dos 50% das compras e frequência alta' },
+    ]);
+    comCtrl($('#br-obrig'), obrig, (c) => c.pos <= 5 ? 'Ranking de compras' : c.fr === 'Semanal' ? 'Vínculo diário/semanal' : 'Fidelidade (anos de casa)', 1);
+    $('#br-obrig-nota').textContent = 'Regra: os 5 primeiros do ranking de cada loja e, dentro do grupo dos 50% das compras, quem comprou em todos os meses do exercício e toda semana (3,5 dias ou mais por mês, em média). O nome do cliente se busca no ERP pelo código.';
+    // ranking (1ª lista)
+    const rank = doAno.filter(daLoja).sort((a, b) => lojaSel === 'Todas' ? b.v - a.v : a.pos - b.pos);
+    const mostra = rank.slice(0, brMostrar);
+    $('#br-h-ant').textContent = `${MESES[0]}–${MESES[ate - 1]}/${String(ano - 1).slice(2)}`;
+    $('#br-rank-per').textContent = `| 1ª lista: quem mais comprou de jan a ${MESES[ate - 1]}/${ano}${lojaSel === 'Todas' ? ' (todas as lojas; # = posição na loja)' : ''}`;
+    fillTable($('#br-rank'), mostra, [
+      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: () => '' }, { fmt: (c) => lojaSel === 'Todas' ? `${c.loja} ${c.pos}º` : `${c.pos}º` }, { cls: 'l nm', fmt: (c) => c.cli },
+      { cls: 'forte', fmt: (c) => money(c.v) }, { fmt: (c) => c.p.toLocaleString('pt-BR') }, { fmt: (c) => c.d.toLocaleString('pt-BR') }, { fmt: (c) => `${c.meses.size} de ${nMeses}` },
+      { cls: 'l', fmt: (c) => c.fr }, { fmt: (c) => c.va ? money(c.va) : 'novo' }, { cls: (c) => c.cresc == null ? '' : c.cresc >= 0 ? 'up' : 'down', fmt: (c) => c.cresc == null ? '—' : pct(c.cresc, true) },
+      { cls: 'l', fmt: (c) => c.desdeBase ? `${c.prim.slice(0, 4)} ou antes` : `${MESES[Number(c.prim.slice(5, 7)) - 1]}/${c.prim.slice(0, 4)}` }, { cls: 'l', fmt: (c) => (c.obrig ? '★ não pode ficar de fora · ' : '') + c.pontos.join(' · ') },
+    ], { rowCls: (c) => c.obrig ? 'br-obrig' : '' });
+    comCtrl($('#br-rank'), mostra, () => 'Ranking de compras', 2);
+    $('#br-mais').hidden = rank.length <= brMostrar; $('#br-mais').onclick = () => { brMostrar += 50; renderBrindes(); };
+    $('#br-rank-nota').textContent = `Compras = valor líquido dos pedidos do cliente no exercício (devoluções abatidas). Frequência pela média de dias com compra por mês: semanal (3,5 ou mais), quinzenal (1,8 ou mais), mensal (comprou em 75% dos meses), regular ou esporádica. Crescimento contra o mesmo período do ano anterior. "Cliente desde" é o primeiro mês do cliente na base (que começa em ${MESES[Number(primBase.slice(5, 7)) - 1]}/${primBase.slice(0, 4)}).`;
+    // 2ª lista: crescimento e número de compras
+    const cresc = doAno.filter((c) => c.sugCresc && daLoja(c)).sort((a, b) => b.aum - a.aum || b.d - a.d).slice(0, lojaSel === 'Todas' ? 80 : 40);
+    const evol = (c) => { const as = Object.keys(c.ant).map(Number).sort(); return [...as.map((a) => `${a}: ${money(c.ant[a])}`), `${ano}: ${money(c.v)}`].join(' → '); };
+    fillTable($('#br-cresc'), cresc, [
+      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: () => '' }, { cls: 'l nm', fmt: (c) => `${lojaSel === 'Todas' ? c.loja + ' · ' : ''}${c.cli}` }, { fmt: (c) => `${c.pos}º` },
+      { fmt: (c) => money(c.v) }, { cls: (c) => c.cresc == null ? '' : c.cresc >= 0 ? 'up' : 'down', fmt: (c) => c.cresc == null ? 'novo' : pct(c.cresc, true) },
+      { fmt: (c) => c.d.toLocaleString('pt-BR') }, { fmt: (c) => `${c.meses.size} de ${nMeses}` }, { cls: 'l', fmt: evol },
+      { cls: 'l', fmt: (c) => [c.cresceu ? `cresceu ${pct0(c.cresc)} (+${money(c.aum)}) no mesmo período` : c.novoForte ? `cliente novo com compra forte (${money(c.v)})` : '', c.fr === 'Semanal' || c.fr === 'Quinzenal' ? `compra ${c.fr.toLowerCase()}` : '', c.meses.size >= nMeses * 0.75 ? `${c.meses.size} de ${nMeses} meses` : ''].filter(Boolean).join(' · ') },
+    ]);
+    comCtrl($('#br-cresc'), cresc, (c) => c.cresceu || c.novoForte ? 'Crescimento' : 'Vínculo diário/semanal', 2);
+    $('#br-cresc-nota').textContent = 'Fora do grupo dos 50% das compras, em ordem de aumento em reais contra o mesmo período do ano anterior. Entra quem: cresceu 30% ou mais sobre uma base de pelo menos R$ 500 no ano anterior, com compras acima da média da loja; é cliente novo (até 1 ano) comprando o dobro da média da loja; ou está entre os 25% que mais compram em número de dias e comprou em pelo menos 75% dos meses. Fidelidade e indicações de outros clientes a base não mostra: marque pelo motivo.';
+  }
+  function exportarBrindes() {
+    const z = dash.data('clientes_mes'); if (z.status !== 'ok') return;
+    const ano = $('#br-ano').value, ate = Number($('#br-ate').value);
+    let esc = {}; try { esc = JSON.parse(localStorage.getItem('bin_brinde_' + ano) || '{}'); } catch (e) {}
+    const lst = Object.entries(esc).filter(([, v]) => v && v.ok).map(([k, v]) => { const [loja, cli] = k.split('|'); return { loja, cli, motivo: v.motivo || '' }; })
+      .sort((a, b) => a.loja.localeCompare(b.loja, 'pt-BR', { numeric: true }) || a.cli.localeCompare(b.cli, 'pt-BR', { numeric: true }));
+    if (!lst.length) { alert('Nenhum cliente escolhido ainda: marque a caixa "Brinde" nas listas.'); return; }
+    const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
+    const lojas = [...new Set(lst.map((r) => r.loja))];
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · clientes escolhidos</title><style>
+      body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
+      main { padding: 16px 26px; } h2 { font-size: 17px; border-bottom: 2px solid #AF6839; padding-bottom: 4px; margin: 18px 0 6px; break-after: avoid; } table { width: 100%; border-collapse: collapse; font-size: 14px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 6px 8px; text-align: left; } th { background: #f1ece2; font-size: 12px; }
+      td.nome { width: 45%; color: #999; } .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
+      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · clientes escolhidos</h1><p>${lst.length} clientes · compras de jan a ${MESES[ate - 1]}/${ano}</p></div></header>
+      <main><p>Lista pelo código do cliente no ERP de cada loja. A coluna "Nome" fica em branco para a loja preencher ao separar o brinde.</p>
+      ${lojas.map((lj) => { const g = lst.filter((r) => r.loja === lj); return `<h2>${esc2(nomeLoja(lj))} · ${g.length} ${g.length === 1 ? 'brinde' : 'brindes'}</h2><table><thead><tr><th>Código do cliente</th><th>Motivo</th><th>Nome (preencher)</th></tr></thead><tbody>${g.map((r) => `<tr><td><b>${esc2(r.cli)}</b></td><td>${esc2(r.motivo)}</td><td class="nome">&nbsp;</td></tr>`).join('')}</tbody></table>`; }).join('')}</main></body></html>`;
+    const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
   function render() {
     renderStatus();
     renderAtualizacao();
@@ -6774,6 +6987,7 @@
     if (aba === 'faturamento') renderFaturamento();
     if (aba === "usoloja") renderUsoLoja();
     if (aba === 'campanha') renderCampanha();
+    if (aba === 'brindes') renderBrindes();
     renderRelatorios();   // sempre: mantém o alerta da área Relatórios
     if (aba === 'metas') renderMetas();
   }
@@ -6783,6 +6997,10 @@
   ao('#cp-sel', (v) => ({ cp_camp: v }));
   ao('#cp-ano', (v) => ({ cp_ano: v, cp_camp: '' }));
   ao('#cp-sem-mes', (v) => ({ cp_sem_mes: v }));
+  ao('#br-ano', (v) => ({ br_ano: v, br_ate: '' }));
+  ao('#br-ate', (v) => ({ br_ate: v }));
+  ao('#br-loja', (v) => { brMostrar = 50; return { br_loja: v }; });
+  $('#br-exp').addEventListener('click', () => exportarBrindes());
   ao('#sel-ate', (v) => ({ mes_ate: v }));
   ao('#ft-mes', (v) => ({ ft_mes: v }));
   ao('#fc-mes', (v) => ({ fc_mes: v }));
