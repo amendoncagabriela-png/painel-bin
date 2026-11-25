@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125133813';</script>
+<script>window.BIN_BUILD = '20261125134739';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -963,8 +963,6 @@
       <h3><span class="alerta" id="cm-alerta" hidden title="Há produtos com custo acima da venda nos relatórios do mês corrente" aria-label="Atenção">!</span><span id="cm-titulo">Custo acima da venda</span> <span class="per">| revisão de cadastro no ERP</span></h3>
       <p class="bd-note" id="cm-nota">—</p>
       <div class="bd-ctl bd-ctl-in">
-        <label class="bd-f"><span>Loja</span><select id="cm-loja" aria-label="Loja"></select></label>
-        <label class="bd-f"><span>Relatório</span><select id="cm-per" aria-label="Período do relatório"></select></label>
         <button type="button" class="bd-btn-atu" id="cm-baixar">Baixar relatório (CSV)</button>
       </div>
       <div class="emp-resumo" id="cm-resumo"></div>
@@ -1035,7 +1033,7 @@
           <p class="bd-note" data-k="n_fam">—</p>
           <div class="bd-tablewrap">
             <table id="pd-tab-fam" class="bd-cards">
-              <thead><tr><th class="l">Família</th><th>Venda</th><th>Variação</th><th>Fatia</th><th>Lucro bruto</th><th>Margem</th><th>Margem ano ant.</th><th>Itens</th></tr></thead>
+              <thead><tr><th class="l">Família</th><th>Venda</th><th>% do faturamento</th><th>Variação</th><th>Fatia</th><th>Lucro bruto</th><th>Margem</th><th>Margem ano ant.</th><th>Itens</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -1045,7 +1043,7 @@
           <p class="bd-note">Em vermelho, margem negativa: custo cadastrado maior que o preço de venda.</p>
           <div class="bd-tablewrap">
             <table id="pd-tab-prod" class="bd-cards">
-              <thead><tr><th class="l">Cód.</th><th class="l">Produto</th><th>Venda</th><th>Variação</th><th>Qtd.</th><th>Margem</th></tr></thead>
+              <thead><tr><th class="l">Cód.</th><th class="l">Produto</th><th>Venda</th><th>% do faturamento</th><th>Variação</th><th>Qtd.</th><th>Margem</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -4364,6 +4362,7 @@
     if (!psSel.length) psSel = persAno.filter((p) => { const [a, b] = p.split('|'); return a <= ateP && b >= deP; });
     const op = { ps: psSel, de: psSel.map((p) => p.split('|')[0]).sort()[0], ate: psSel.map((p) => p.split('|')[1]).sort().pop() };
     op.ant = compara(op.de, op.ate);
+    pdSel = { loja, de: op.de, ate: op.ate };
     opcoesG($('#pd-ano'), [[null, anosP.map((a) => [a, a])]], anoP);
     const nomeM = (m, fim) => MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (fim && m === MES_CORRENTE ? ' (em curso)' : '') + (m.slice(0, 4) !== anoP ? '/' + m.slice(0, 4) : '');
     opcoesG($('#pd-de'), [[null, inis.map((m) => [m, nomeM(m)])]], deP); opcoesG($('#pd-ate'), [[null, fins.map((m) => [m, nomeM(m, true)])]], ateP);
@@ -4414,9 +4413,13 @@
     const pior = grandes.filter((r) => r.margem != null && r.margem >= 0).sort((a, c) => a.margem - c.margem)[0];
     const anomalas = reais.filter((r) => r.margem != null && r.margem < 0 && r.venda > 1000);
     set('n_fam', `Relatório de produtos do ERP, ${perTxt}${ant ? `, comparado com ${perCurto(addMes(op.de, -12), addMes(op.ate, -12))}` : ' (sem o mesmo período do ano anterior)'}. Família = primeira palavra da descrição. Tampas de marmitex de isopor com custo acima da venda são lidas junto com as bases nº 7, 8 e 9 da mesma marca (linhas "KIT").` + (anomalas.length ? ` Margem negativa em ${anomalas.map((r) => r.nome).join(', ')} sugere custo cadastrado errado.` : ''));
+    // Faturamento do período (relatório 01, mesmas lojas e meses): base do "% do faturamento" de cada família e produto
+    const fatPer = d3.sum((dash.data('erp_diario').data || []).filter((r) => (loja === 'Todas' || r.loja === loja) && r.data.slice(0, 7) >= op.de && r.data.slice(0, 7) <= op.ate), (r) => Number(r.valor));
+    const pFat = (v) => fatPer > 0 ? pct(v / fatPer) : '—';
     fillTable($('#pd-tab-fam'), famShow, [
       { cls: 'l nm', fmt: (r) => r.nome },
       { render: (td, r) => { const w = document.createElement('div'); w.className = 'bd-bar'; const i = document.createElement('i'); i.style.width = (r.venda / maxV * 5) + 'rem'; i.style.background = GOLD; const s = document.createElement('span'); s.textContent = money(r.venda); w.append(i, s); td.appendChild(w); } },
+      { fmt: (r) => pFat(r.venda) },
       { cls: (r) => r.var == null ? '' : r.var >= 0 ? 'ok' : 'bad', fmt: (r) => pct(r.var, true) },
       { fmt: (r) => pct(r.fatia) },
       { fmt: (r) => money(r.lucro) },
@@ -4428,6 +4431,7 @@
       { cls: 'l cod', fmt: (r) => r.codigo },
       { cls: 'l nm wrap', fmt: (r) => r.descricao },
       { fmt: (r) => money(r.venda) },
+      { fmt: (r) => pFat(r.venda) },
       { cls: (r) => { const a = prodAnt && prodAnt.get(r.codigo); return a > 0 ? (r.venda >= a ? 'ok' : 'bad') : ''; }, fmt: (r) => { const a = prodAnt && prodAnt.get(r.codigo); return a > 0 ? pct(r.venda / a - 1, true) : '—'; } },
       { fmt: (r) => int.format(r.qtd) },
       { cls: (r) => r.lucro < 0 ? 'bad' : '', fmt: (r) => pct(r.venda > 0 ? r.lucro / r.venda : null) },
@@ -4435,11 +4439,16 @@
     // Estoque ao custo (relatório 10, em teste)
     {
       const ed = dash.data('erp_estoque');
-      const E = ed.status === 'ok' ? ed.data.map((r) => ({ loja: r.loja, data: r.data, v: Number(r.valor), n: Number(r.itens), neg: Number(r.negativos) })).sort((a, c) => c.data.localeCompare(a.data) || ord(a.loja) - ord(c.loja)) : [];
-      $('#pd-estoque').hidden = !E.length;
+      // Estoque do período do cabeçalho: em cada loja (ou na loja escolhida), o relatório mais recente até o fim do período
+      const E0 = ed.status === 'ok' ? ed.data.map((r) => ({ loja: r.loja, data: r.data, v: Number(r.valor), n: Number(r.itens), neg: Number(r.negativos) })).filter((r) => loja === 'Todas' || r.loja === loja) : [];
+      const fimP = op.ate + '-31', ultE = new Map();
+      for (const r of E0) if (r.data <= fimP) { const u = ultE.get(r.loja); if (!u || r.data > u.data) ultE.set(r.loja, r); }
+      const E = [...ultE.values()].sort((a, c) => ord(a.loja) - ord(c.loja));
+      $('#pd-estoque').hidden = !E0.length;
+      if (!E.length && E0.length) { set('t_est', `Sem relatório de estoque até ${perCurto(op.ate, op.ate)}`); set('n_est', 'O relatório de estoque (10) mais antigo é posterior ao período escolhido.'); fillTable($('#pd-tab-est'), [], []); }
       if (E.length) {
-        const negs = E.filter((r) => r.neg >= 50);
-        set('t_est', `Estoque ao custo em ${dBRy(E[0].data)}: ${money(d3.sum(E.filter((r) => r.data === E[0].data), (r) => r.v))} nas lojas com relatório`);
+        const negs = E.filter((r) => r.neg >= 50), dMax = E.reduce((m, r) => r.data > m ? r.data : m, ''), defas = op.ate > dMax.slice(0, 7);
+        set('t_est', `Estoque ao custo ${loja === 'Todas' ? 'nas lojas' : 'na loja'} no fim de ${perCurto(op.ate, op.ate)}: ${money(d3.sum(E, (r) => r.v))}${defas ? ` · último relatório de estoque em ${dBRy(dMax)}` : ''}`);
         set('n_est', `Saldo × custo de cada produto no relatório "Estoque financeiro retroativo" do ERP. A M N (L1) está somada na L3 e a L108304 na L8. Em teste: entra no custo das vendas (estoque inicial + compras − estoque final) quando houver todos os meses e lojas.${negs.length ? ` Atenção: ${negs.map((r) => `${r.loja} com ${int.format(r.neg)} itens negativos`).join(', ')}, sinal de baixa ou cadastro errados.` : ''}`);
         fillTable($('#pd-tab-est'), E, [
           { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) },
@@ -6586,6 +6595,7 @@
     return n;
   }
   let cmLinhas = [];
+  let pdSel = { loja: 'Todas', de: '0000-00', ate: '9999-99' };   // loja e período escolhidos no cabeçalho de Produtos e markup
   function renderCusto() {
     const all = custoRows();
     const card = $('#card-custo');
@@ -6594,15 +6604,14 @@
     if (!all.length) { $('#cm-titulo').textContent = 'Nenhum produto com custo acima da venda'; $('#cm-nota').textContent = 'Nos relatórios de produtos (02) lidos, nenhum item vendido tem custo maior que a venda.'; $('#cm-resumo').replaceChildren(); fillTable($('#tab-custo'), [], []); $('#cm-baixar').disabled = true; cmLinhas = []; renderRiscos('Todas', 'todos'); return; }
     const prm = P();
     const lojas = [...new Set(all.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c));
-    const loja = prm.cm_loja === 'Todas' || lojas.includes(prm.cm_loja) ? prm.cm_loja : 'Todas';
-    opcoesG($('#cm-loja'), [[null, [['Todas', 'Todas as lojas']]], ['Lojas', lojas.map((l) => [l, nomeLoja(l)])]], loja);
+    // Loja e período do cabeçalho de Produtos e markup (o quadro não tem filtro próprio)
+    const loja = pdSel.loja === 'Todas' || lojas.includes(pdSel.loja) ? pdSel.loja : 'Todas';
     const daLoja = all.filter((r) => loja === 'Todas' || r.loja === loja);
     const pers = [...new Set(daLoja.map((r) => r.per_ini + '|' + r.per_fim))].sort().reverse();
     const temAtual = daLoja.some(noMesCorrente);
     const ops = [...(temAtual ? [['atual', `Mês corrente (${mesNome(MES_CORRENTE)})`]] : []), ['todos', 'Todos os relatórios'], ...pers.map((p) => { const [a, b] = p.split('|'); return ['p' + p, perCurto(a, b)]; })];
-    const per = ops.some((o) => o[0] === prm.cm_per) ? prm.cm_per : ops[0][0];
-    opcoesG($('#cm-per'), [[null, ops]], per);
-    const L = daLoja.filter((r) => per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)).sort((a, c) => c.perda - a.perda);
+    const per = 'pd';
+    const L = daLoja.filter((r) => per === 'pd' ? r.per_ini >= pdSel.de && r.per_fim <= pdSel.ate : per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)).sort((a, c) => c.perda - a.perda);
     cmLinhas = L;
     const perda = d3.sum(L, (r) => r.perda), nLojas = new Set(L.map((r) => r.loja)).size;
     $('#cm-titulo').textContent = L.length ? `${int.format(L.length)} produtos vendidos com custo acima da venda` : 'Nenhum produto com custo acima da venda neste filtro';
@@ -6647,7 +6656,7 @@
   function renderRiscos(loja, per) {
     const d = dash.data('erp_risco');
     const all = d.status === 'ok' ? d.data.map((r) => ({ ...r, loja: lojaDe(r), m: Number(r.margem), mo: Number(r.margem_outros), venda: Number(r.venda), qtd: Number(r.qtd), cu: Number(r.custo_unit), cuo: Number(r.custo_unit_outros), n: Number(r.relatorios_outros) })) : [];
-    const R = all.filter((r) => (loja === 'Todas' || r.loja === loja) && (per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)))
+    const R = all.filter((r) => (loja === 'Todas' || r.loja === loja) && (per === 'pd' ? r.per_ini >= pdSel.de && r.per_fim <= pdSel.ate : per === 'todos' || (per === 'atual' ? noMesCorrente(r) : 'p' + r.per_ini + '|' + r.per_fim === per)))
       .map((r) => ({ ...r, dif: r.m - r.mo, peso: Math.min(1, Math.abs(r.m - r.mo)) * r.venda })).sort((a, c) => c.peso - a.peso);
     rkLinhas = R;
     const abaixo = R.filter((r) => r.dif < 0).length, acima = R.length - abaixo;
@@ -7108,7 +7117,7 @@
     if (aba === 'lojas') renderLojas();
     if (aba === 'raiox') renderRaiox();
     alertaCusto();
-    if (aba === 'produtos') { renderCusto(); renderMarkup(); renderProdutos(); }
+    if (aba === 'produtos') { renderProdutos(); renderCusto(); renderMarkup(); }
     if (aba === 'gastos') renderGastos();
     if (aba === 'empresas') renderEmpresas();
     if (aba === 'central') renderCentral();
@@ -7156,8 +7165,6 @@
   ao('#pd-de', (v) => ({ pd_de: v }));
   ao('#pd-ate', (v) => ({ pd_ate: v }));
   ao('#pd-ord', (v) => ({ pd_ord: v }));
-  ao('#cm-loja', (v) => ({ cm_loja: v, cm_per: '' }));
-  ao('#cm-per', (v) => ({ cm_per: v }));
   ao('#gs-loja', (v) => ({ gs_loja: v }));
   ao('#gs-ano', (v) => ({ gs_ano: v, gs_de: '', gs_ate: '' }));
   ao('#dm-ano', (v) => ({ dm_ano: v, dm_de: '', dm_ate: '' }));
