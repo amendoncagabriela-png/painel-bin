@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125104608';</script>
+<script>window.BIN_BUILD = '20261125133420';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -3496,9 +3496,9 @@
   // Lojas: todas aparecem; as que ainda não têm dados ficam desabilitadas, à espera da extração.
   const UNIDADES = ['L2', 'L3', 'L4', 'L5', 'L6', 'L7/L10', 'L8', 'L9'];
   const nomeLoja = (l) => l === 'Todas' ? 'Todas as lojas' : `${l} ${NOMES[l] || ''}`.trim();
-  function selUnid(sel, disp, atual) {
+  function selUnid(sel, disp, atual, todas) {
     const com = UNIDADES.filter((l) => disp.includes(l)), sem = UNIDADES.filter((l) => !disp.includes(l));
-    opcoesG(sel, [['Com dados do ERP', com.map((l) => [l, nomeLoja(l)])], ...(sem.length ? [['Aguardando extração do ERP', sem.map((l) => [l, nomeLoja(l), true])]] : [])], atual);
+    opcoesG(sel, [...(todas ? [['Grupo', [['Todas', 'Todas as lojas']]]] : []), ['Com dados do ERP', com.map((l) => [l, nomeLoja(l)])], ...(sem.length ? [['Aguardando extração do ERP', sem.map((l) => [l, nomeLoja(l), true])]] : [])], atual);
   }
   function lojaPadrao() { const m = dash.data('l2_meta'); return (m.status === 'ok' && (m.data.find((r) => r.chave === 'loja') || {}).valor) || 'L2'; }
   const lojaDe = (r) => r.loja || lojaPadrao();
@@ -4336,15 +4336,16 @@
     if (fam.status !== 'ok') { if (fam.status === 'error' || fam.status === 'missing') vazio($('#pd-chart-cresc'), 'O relatório de produtos do ERP ainda não foi carregado.'); return; }
     const prm = P();
     const disp = [...new Set(fam.data.map(lojaDe))];
-    const loja = disp.includes(prm.pd_loja) ? prm.pd_loja : disp[0];
+    const loja = prm.pd_loja === 'Todas' ? 'Todas' : disp.includes(prm.pd_loja) ? prm.pd_loja : disp[0];   // Todas = soma das lojas
     // Lojas com histórico de produtos (mais de um relatório); as demais só têm o mês de teste
     const nPer = d3.rollup(fam.data, (v) => new Set(v.map((r) => r.per_ini + '|' + r.per_fim)).size, lojaDe);
     const comHist = disp.filter((l) => nPer.get(l) > 1).sort((a, c) => ord(a) - ord(c));
     const soTeste = disp.filter((l) => !comHist.includes(l)).sort((a, c) => ord(a) - ord(c));
     emDev($('#produtos'), comHist.length <= 1, `Produtos com histórico só da ${comHist.join(', ') || 'L2'}${soTeste.length ? `; ${soTeste.join(', ')} têm apenas o relatório de teste` : ''}. As outras lojas entram quando o relatório 02 (vendas por produto) delas for salvo mês a mês.`);
-    selUnid($('#pd-loja'), disp, loja);
+    selUnid($('#pd-loja'), disp, loja, true);
     notaErp('produtos', loja);
-    const F = fam.data.filter((r) => lojaDe(r) === loja), PR = prod.status === 'ok' ? prod.data.filter((r) => lojaDe(r) === loja) : [];
+    const daLojaP = (r) => loja === 'Todas' || lojaDe(r) === loja;
+    const F = fam.data.filter(daLojaP), PR = prod.status === 'ok' ? prod.data.filter(daLojaP) : [];
     const pers = [...new Set(F.map((r) => r.per_ini + '|' + r.per_fim))].sort().reverse();
     // Comparação: relatórios do ano anterior que cabem nos mesmos meses; só vale se cobrirem o período inteiro.
     const compara = (de, ate) => { const ps = pers.filter((p) => { const [a, b] = p.split('|'); return a >= addMes(de, -12) && b <= addMes(ate, -12); }); const n = d3.sum(ps, (p) => nMeses(...p.split('|'))); return n === nMeses(de, ate) ? ps : null; };
