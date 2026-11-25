@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125102929';</script>
+<script>window.BIN_BUILD = '20261125104608';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -7020,7 +7020,7 @@
     const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
     const fora = sugestoes.filter((s) => !(esc[s.c.k] && esc[s.c.k].ok)), dentro = selecionados;
     const lojas = [...new Set([...sugestoes, ...selecionados].map((s) => s.c.loja))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
-    const linha = (s) => { const c = s.c, nm = nomeDe(c); return `<tr><td><b>${e2(c.cli)}</b>${nm ? `<br><small>${e2(nm)}</small>` : ''}</td><td>${c.pos}º</td><td>${e2(money(c.v))}${c.cresc != null ? `<br><small>${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${ano - 1}</small>` : '<br><small>novo</small>'}</td><td>${e2(c.fr)}<br><small>${c.d} dias · ${c.meses.size} de ${nMeses} meses</small></td><td><span class="tp t-${({ 'Não pode ficar de fora': 'a', 'Acima do corte': 'd', 'Perto do corte, crescendo': 'b', 'Perto do corte, fiel e frequente': 'c', 'Dentro da cota': 'e', 'Abaixo do corte': 'f' })[s.tipo]}">${e2(s.tipo)}</span>${esc[c.k] && esc[c.k].ok && esc[c.k].motivo ? ` <small>· motivo escolhido: <b>${e2(esc[c.k].motivo)}</b></small>` : ''}<br>${e2(s.motivos.join('; '))}</td></tr>`; };
+    const linha = (s, cls) => { const c = s.c, nm = nomeDe(c); return `<tr${cls ? ` class="${cls}"` : ''}><td><b>${e2(c.cli)}</b>${nm ? `<br><small>${e2(nm)}</small>` : ''}</td><td>${c.pos}º</td><td>${e2(money(c.v))}${c.cresc != null ? `<br><small>${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${ano - 1}</small>` : '<br><small>novo</small>'}</td><td>${e2(c.fr)}<br><small>${c.d} dias · ${c.meses.size} de ${nMeses} meses</small></td><td><span class="tp t-${({ 'Não pode ficar de fora': 'a', 'Acima do corte': 'd', 'Perto do corte, crescendo': 'b', 'Perto do corte, fiel e frequente': 'c', 'Dentro da cota': 'e', 'Abaixo do corte': 'f' })[s.tipo]}">${e2(s.tipo)}</span>${esc[c.k] && esc[c.k].ok && esc[c.k].motivo ? ` <small>· motivo escolhido: <b>${e2(esc[c.k].motivo)}</b></small>` : ''}<br>${e2(s.motivos.join('; '))}</td></tr>`; };
     const cab = '<table><thead><tr><th>Cliente</th><th>Posição</th><th>Compras</th><th>Frequência</th><th>Por que reconhecer</th></tr></thead><tbody>';
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · sugestões de reconhecimento</title><style>
       body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
@@ -7028,6 +7028,8 @@
       h2 { font-size: 18px; margin: 22px 0 6px; } h3 { font-size: 15px; border-bottom: 2px solid #AF6839; padding-bottom: 3px; margin: 14px 0 6px; break-after: avoid; }
       table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 6px 7px; text-align: left; vertical-align: top; } th { background: #f1ece2; font-size: 11px; } tr { break-inside: avoid; } small { color: #555; }
       .tp { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; } .t-a { background: #A62A2E; } .t-b { background: #2f7d3b; } .t-c { background: #AF6839; } .t-d { background: #2a5d8f; } .t-e { background: #191919; } .t-f { background: #8a8a8a; }
+      tr.nsel td { background: #FFF1DC; } tr.nsel td:first-child { border-left: 5px solid #AF6839; } .leg-nsel { display: inline-block; background: #FFF1DC; border-left: 5px solid #AF6839; padding: 1px 8px; font-size: 12px; font-weight: 700; }
+      @media print { tr.nsel td, .leg-nsel { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
       .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
       <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · sugestões de reconhecimento</h1><p>${lojaSel === 'Todas' ? 'Todas as lojas' : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${fora.length} sugeridos ainda não selecionados</p></div></header>
@@ -7037,8 +7039,8 @@
         <span class="tp t-b">Perto do corte, crescendo</span> = entre 75% e 99% do corte, cresceu 30% ou mais sobre uma base de pelo menos 40% do corte no ano anterior e comprou em 75% dos meses ou mais.<br>
         <span class="tp t-c">Perto do corte, fiel e frequente</span> = entre 75% e 99% do corte e compra toda semana, ou tem 2 anos de casa ou mais e comprou todos os meses.<br>
         Vínculo do dia a dia e indicações a base não mostra: avalie com a loja.</div>
-        <h2>Sugeridos e ainda não selecionados (${fora.length})</h2>
-        ${fora.length ? lojas.map((lj) => { const g = fora.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length} <small>· corte da loja: ${e2(money(brUlt.cortes.get(lj)))} (compras do ${brUlt.cotas.get(lj)}º cliente, o último dentro da cota)</small></h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Todos os sugeridos já estão selecionados.</p>'}
+        <h2>Sugeridos e ainda não selecionados (${fora.length}) <span class="leg-nsel">fundo laranja = não selecionado</span></h2>
+        ${fora.length ? lojas.map((lj) => { const g = fora.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length} <small>· corte da loja: ${e2(money(brUlt.cortes.get(lj)))} (compras do ${brUlt.cotas.get(lj)}º cliente, o último dentro da cota)</small></h3>${cab}${g.map((s) => linha(s, 'nsel')).join('')}</tbody></table>` : ''; }).join('') : '<p>Todos os sugeridos já estão selecionados.</p>'}
         <h2>Clientes selecionados para o brinde (${dentro.length})</h2><p style="font-size:13px;color:#555;margin:0 0 6px">Todos os selecionados, com a mesma análise. Além das etiquetas acima: <span class="tp t-e">Dentro da cota</span> = compra pelo menos o valor do corte; <span class="tp t-f">Abaixo do corte</span> = escolhido por outro critério (vínculo, indicação, decisão da loja): vale ter o motivo anotado.</p>
         ${dentro.length ? lojas.map((lj) => { const g = dentro.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length} <small>· corte da loja: ${e2(money(brUlt.cortes.get(lj)))} (compras do ${brUlt.cotas.get(lj)}º cliente, o último dentro da cota)</small></h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Nenhum cliente selecionado ainda.</p>'}
       </main></body></html>`;
