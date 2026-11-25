@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261124185433';</script>
+<script>window.BIN_BUILD = '20261125094116';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -344,6 +344,9 @@
   .cp-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem; } .cp-ev { text-align: left; border: 1px solid var(--color-border-line); border-left: 4px solid var(--bin-gold); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); padding: .5rem .65rem; cursor: pointer; font: inherit; } .cp-ev b, .cp-ev span, .cp-ev em { display: block; } .cp-ev span { font-size: .82rem; color: var(--color-fg-muted); } .cp-ev em { font-size: .74rem; font-style: normal; color: var(--bin-gold); font-weight: 700; } .cp-ev.sel { outline: 2px solid var(--bin-gold); background: color-mix(in srgb, var(--bin-gold) 10%, transparent); } .cp-ev.passou { opacity: .55; } .cp-ev.agora { border-left-color: var(--color-ok); }
   .cp-sug { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--bin-gold); border: 1px solid currentColor; border-radius: 999px; padding: 0 .4rem; margin-left: .35rem; white-space: nowrap; } .cp-sim { font-size: .78rem; color: var(--color-fg-muted); margin-top: .15rem; line-height: 1.35; } .cp-susp { color: var(--color-fg-muted); font-style: italic; }
   .cp-qtd input { font: inherit; font-size: .8rem; padding: .1rem .3rem; width: 11rem; border: 1px solid var(--color-border-subtle, #ccc); border-radius: 4px; } .cp-qtd.falta span { color: var(--bin-red, #A62A2E); font-weight: 700; }
+  .br-larga { grid-template-columns: minmax(0, 1fr); } .br-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } @media (max-width: 760px) { .br-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  #brindes table.br-tab td, #brindes table.br-tab th, #brindes table.br-tab .br-sub { white-space: normal !important; } #brindes table.br-tab td.cp-ap { white-space: nowrap !important; } #br-rank td:last-child { min-width: 14rem; } .br-tab td .br-sub { font-size: .78rem; color: var(--color-fg-muted); margin-top: .1rem; font-weight: 400; line-height: 1.3; } .br-tab td .br-sub.up { color: var(--up, #2f7d3b); } .br-tab td .br-sub.down { color: var(--down, #A62A2E); }
+  .br-tab .br-pos { font-size: .78rem; color: var(--color-fg-muted); font-weight: 400; } .br-tab td.cp-ap { white-space: nowrap; } .br-tab .br-motivo { display: block; margin-top: .25rem; max-width: 9.5rem; font-size: .75rem; } .br-todos { cursor: pointer; white-space: nowrap; } #br-rank td.nm { min-width: 9rem; }
   td.br-cod { cursor: pointer; } td.br-cod .br-nome { font-weight: 700; font-size: .85rem; color: var(--color-fg, #191919); margin-top: .1rem; } td.br-cod:not(:has(.br-nome)) { text-decoration: underline dotted; }
   tr.br-obrig td.nm { font-weight: 700; } tr.br-obrig td.nm::before { content: "★ "; color: var(--bin-red, #A62A2E); }
   tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
@@ -2572,6 +2575,7 @@
       <label class="bd-f"><span>Loja</span><select id="br-loja" aria-label="Loja"></select></label>
       <label class="bd-f"><span>Brindes no grupo</span><input id="br-total" type="number" min="0" step="1" inputmode="numeric" style="width:7rem" aria-label="Total de brindes do grupo"></label>
       <button type="button" class="bd-btn-atu" id="br-exp">Lista dos escolhidos (PDF / imprimir)</button>
+      <button type="button" class="bd-btn-atu sec" id="br-sug-exp">Sugestões de reconhecimento</button>
       <button type="button" class="bd-btn-atu sec" id="br-nomes" hidden>Ver nomes dos clientes (conta Google)</button>
     </div>
     <div class="bd-hero">
@@ -2579,9 +2583,8 @@
       <h2 class="bd-headline" id="br-headline">—</h2>
       <p class="bd-comp" id="br-comp">—</p>
     </div>
-    <div class="bd-layout">
-      <aside class="bd-rail" aria-label="Indicadores dos brindes">
-        <div class="bd-goldline"></div>
+    <div class="bd-layout br-larga">
+      <aside class="bd-rail br-kpis" aria-label="Indicadores dos brindes">
         <div class="bd-kpi"><span class="lbl">Clientes identificados</span><span class="ico"><svg><use href="#i-box"/></svg></span><span class="val" data-br="cli">—</span><span class="sub" data-br="cli_sub">—</span></div>
         <div class="bd-kpi"><span class="lbl">Sugestão de brindes</span><span class="ico"><svg><use href="#i-target"/></svg></span><span class="val" data-br="sug">—</span><span class="sub" data-br="sug_sub">—</span></div>
         <div class="bd-kpi"><span class="lbl">Não podem ficar de fora</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-br="obrig">—</span><span class="sub" data-br="obrig_sub">—</span></div>
@@ -2590,24 +2593,14 @@
       <div class="bd-main">
         <div class="bd-card">
           <h3>Distribuição por loja <span class="per" id="br-dist-per">| quanto cada loja recebe do total do grupo</span></h3>
-          <div class="bd-tablewrap"><table id="br-dist" class="bd-cards"><thead><tr><th class="l">Loja</th><th>Clientes identificados</th><th>Venda a clientes identificados</th><th>Parte do grupo</th><th>Relevantes</th><th>Não podem ficar de fora</th><th>Sugestão do sistema</th><th>Escolhidos</th><th>Faltam</th></tr></thead><tbody></tbody></table></div>
+          <div class="bd-tablewrap"><table id="br-dist" class="bd-cards br-tab"><thead><tr><th class="l">Loja</th><th>Venda a clientes identificados</th><th>Relevantes</th><th>Sugestão</th><th>Escolhidos</th></tr></thead><tbody></tbody></table></div>
           <p class="bd-note" id="br-dist-nota">—</p>
         </div>
         <div class="bd-card">
-          <h3>Não podem ficar de fora <span class="per" id="br-obrig-per">| pontos importantes de cada cliente</span></h3>
-          <div class="bd-tablewrap"><table id="br-obrig" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Loja</th><th class="l">Cliente (código)</th><th>Posição</th><th>Compras no exercício</th><th class="l">Por que não pode ficar de fora</th></tr></thead><tbody></tbody></table></div>
-          <p class="bd-note" id="br-obrig-nota">—</p>
-        </div>
-        <div class="bd-card">
-          <h3>Ranking de compras <span class="per" id="br-rank-per">| 1ª lista: quem mais comprou no exercício</span></h3>
-          <div class="bd-tablewrap"><table id="br-rank" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Motivo</th><th>#</th><th class="l">Cliente (código)</th><th>Compras no exercício</th><th>Pedidos</th><th>Dias com compra</th><th>Meses com compra</th><th class="l">Frequência</th><th id="br-h-ant">Ano anterior</th><th>Crescimento</th><th class="l">Cliente desde</th><th class="l">Pontos</th></tr></thead><tbody></tbody></table></div>
+          <h3>Ranking de compras <span class="per" id="br-rank-per">| quem mais comprou no exercício</span></h3>
+          <div class="bd-tablewrap"><table id="br-rank" class="bd-cards br-tab"><thead><tr><th class="l"><label class="br-todos" title="Selecionar todos os clientes visíveis"><input type="checkbox" id="br-todos" aria-label="Selecionar todos os clientes visíveis"> Brinde</label></th><th class="l">Cliente</th><th>Compras no exercício</th><th class="l">Frequência</th><th class="l">Pontos</th></tr></thead><tbody></tbody></table></div>
           <div class="cp-acoes"><button type="button" class="bd-btn-atu sec" id="br-mais">Mostrar mais 50</button></div>
           <p class="bd-note" id="br-rank-nota">—</p>
-        </div>
-        <div class="bd-card">
-          <h3>Sugestão por crescimento e número de compras <span class="per">| 2ª lista: fora do topo do ranking, mas crescendo e comprando sempre</span></h3>
-          <div class="bd-tablewrap"><table id="br-cresc" class="bd-cards"><thead><tr><th class="l">Brinde</th><th class="l">Motivo</th><th class="l">Cliente (código)</th><th>Posição no ranking</th><th>Compras no exercício</th><th>Crescimento</th><th>Dias com compra</th><th>Meses com compra</th><th class="l">Evolução nos anos</th><th class="l">Por que sugerir</th></tr></thead><tbody></tbody></table></div>
-          <p class="bd-note" id="br-cresc-nota">—</p>
         </div>
       </div>
     </div>
@@ -6917,68 +6910,104 @@
     kb('esc', String(escVis)); kb('esc_sub', escVis > cotaVis ? `${escVis - cotaVis} acima da cota` : `faltam ${cotaVis - escVis} da cota`);
     $('#br-headline').textContent = `${total} brindes no grupo${total === sugTotal ? ' (sugestão do sistema)' : ` (o sistema sugere ${sugTotal})`}: ${obrigGrupo} clientes não podem ficar de fora e ${nEsc} já foram escolhidos.`;
     $('#br-comp').textContent = `A divisão por loja segue a venda a clientes identificados e o número de clientes relevantes de cada uma. Comece pelo ranking (1ª lista), confira os que não podem ficar de fora e complete com a 2ª lista (crescimento e frequência) e com o que só a loja sabe: vínculo do dia a dia, fidelidade e indicações.`;
+    // Células compactas: valor principal e, embaixo, a linha de detalhe (evita tabela larga com barra de rolagem)
+    const cel2 = (main, sub, clsSub) => (td) => { td.replaceChildren(document.createTextNode(main)); if (sub) td.append(Object.assign(document.createElement('div'), { className: 'br-sub' + (clsSub ? ' ' + clsSub : ''), textContent: sub })); };
     // distribuição
     fillTable($('#br-dist'), resumo.filter((r) => r.n), [
-      { cls: 'l nm', fmt: (r) => nomeLoja(r.loja) }, { fmt: (r) => r.n.toLocaleString('pt-BR') }, { fmt: (r) => money(r.tot) }, { fmt: (r) => pct0(totGrupo ? r.tot / totGrupo : 0) },
-      { fmt: (r) => String(r.relev) }, { fmt: (r) => String(r.obrig) }, { cls: 'forte', fmt: (r) => String(r.cota) }, { fmt: (r) => String(r.esc) },
-      { cls: (r) => r.esc > r.cota ? 'down' : r.esc === r.cota ? 'up' : '', fmt: (r) => r.esc > r.cota ? `${r.esc - r.cota} a mais` : String(r.cota - r.esc) },
+      { cls: 'l nm', render: (td, r) => cel2(r.loja, NOMES[r.loja] || '')(td) },
+      { render: (td, r) => cel2(money(r.tot), `${pct0(totGrupo ? r.tot / totGrupo : 0)} do grupo · ${r.n.toLocaleString('pt-BR')} clientes`)(td) },
+      { render: (td, r) => cel2(String(r.relev), `${r.obrig} não podem ficar de fora`)(td) },
+      { cls: 'forte', fmt: (r) => String(r.cota) },
+      { cls: (r) => r.esc > r.cota ? 'down' : r.esc === r.cota && r.cota ? 'up' : '', render: (td, r) => cel2(String(r.esc), r.esc > r.cota ? `${r.esc - r.cota} acima da cota` : r.esc === r.cota ? 'cota completa' : `faltam ${r.cota - r.esc}`)(td) },
     ], { onClick: (r) => dash.setParams({ br_loja: r.loja }), selected: (r) => r.loja === lojaSel });
-    $('#br-dist-nota').textContent = `Relevantes = clientes que formam os primeiros 50% das compras dos clientes identificados da loja, mais os que não podem ficar de fora e os que compram toda semana. Sugestão do sistema = metade pela parte da loja na venda a clientes identificados, metade pela parte nos relevantes, sem ficar abaixo dos que não podem ficar de fora. Clique numa loja para ver os clientes dela. Venda de balcão sem cadastro (varejo) fica fora. Na L3 (até 2025) e na L8 (desde 2026) entram também os clientes da M N.`;
-    // controles de escolha (brinde, motivo)
-    const ctrl = (c, motivoPadrao) => {
-      const st = esc[c.k] || {}, wrap = document.createElement('span');
+    $('#br-dist-nota').textContent = `Relevantes = clientes que formam os primeiros 50% das compras dos clientes identificados da loja, mais os que não podem ficar de fora e os que compram toda semana. Sugestão = metade pela parte da loja na venda a clientes identificados, metade pela parte nos relevantes, sem ficar abaixo dos que não podem ficar de fora. Clique numa loja para ver os clientes dela. Venda de balcão sem cadastro (varejo) fica fora. Na L3 (até 2025) e na L8 (desde 2026) entram também os clientes da M N.`;
+    // controles de escolha (brinde e motivo, no mesmo lugar)
+    const marcar = (c, ok, motivo) => { const e = esc[c.k] || {}; esc[c.k] = { ok, motivo: motivo != null ? motivo : e.motivo || (ok ? 'Ranking de compras' : ''), obs: e.obs || '' }; if (!esc[c.k].ok && !esc[c.k].motivo) delete esc[c.k]; };
+    const ctrl = (td, c) => {
+      const st = esc[c.k] || {};
       const cb = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!st.ok, title: 'Recebe brinde' }); cb.setAttribute('aria-label', `Brinde para o cliente ${c.cli} da ${c.loja}`);
-      const sel = document.createElement('select'); sel.setAttribute('aria-label', `Motivo do cliente ${c.cli}`);
+      const sel = Object.assign(document.createElement('select'), { className: 'br-motivo' }); sel.setAttribute('aria-label', `Motivo do cliente ${c.cli}`);
       for (const m of BR_MOTIVOS) sel.append(new Option(m || 'motivo…', m, false, (st.motivo || '') === m));
-      const salvar = () => { esc = lerE(); esc[c.k] = { ok: cb.checked, motivo: sel.value || (cb.checked ? motivoPadrao : ''), obs: (esc[c.k] || {}).obs || '' }; if (!esc[c.k].ok && !esc[c.k].motivo) delete esc[c.k]; gravarE(esc); sel.value = (esc[c.k] || {}).motivo || ''; renderBrindes(); };
+      const salvar = () => { esc = lerE(); marcar(c, cb.checked, sel.value || null); gravarE(esc); renderBrindes(); };
       cb.addEventListener('change', salvar); sel.addEventListener('change', salvar);
-      return [cb, sel];
+      td.replaceChildren(cb, sel);
     };
-    // Nome do cliente: só no painel do computador (arquivo local, fora do Drive e do painel web) e só quando o cliente é selecionado
-    // (caixa "Brinde" marcada) ou quando se clica no código; clicar de novo esconde.
+    // Nome do cliente: só quando o cliente é selecionado (caixa marcada) ou quando se clica no código; clicar de novo esconde.
     const nomeDe = (c) => window.BIN_NOMES ? window.BIN_NOMES[c.k] || '' : null;
-    const celNome = (td, c, sel) => {
-      const ver = sel || brVer.has(c.k), nm = nomeDe(c), cod = td.dataset.cod || td.textContent; td.dataset.cod = cod;
-      td.replaceChildren(document.createTextNode(cod));
-      if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: nm === null ? (window.BIN_WEB ? (brNomesEst === 'sem' ? 'esta conta Google não tem acesso aos nomes' : brNomesEst === 'lendo' ? 'buscando o nome…' : 'toque em "Ver nomes dos clientes" no topo') : 'nome não carregado') : nm || 'nome não encontrado nos relatórios' }));
+    const txtNome = (nm) => nm === null ? (window.BIN_WEB ? (brNomesEst === 'sem' ? 'esta conta Google não tem acesso aos nomes' : brNomesEst === 'lendo' ? 'buscando o nome…' : 'toque em "Ver nomes dos clientes" no topo') : 'nome não carregado') : nm || 'nome não encontrado nos relatórios';
+    const celCli = (td, c) => {
+      const sel = !!(esc[c.k] && esc[c.k].ok), ver = sel || brVer.has(c.k);
+      td.replaceChildren(Object.assign(document.createElement('span'), { className: 'br-pos', textContent: `${lojaSel === 'Todas' ? c.loja + ' · ' : ''}${c.pos}º` }), document.createTextNode(' ' + c.cli));
+      if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: txtNome(nomeDe(c)) }));
       td.title = ver ? '' : 'Clique para ver o nome do cliente'; td.classList.add('br-cod');
-      td.onclick = () => { if (brVer.has(c.k)) brVer.delete(c.k); else brVer.add(c.k); celNome(td, c, sel); };
+      td.onclick = () => { if (brVer.has(c.k)) brVer.delete(c.k); else brVer.add(c.k); celCli(td, c); };
     };
-    const comCtrl = (table, lst, motivoPadrao, colsCtrl) => { [...table.tBodies[0].rows].forEach((tr, i) => { const c = lst[i]; if (!c) return; const [cb, sel] = ctrl(c, motivoPadrao(c)); tr.cells[0].replaceChildren(cb); if (colsCtrl > 1) tr.cells[1].replaceChildren(sel); tr.classList.toggle('cp-ok', cb.checked); const td = tr.querySelector('td.nm'); if (td) celNome(td, c, cb.checked); }); };
     const daLoja = (c) => lojaSel === 'Todas' || c.loja === lojaSel;
-    // não podem ficar de fora
-    const obrig = doAno.filter((c) => c.obrig && daLoja(c)).sort((a, b) => a.loja.localeCompare(b.loja, 'pt-BR', { numeric: true }) || a.pos - b.pos);
-    fillTable($('#br-obrig'), obrig, [
-      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: (c) => c.loja }, { cls: 'l nm', fmt: (c) => c.cli }, { fmt: (c) => `${c.pos}º` }, { fmt: (c) => money(c.v) },
-      { cls: 'l', fmt: (c) => c.pontos.join(' · ') || 'grupo dos 50% das compras e frequência alta' },
-    ]);
-    comCtrl($('#br-obrig'), obrig, (c) => c.pos <= 5 ? 'Ranking de compras' : c.fr === 'Semanal' ? 'Vínculo diário/semanal' : 'Fidelidade (anos de casa)', 1);
-    $('#br-obrig-nota').textContent = 'Regra: os 5 primeiros do ranking de cada loja e, dentro do grupo dos 50% das compras, quem comprou em todos os meses do exercício e toda semana (3,5 dias ou mais por mês, em média). O nome do cliente se busca no ERP pelo código.';
-    // ranking (1ª lista)
+    // ranking de compras
     const rank = doAno.filter(daLoja).sort((a, b) => lojaSel === 'Todas' ? b.v - a.v : a.pos - b.pos);
     const mostra = rank.slice(0, brMostrar);
-    $('#br-h-ant').textContent = `${MESES[0]}–${MESES[ate - 1]}/${String(ano - 1).slice(2)}`;
-    $('#br-rank-per').textContent = `| 1ª lista: quem mais comprou de jan a ${MESES[ate - 1]}/${ano}${lojaSel === 'Todas' ? ' (todas as lojas; # = posição na loja)' : ''}`;
+    $('#br-rank-per').textContent = `| quem mais comprou de jan a ${MESES[ate - 1]}/${ano}${lojaSel === 'Todas' ? ' · todas as lojas (posição dentro da loja)' : ''}`;
+    const antTxt = (c) => c.va ? `${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${money(c.va)} em ${String(ano - 1)}` : `novo · sem compra no mesmo período de ${ano - 1}`;
+    const desde = (c) => c.desdeBase ? `cliente desde ${c.prim.slice(0, 4)} ou antes` : `cliente desde ${MESES[Number(c.prim.slice(5, 7)) - 1]}/${c.prim.slice(0, 4)}`;
     fillTable($('#br-rank'), mostra, [
-      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: () => '' }, { fmt: (c) => lojaSel === 'Todas' ? `${c.loja} ${c.pos}º` : `${c.pos}º` }, { cls: 'l nm', fmt: (c) => c.cli },
-      { cls: 'forte', fmt: (c) => money(c.v) }, { fmt: (c) => c.p.toLocaleString('pt-BR') }, { fmt: (c) => c.d.toLocaleString('pt-BR') }, { fmt: (c) => `${c.meses.size} de ${nMeses}` },
-      { cls: 'l', fmt: (c) => c.fr }, { fmt: (c) => c.va ? money(c.va) : 'novo' }, { cls: (c) => c.cresc == null ? '' : c.cresc >= 0 ? 'up' : 'down', fmt: (c) => c.cresc == null ? '—' : pct(c.cresc, true) },
-      { cls: 'l', fmt: (c) => c.desdeBase ? `${c.prim.slice(0, 4)} ou antes` : `${MESES[Number(c.prim.slice(5, 7)) - 1]}/${c.prim.slice(0, 4)}` }, { cls: 'l', fmt: (c) => (c.obrig ? '★ não pode ficar de fora · ' : '') + c.pontos.join(' · ') },
+      { cls: 'l cp-ap', render: ctrl },
+      { cls: 'l nm', render: celCli },
+      { render: (td, c) => cel2(money(c.v), antTxt(c), c.cresc == null ? '' : c.cresc >= 0 ? 'up' : 'down')(td) },
+      { cls: 'l', render: (td, c) => cel2(c.fr, `${c.d} dias · ${c.p} pedidos · ${c.meses.size} de ${nMeses} meses`)(td) },
+      { cls: 'l', render: (td, c) => cel2(c.obrig ? '★ Não pode ficar de fora' : c.pontos.length ? c.pontos[0] : '—', [...(c.obrig ? c.pontos : c.pontos.slice(1)), desde(c)].join(' · '))(td) },
     ], { rowCls: (c) => c.obrig ? 'br-obrig' : '' });
-    comCtrl($('#br-rank'), mostra, () => 'Ranking de compras', 2);
+    [...$('#br-rank').tBodies[0].rows].forEach((tr, i) => { const c = mostra[i]; if (c) tr.classList.toggle('cp-ok', !!(esc[c.k] && esc[c.k].ok)); });
+    // selecionar todos os visíveis (cabeçalho da coluna Brinde)
+    const todos = $('#br-todos'), visSel = mostra.filter((c) => esc[c.k] && esc[c.k].ok).length;
+    todos.checked = mostra.length > 0 && visSel === mostra.length; todos.indeterminate = visSel > 0 && visSel < mostra.length;
+    todos.onchange = () => { esc = lerE(); for (const c of mostra) marcar(c, todos.checked, todos.checked ? null : (esc[c.k] && esc[c.k].motivo === 'Ranking de compras' ? '' : null)); gravarE(esc); renderBrindes(); };
     $('#br-mais').hidden = rank.length <= brMostrar; $('#br-mais').onclick = () => { brMostrar += 50; renderBrindes(); };
-    $('#br-rank-nota').textContent = `Compras = valor líquido dos pedidos do cliente no exercício (devoluções abatidas). Frequência pela média de dias com compra por mês: semanal (3,5 ou mais), quinzenal (1,8 ou mais), mensal (comprou em 75% dos meses), regular ou esporádica. Crescimento contra o mesmo período do ano anterior. "Cliente desde" é o primeiro mês do cliente na base (que começa em ${MESES[Number(primBase.slice(5, 7)) - 1]}/${primBase.slice(0, 4)}).`;
-    // 2ª lista: crescimento e número de compras
-    const cresc = doAno.filter((c) => c.sugCresc && daLoja(c)).sort((a, b) => b.aum - a.aum || b.d - a.d).slice(0, lojaSel === 'Todas' ? 80 : 40);
-    const evol = (c) => { const as = Object.keys(c.ant).map(Number).sort(); return [...as.map((a) => `${a}: ${money(c.ant[a])}`), `${ano}: ${money(c.v)}`].join(' → '); };
-    fillTable($('#br-cresc'), cresc, [
-      { cls: 'l cp-ap', fmt: () => '' }, { cls: 'l', fmt: () => '' }, { cls: 'l nm', fmt: (c) => `${lojaSel === 'Todas' ? c.loja + ' · ' : ''}${c.cli}` }, { fmt: (c) => `${c.pos}º` },
-      { fmt: (c) => money(c.v) }, { cls: (c) => c.cresc == null ? '' : c.cresc >= 0 ? 'up' : 'down', fmt: (c) => c.cresc == null ? 'novo' : pct(c.cresc, true) },
-      { fmt: (c) => c.d.toLocaleString('pt-BR') }, { fmt: (c) => `${c.meses.size} de ${nMeses}` }, { cls: 'l', fmt: evol },
-      { cls: 'l', fmt: (c) => [c.cresceu ? `cresceu ${pct0(c.cresc)} (+${money(c.aum)}) no mesmo período` : c.novoForte ? `cliente novo com compra forte (${money(c.v)})` : '', c.fr === 'Semanal' || c.fr === 'Quinzenal' ? `compra ${c.fr.toLowerCase()}` : '', c.meses.size >= nMeses * 0.75 ? `${c.meses.size} de ${nMeses} meses` : ''].filter(Boolean).join(' · ') },
-    ]);
-    comCtrl($('#br-cresc'), cresc, (c) => c.cresceu || c.novoForte ? 'Crescimento' : 'Vínculo diário/semanal', 2);
-    $('#br-cresc-nota').textContent = 'Fora do grupo dos 50% das compras, em ordem de aumento em reais contra o mesmo período do ano anterior. Entra quem: cresceu 30% ou mais sobre uma base de pelo menos R$ 500 no ano anterior, com compras acima da média da loja; é cliente novo (até 1 ano) comprando o dobro da média da loja; ou está entre os 25% que mais compram em número de dias e comprou em pelo menos 75% dos meses. Fidelidade e indicações de outros clientes a base não mostra: marque pelo motivo.';
+    $('#br-rank-nota').textContent = `"Selecionar todos" marca só as ${mostra.length} linhas que estão na tela (use "Mostrar mais 50" para incluir mais). Compras = valor líquido dos pedidos no exercício (devoluções abatidas), com o crescimento contra o mesmo período do ano anterior. Frequência pela média de dias com compra por mês: semanal (3,5 ou mais), quinzenal (1,8 ou mais), mensal (comprou em 75% dos meses), regular ou esporádica. ★ = não pode ficar de fora (5 primeiros da loja, ou todo mês e toda semana no grupo dos 50% das compras). Clique no código para ver o nome.`;
+    // Sugestões de reconhecimento (para exportar e confrontar com a seleção): quem não pode ficar de fora e a lista de crescimento e frequência
+    const motivoSug = (c) => {
+      const m = [];
+      if (c.obrig) m.push(c.pos <= 5 ? `está entre os 5 que mais compram na loja (${c.pos}º)` : 'compra todo mês e toda semana e está no grupo dos 50% das compras');
+      if (c.cresceu) m.push(`cresceu ${pct0(c.cresc)} (+${money(c.aum)}) no mesmo período de ${ano - 1}`);
+      if (c.novoForte) m.push(`cliente novo já comprando forte (${money(c.v)})`);
+      if (c.sugCresc && !c.cresceu && !c.novoForte) m.push(`compra com muita frequência (${c.d} dias, ${c.meses.size} de ${nMeses} meses)`);
+      if (c.anosCasa >= 2 && c.meses.size >= nMeses && !c.obrig) m.push(`fiel: ${c.desdeBase ? 'desde o início da base' : `${c.anosCasa} anos de casa`} e comprou todos os meses`);
+      return m;
+    };
+    brUlt = { ano, ate, nMeses, lojaSel, esc,
+      sugestoes: doAno.filter((c) => daLoja(c) && (c.obrig || c.sugCresc)).map((c) => ({ c, motivos: motivoSug(c), tipo: c.obrig ? 'Não pode ficar de fora' : c.cresceu || c.novoForte ? 'Crescimento' : 'Frequência' }))
+        .sort((a, b) => a.c.loja.localeCompare(b.c.loja, 'pt-BR', { numeric: true }) || (b.c.obrig - a.c.obrig) || a.c.pos - b.c.pos),
+      nomeDe, txtNome };
+    const nSug = brUlt.sugestoes.filter((s) => !(esc[s.c.k] && esc[s.c.k].ok)).length;
+    $('#br-sug-exp').textContent = `Sugestões de reconhecimento (${nSug} não selecionados)`;
+  }
+  // Exporta as sugestões de reconhecimento confrontadas com a seleção: primeiro os sugeridos que ainda NÃO foram selecionados, com o porquê
+  let brUlt = null;
+  function exportarSugestoes() {
+    if (!brUlt) return;
+    const { ano, ate, nMeses, esc, sugestoes, nomeDe, lojaSel } = brUlt;
+    const e2 = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
+    const fora = sugestoes.filter((s) => !(esc[s.c.k] && esc[s.c.k].ok)), dentro = sugestoes.filter((s) => esc[s.c.k] && esc[s.c.k].ok);
+    const lojas = [...new Set(sugestoes.map((s) => s.c.loja))];
+    const linha = (s) => { const c = s.c, nm = nomeDe(c); return `<tr><td><b>${e2(c.cli)}</b>${nm ? `<br><small>${e2(nm)}</small>` : ''}</td><td>${c.pos}º</td><td>${e2(money(c.v))}${c.cresc != null ? `<br><small>${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${ano - 1}</small>` : '<br><small>novo</small>'}</td><td>${e2(c.fr)}<br><small>${c.d} dias · ${c.meses.size} de ${nMeses} meses</small></td><td><span class="tp t-${s.tipo === 'Não pode ficar de fora' ? 'a' : s.tipo === 'Crescimento' ? 'b' : 'c'}">${e2(s.tipo)}</span><br>${e2(s.motivos.join('; '))}</td></tr>`; };
+    const cab = '<table><thead><tr><th>Cliente</th><th>Posição</th><th>Compras</th><th>Frequência</th><th>Por que reconhecer</th></tr></thead><tbody>';
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · sugestões de reconhecimento</title><style>
+      body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
+      main { padding: 16px 26px; max-width: 1000px; } .intro { background: #faf8f3; border-left: 6px solid #AF6839; padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.5; }
+      h2 { font-size: 18px; margin: 22px 0 6px; } h3 { font-size: 15px; border-bottom: 2px solid #AF6839; padding-bottom: 3px; margin: 14px 0 6px; break-after: avoid; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 6px 7px; text-align: left; vertical-align: top; } th { background: #f1ece2; font-size: 11px; } tr { break-inside: avoid; } small { color: #555; }
+      .tp { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; } .t-a { background: #A62A2E; } .t-b { background: #2f7d3b; } .t-c { background: #AF6839; }
+      .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
+      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · sugestões de reconhecimento</h1><p>${lojaSel === 'Todas' ? 'Todas as lojas' : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${fora.length} sugeridos ainda não selecionados</p></div></header>
+      <main><div class="intro">Confronto com o ranking selecionado: abaixo estão os clientes que a análise sugere reconhecer e que <b>ainda não foram selecionados</b>, com o porquê. <span class="tp t-a">Não pode ficar de fora</span> = entre os 5 que mais compram na loja, ou compra todo mês e toda semana; <span class="tp t-b">Crescimento</span> = cresceu forte contra o ano anterior ou é cliente novo comprando forte; <span class="tp t-c">Frequência</span> = compra muitas vezes e quase todo mês. Vínculo do dia a dia e indicações a base não mostra: avalie com a loja.</div>
+        <h2>Sugeridos e ainda não selecionados (${fora.length})</h2>
+        ${fora.length ? lojas.map((lj) => { const g = fora.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length}</h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Todos os sugeridos já estão selecionados.</p>'}
+        <h2>Sugeridos que já estão selecionados (${dentro.length})</h2>
+        ${dentro.length ? lojas.map((lj) => { const g = dentro.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length}</h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Nenhum ainda.</p>'}
+      </main></body></html>`;
+    const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
   }
   function exportarBrindes() {
     const z = dash.data('clientes_mes'); if (z.status !== 'ok') return;
@@ -7031,6 +7060,7 @@
   ao('#br-ate', (v) => ({ br_ate: v }));
   ao('#br-loja', (v) => { brMostrar = 50; return { br_loja: v }; });
   $('#br-exp').addEventListener('click', () => exportarBrindes());
+  $('#br-sug-exp').addEventListener('click', () => exportarSugestoes());
   ao('#sel-ate', (v) => ({ mes_ate: v }));
   ao('#ft-mes', (v) => ({ ft_mes: v }));
   ao('#fc-mes', (v) => ({ fc_mes: v }));
