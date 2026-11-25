@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125094116';</script>
+<script>window.BIN_BUILD = '20261125095100';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -347,6 +347,7 @@
   .br-larga { grid-template-columns: minmax(0, 1fr); } .br-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } @media (max-width: 760px) { .br-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   #brindes table.br-tab td, #brindes table.br-tab th, #brindes table.br-tab .br-sub { white-space: normal !important; } #brindes table.br-tab td.cp-ap { white-space: nowrap !important; } #br-rank td:last-child { min-width: 14rem; } .br-tab td .br-sub { font-size: .78rem; color: var(--color-fg-muted); margin-top: .1rem; font-weight: 400; line-height: 1.3; } .br-tab td .br-sub.up { color: var(--up, #2f7d3b); } .br-tab td .br-sub.down { color: var(--down, #A62A2E); }
   .br-tab .br-pos { font-size: .78rem; color: var(--color-fg-muted); font-weight: 400; } .br-tab td.cp-ap { white-space: nowrap; } .br-tab .br-motivo { display: block; margin-top: .25rem; max-width: 9.5rem; font-size: .75rem; } .br-todos { cursor: pointer; white-space: nowrap; } #br-rank td.nm { min-width: 9rem; }
+  .br-filtro { font: inherit; font-size: .75rem; font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: .35rem; padding: .05rem .2rem; max-width: 10rem; } .br-filtro:disabled { opacity: .7; }
   td.br-cod { cursor: pointer; } td.br-cod .br-nome { font-weight: 700; font-size: .85rem; color: var(--color-fg, #191919); margin-top: .1rem; } td.br-cod:not(:has(.br-nome)) { text-decoration: underline dotted; }
   tr.br-obrig td.nm { font-weight: 700; } tr.br-obrig td.nm::before { content: "★ "; color: var(--bin-red, #A62A2E); }
   tr.cp-simrow td { background: color-mix(in srgb, var(--bin-gold) 6%, transparent); font-size: .92em; } tr.cp-simrow td.nm { padding-left: 1.4rem; color: var(--color-fg-muted); }
@@ -2598,7 +2599,7 @@
         </div>
         <div class="bd-card">
           <h3>Ranking de compras <span class="per" id="br-rank-per">| quem mais comprou no exercício</span></h3>
-          <div class="bd-tablewrap"><table id="br-rank" class="bd-cards br-tab"><thead><tr><th class="l"><label class="br-todos" title="Selecionar todos os clientes visíveis"><input type="checkbox" id="br-todos" aria-label="Selecionar todos os clientes visíveis"> Brinde</label></th><th class="l">Cliente</th><th>Compras no exercício</th><th class="l">Frequência</th><th class="l">Pontos</th></tr></thead><tbody></tbody></table></div>
+          <div class="bd-tablewrap"><table id="br-rank" class="bd-cards br-tab"><thead><tr><th class="l"><label class="br-todos" title="Selecionar todos os clientes visíveis"><input type="checkbox" id="br-todos" aria-label="Selecionar todos os clientes visíveis"> Brinde</label></th><th class="l">Cliente <select id="br-rank-loja" class="br-filtro" aria-label="Filtrar o ranking por loja"></select></th><th>Compras no exercício</th><th class="l">Frequência</th><th class="l">Pontos</th></tr></thead><tbody></tbody></table></div>
           <div class="cp-acoes"><button type="button" class="bd-btn-atu sec" id="br-mais">Mostrar mais 50</button></div>
           <p class="bd-note" id="br-rank-nota">—</p>
         </div>
@@ -6808,7 +6809,7 @@
   // 1ª lista: ranking de compras no exercício (até o mês escolhido). 2ª lista: crescimento contra o mesmo período do ano anterior e número de compras.
   // As escolhas (brinde sim/não, motivo, observação), o total de brindes do grupo ficam guardados neste aparelho.
   const BR_MOTIVOS = ['', 'Ranking de compras', 'Crescimento', 'Fidelidade (anos de casa)', 'Vínculo diário/semanal', 'Indica outros clientes', 'Outro'];
-  let brMostrar = 50; const brVer = new Set();
+  let brMostrar = 50, brRankLoja = ''; const brVer = new Set();   // brRankLoja: filtro de loja só da tabela do ranking
   // nomes dos clientes: arquivo só do computador (local/clientes_nomes.js, gerado por nomes_clientes.ps1); no painel web não existe
   if (!window.BIN_WEB && !window.BIN_NOMES) { const s = document.createElement('script'); s.src = 'local/clientes_nomes.js'; s.onload = () => { if ($('#brindes') && !$('#brindes').hidden) renderBrindes(); }; s.onerror = () => {}; document.head.append(s); }
   // Painel web: os nomes vêm de um arquivo trancado separado na pasta privada do Drive, lido com a conta Google de quem tem acesso
@@ -6937,16 +6938,23 @@
     const txtNome = (nm) => nm === null ? (window.BIN_WEB ? (brNomesEst === 'sem' ? 'esta conta Google não tem acesso aos nomes' : brNomesEst === 'lendo' ? 'buscando o nome…' : 'toque em "Ver nomes dos clientes" no topo') : 'nome não carregado') : nm || 'nome não encontrado nos relatórios';
     const celCli = (td, c) => {
       const sel = !!(esc[c.k] && esc[c.k].ok), ver = sel || brVer.has(c.k);
-      td.replaceChildren(Object.assign(document.createElement('span'), { className: 'br-pos', textContent: `${lojaSel === 'Todas' ? c.loja + ' · ' : ''}${c.pos}º` }), document.createTextNode(' ' + c.cli));
+      td.replaceChildren(Object.assign(document.createElement('span'), { className: 'br-pos', textContent: `${lojaSel === 'Todas' && !brRankLoja ? c.loja + ' · ' : ''}${c.pos}º` }), document.createTextNode(' ' + c.cli));
       if (ver) td.append(Object.assign(document.createElement('div'), { className: 'br-nome', textContent: txtNome(nomeDe(c)) }));
       td.title = ver ? '' : 'Clique para ver o nome do cliente'; td.classList.add('br-cod');
       td.onclick = () => { if (brVer.has(c.k)) brVer.delete(c.k); else brVer.add(c.k); celCli(td, c); };
     };
     const daLoja = (c) => lojaSel === 'Todas' || c.loja === lojaSel;
     // ranking de compras
-    const rank = doAno.filter(daLoja).sort((a, b) => lojaSel === 'Todas' ? b.v - a.v : a.pos - b.pos);
+    // filtro de loja no cabeçalho do ranking: só muda a tabela (a posição continua a da loja; distribuição e totais não mudam)
+    const selRL = $('#br-rank-loja'), lojasRank = lojaSel === 'Todas' ? lojas.filter((l) => porLoja.get(l).length) : [lojaSel];
+    if (brRankLoja && !lojasRank.includes(brRankLoja)) brRankLoja = '';
+    opcoes(selRL, [...(lojaSel === 'Todas' ? [['', 'todas as lojas']] : []), ...lojasRank.map((l) => [l, `${l} ${NOMES[l] || ''}`.trim()])], lojaSel === 'Todas' ? brRankLoja : lojaSel);
+    selRL.disabled = lojaSel !== 'Todas';
+    selRL.onchange = () => { brRankLoja = selRL.value; brMostrar = 50; renderBrindes(); };
+    const umaLoja = lojaSel !== 'Todas' || !!brRankLoja;
+    const rank = doAno.filter((c) => daLoja(c) && (!brRankLoja || c.loja === brRankLoja)).sort((a, b) => umaLoja ? a.pos - b.pos : b.v - a.v);
     const mostra = rank.slice(0, brMostrar);
-    $('#br-rank-per').textContent = `| quem mais comprou de jan a ${MESES[ate - 1]}/${ano}${lojaSel === 'Todas' ? ' · todas as lojas (posição dentro da loja)' : ''}`;
+    $('#br-rank-per').textContent = `| quem mais comprou de jan a ${MESES[ate - 1]}/${ano}${umaLoja ? ` · ${nomeLoja(brRankLoja || lojaSel)}` : ' · todas as lojas (posição dentro da loja)'}`;
     const antTxt = (c) => c.va ? `${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${money(c.va)} em ${String(ano - 1)}` : `novo · sem compra no mesmo período de ${ano - 1}`;
     const desde = (c) => c.desdeBase ? `cliente desde ${c.prim.slice(0, 4)} ou antes` : `cliente desde ${MESES[Number(c.prim.slice(5, 7)) - 1]}/${c.prim.slice(0, 4)}`;
     fillTable($('#br-rank'), mostra, [
@@ -6956,7 +6964,7 @@
       { cls: 'l', render: (td, c) => cel2(c.fr, `${c.d} dias · ${c.p} pedidos · ${c.meses.size} de ${nMeses} meses`)(td) },
       { cls: 'l', render: (td, c) => cel2(c.obrig ? '★ Não pode ficar de fora' : c.pontos.length ? c.pontos[0] : '—', [...(c.obrig ? c.pontos : c.pontos.slice(1)), desde(c)].join(' · '))(td) },
     ], { rowCls: (c) => c.obrig ? 'br-obrig' : '' });
-    [...$('#br-rank').tBodies[0].rows].forEach((tr, i) => { const c = mostra[i]; if (c) tr.classList.toggle('cp-ok', !!(esc[c.k] && esc[c.k].ok)); });
+    [...$('#br-rank').tBodies[0].rows].forEach((tr, i) => { const c = mostra[i]; if (c) tr.classList.toggle('cp-ok', !!(esc[c.k] && esc[c.k].ok)); if (tr.cells[1]) tr.cells[1].dataset.label = 'Cliente'; if (tr.cells[0]) tr.cells[0].dataset.label = 'Brinde'; });
     // selecionar todos os visíveis (cabeçalho da coluna Brinde)
     const todos = $('#br-todos'), visSel = mostra.filter((c) => esc[c.k] && esc[c.k].ok).length;
     todos.checked = mostra.length > 0 && visSel === mostra.length; todos.indeterminate = visSel > 0 && visSel < mostra.length;
