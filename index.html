@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125134739';</script>
+<script>window.BIN_BUILD = '20261125154623';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -1047,6 +1047,21 @@
               <tbody></tbody>
             </table>
           </div>
+        </div>
+        <div class="bd-card" id="pd-atual">
+          <h3><span data-k="t_atual">Estoque atual do grupo</span> <span class="per">| base PRODUTOS do ERP, ao custo</span></h3>
+          <div class="emp-resumo" id="pd-atual-resumo"></div>
+          <p class="bd-note" data-k="n_atual">—</p>
+        </div>
+        <div class="bd-card" id="pd-material">
+          <h3>Material e tipo de produto <span class="per" id="pd-mat-per">| tendência por material e por tipo</span></h3>
+          <div class="bd-ctl bd-ctl-in">
+            <label class="bd-f"><span>Ver</span><select id="pd-mat-modo" aria-label="Como agrupar"><option value="mt">Material e tipo</option><option value="t">Só o tipo (todos os materiais)</option><option value="m">Só o material</option></select></label>
+            <label class="bd-f"><span>Material</span><select id="pd-mat-fil" aria-label="Filtrar por material"></select></label>
+            <button type="button" class="bd-btn-atu sec" id="pd-mat-nao">Itens sem material identificado (CSV)</button>
+          </div>
+          <div class="bd-tablewrap"><table id="pd-tab-mat" class="bd-cards br-tab"><thead><tr><th class="l">Material / tipo</th><th>Venda</th><th>% do faturamento</th><th>Variação</th><th>Margem</th><th>Estoque atual (grupo)</th></tr></thead><tbody></tbody></table></div>
+          <p class="bd-note" id="pd-mat-nota">—</p>
         </div>
         <div class="bd-card" id="pd-estoque">
           <h3><span data-k="t_est">Estoque ao custo</span> <span class="per">| em teste</span></h3>
@@ -4344,7 +4359,8 @@
     emDev($('#produtos'), comHist.length <= 1, `Produtos com histórico só da ${comHist.join(', ') || 'L2'}${soTeste.length ? `; ${soTeste.join(', ')} têm apenas o relatório de teste` : ''}. As outras lojas entram quando o relatório 02 (vendas por produto) delas for salvo mês a mês.`);
     selUnid($('#pd-loja'), disp, loja, true);
     notaErp('produtos', loja);
-    const daLojaP = (r) => loja === 'Todas' || lojaDe(r) === loja;
+    // Relatório 02 que atravessa o ano (ex.: jun/2024 a jun/2026) se sobrepõe aos mensais: fica fora (o aviso pede para tirar de novo)
+    const daLojaP = (r) => (loja === 'Todas' || lojaDe(r) === loja) && (!r.per_ini || r.per_ini.slice(0, 4) === r.per_fim.slice(0, 4));
     const F = fam.data.filter(daLojaP), PR = prod.status === 'ok' ? prod.data.filter(daLojaP) : [];
     const pers = [...new Set(F.map((r) => r.per_ini + '|' + r.per_fim))].sort().reverse();
     // Comparação: relatórios do ano anterior que cabem nos mesmos meses; só vale se cobrirem o período inteiro.
@@ -4413,8 +4429,10 @@
     const pior = grandes.filter((r) => r.margem != null && r.margem >= 0).sort((a, c) => a.margem - c.margem)[0];
     const anomalas = reais.filter((r) => r.margem != null && r.margem < 0 && r.venda > 1000);
     set('n_fam', `Relatório de produtos do ERP, ${perTxt}${ant ? `, comparado com ${perCurto(addMes(op.de, -12), addMes(op.ate, -12))}` : ' (sem o mesmo período do ano anterior)'}. Família = primeira palavra da descrição. Tampas de marmitex de isopor com custo acima da venda são lidas junto com as bases nº 7, 8 e 9 da mesma marca (linhas "KIT").` + (anomalas.length ? ` Margem negativa em ${anomalas.map((r) => r.nome).join(', ')} sugere custo cadastrado errado.` : ''));
+    // só os meses que têm relatório de produtos (um mês sem o 02 não entra na base do %)
+    const mesesP = new Set(F.filter((r) => op.ps.includes(r.per_ini + '|' + r.per_fim)).flatMap((r) => { const o = []; for (let m = r.per_ini; m <= r.per_fim; m = addMes(m, 1)) o.push(lojaDe(r) + '|' + m); return o; }));
     // Faturamento do período (relatório 01, mesmas lojas e meses): base do "% do faturamento" de cada família e produto
-    const fatPer = d3.sum((dash.data('erp_diario').data || []).filter((r) => (loja === 'Todas' || r.loja === loja) && r.data.slice(0, 7) >= op.de && r.data.slice(0, 7) <= op.ate), (r) => Number(r.valor));
+    const fatPer = d3.sum((dash.data('erp_diario').data || []).filter((r) => (loja === 'Todas' || r.loja === loja) && mesesP.has(r.loja + '|' + r.data.slice(0, 7))), (r) => Number(r.valor));
     const pFat = (v) => fatPer > 0 ? pct(v / fatPer) : '—';
     fillTable($('#pd-tab-fam'), famShow, [
       { cls: 'l nm', fmt: (r) => r.nome },
@@ -4436,6 +4454,66 @@
       { fmt: (r) => int.format(r.qtd) },
       { cls: (r) => r.lucro < 0 ? 'bad' : '', fmt: (r) => pct(r.venda > 0 ? r.lucro / r.venda : null) },
     ]);
+    // Estoque atual do grupo (base PRODUTOS) e material x tipo de produto
+    {
+      const ea = (dash.data('estoque_atual').data || []).map((r) => ({ ...r, v: Number(r.valor), n: Number(r.itens) }));
+      const conf = ea.filter((r) => /^A conferir/.test(r.material)), ok = ea.filter((r) => !/^A conferir/.test(r.material));
+      $('#pd-atual').hidden = !ea.length;
+      if (ea.length) {
+        const totA = d3.sum(ok, (r) => r.v), base = ea[0].base_em;
+        set('t_atual', `Estoque atual do grupo: ${money(totA)}`);
+        const chip = (t, v) => { const s = document.createElement('span'); s.className = 'emp-chip'; s.append(Object.assign(document.createElement('b'), { textContent: v }), document.createTextNode(' ' + t)); return s; };
+        const porM = d3.rollups(ok, (v) => d3.sum(v, (r) => r.v), (r) => r.material).sort((a, c) => c[1] - a[1]);
+        $('#pd-atual-resumo').replaceChildren(...porM.slice(0, 6).map(([m, v]) => chip(`${m} (${pct0(v / totA)})`, money(v))));
+        set('n_atual', `Saldo × custo de cada produto na base PRODUTOS de ${dBRy(base)}, somando todas as lojas; caixa e pacote do mesmo produto (estoque vinculado) contam uma vez. Saldos negativos ficam fora.`
+          + (conf.length ? ` Fora do total por serem improváveis (conferir o cadastro ou a baixa): ${conf.map((r) => `${r.tipo.replace(/ · cód\..*/, '')} (${money(r.v)})`).join('; ')}.` : '')
+          + ' Para atualizar, é preciso uma base PRODUTOS nova.');
+      }
+      // Material e tipo: venda do período do cabeçalho (mesmos relatórios das famílias), comparação com o ano anterior e estoque atual
+      const md = dash.data('erp_material'), MR = md.status === 'ok' ? md.data.filter(daLojaP) : [];
+      $('#pd-material').hidden = !MR.length;
+      if (MR.length) {
+        const modo = ['mt', 't', 'm'].includes(prm.pd_mat_modo) ? prm.pd_mat_modo : 'mt';
+        const mats = [...new Set(MR.map((r) => r.material))].sort((a, c) => (a === 'Não identificado') - (c === 'Não identificado') || a.localeCompare(c, 'pt-BR'));
+        const fil = mats.includes(prm.pd_mat_fil) ? prm.pd_mat_fil : 'Todos';
+        $('#pd-mat-modo').value = modo;
+        opcoesG($('#pd-mat-fil'), [[null, [['Todos', 'Todos os materiais'], ...mats.map((m) => [m, m])]]], fil);
+        const noP = (ps) => (r) => ps.includes(r.per_ini + '|' + r.per_fim) && (fil === 'Todos' || r.material === fil);
+        const chave = (r) => modo === 't' ? r.tipo : modo === 'm' ? r.material : r.material + '|' + r.tipo;
+        const soma = (rows) => d3.rollup(rows, (v) => ({ venda: d3.sum(v, (r) => Number(r.venda)), lucro: d3.sum(v, (r) => Number(r.lucro)) }), chave);
+        const cur = soma(MR.filter(noP(op.ps))), antM = op.ant ? soma(MR.filter(noP(op.ant))) : null;
+        const estK = d3.rollup(ok.filter((r) => fil === 'Todos' || r.material === fil), (v) => d3.sum(v, (r) => r.v), chave);
+        const linhas = [...cur].map(([k, o]) => { const a = antM && antM.get(k); const [m, t] = modo === 'mt' ? k.split('|') : [modo === 'm' ? k : null, modo === 't' ? k : null];
+          return { k, mat: m, tipo: t, ...o, margem: o.venda > 0 ? o.lucro / o.venda : null, var: a && a.venda > 0 ? o.venda / a.venda - 1 : null, est: estK.get(k) || 0 }; });
+        let lista;
+        if (modo === 'mt') {   // material (com o total dele) e, abaixo, os tipos daquele material
+          const porMat = d3.rollups(linhas, (v) => v, (r) => r.mat).map(([m, v]) => { const tv = d3.sum(v, (r) => r.venda), tl = d3.sum(v, (r) => r.lucro);
+            const a = antM ? d3.sum([...antM].filter(([k]) => k.startsWith(m + '|')), ([, o]) => o.venda) : 0;
+            return { m, v: v.sort((x, y) => y.venda - x.venda), tot: { k: m, mat: m, nivel: 'm', venda: tv, lucro: tl, margem: tv > 0 ? tl / tv : null, var: a > 0 ? tv / a - 1 : null, est: d3.sum(ok.filter((r) => r.material === m), (r) => r.v) } }; })
+            .sort((a, c) => c.tot.venda - a.tot.venda);
+          lista = porMat.flatMap((g) => [g.tot, ...g.v.map((r) => ({ ...r, nivel: 't' }))]);
+        } else lista = linhas.sort((a, c) => c.venda - a.venda).map((r) => ({ ...r, nivel: modo }));
+        fillTable($('#pd-tab-mat'), lista, [
+          { cls: (r) => r.nivel === 'm' ? 'l nm' : 'l', fmt: (r) => r.nivel === 'm' ? r.mat : r.nivel === 't' && modo === 'mt' ? '↳ ' + r.tipo : (r.tipo || r.mat) },
+          { fmt: (r) => money(r.venda) }, { fmt: (r) => pFat(r.venda) },
+          { cls: (r) => r.var == null ? '' : r.var >= 0 ? 'ok' : 'bad', fmt: (r) => r.var == null ? '—' : pct(r.var, true) },
+          { cls: (r) => r.margem != null && r.margem < 0 ? 'bad' : '', fmt: (r) => pct(r.margem) },
+          { fmt: (r) => r.est ? money(r.est) : '—' },
+        ], { rowCls: (r) => r.nivel === 'm' && modo === 'mt' ? 'tot' : '' });
+        const nao = dash.data('erp_material_nao').data || [], vNao = d3.sum(linhas.filter((r) => (r.mat || r.k) === 'Não identificado' || r.k.startsWith('Não identificado')), (r) => r.venda);
+        $('#pd-mat-per').textContent = `| ${perTxt}${fil === 'Todos' ? '' : ' · ' + fil}${ant ? ' · variação contra o mesmo período do ano anterior' : ''}`;
+        $('#pd-mat-nota').textContent = `Material e tipo pela descrição do cadastro (ex.: "PRATO ISOP" = Isopor › Prato; "SACOLA OXI BIO" = Biodegradável › Sacola). A tampa de marmitex de isopor aparece separada da base, como está no ERP. `
+          + `% do faturamento sobre a venda do relatório 01 nas mesmas lojas, só nos meses que têm o relatório de produtos (se a soma fica bem abaixo de 100%, o relatório 02 do período está incompleto no ERP). Estoque atual = base PRODUTOS do grupo (todas as lojas). `
+          + (nao.length ? `Produtos sem material identificado: ${money(vNao)} de venda no período. Baixe a lista (os ${nao.length} de maior venda), indique o material e o tipo e devolva, que eles passam para o grupo certo.` : '');
+        $('#pd-mat-nao').hidden = !nao.length;
+        $('#pd-mat-nao').onclick = () => {
+          const sep = ';', q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+          const linhasCsv = ['codigo;descricao;venda_no_periodo_lido;material (preencher);tipo (preencher; sugestão)', ...nao.map((r) => [r.codigo, r.descricao, Number(r.venda).toFixed(2).replace('.', ','), '', r.tipo_sugerido].map(q).join(sep))];
+          const blob = new Blob(['﻿' + linhasCsv.join('\r\n')], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a');
+          a.href = URL.createObjectURL(blob); a.download = 'produtos_sem_material.csv'; document.body.append(a); a.click(); a.remove();
+        };
+      }
+    }
     // Estoque ao custo (relatório 10, em teste)
     {
       const ed = dash.data('erp_estoque');
@@ -7161,6 +7239,8 @@
   ao('#rx-cli', (v) => ({ rx_cli: v }));
   ao('#rx-forma', (v) => ({ rx_forma: v }));
   ao('#pd-loja', (v) => ({ pd_loja: v }));
+  ao('#pd-mat-modo', (v) => ({ pd_mat_modo: v }));
+  ao('#pd-mat-fil', (v) => ({ pd_mat_fil: v }));
   ao('#pd-ano', (v) => ({ pd_ano: v, pd_de: '', pd_ate: '' }));
   ao('#pd-de', (v) => ({ pd_de: v }));
   ao('#pd-ate', (v) => ({ pd_ate: v }));
