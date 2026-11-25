@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125095100';</script>
+<script>window.BIN_BUILD = '20261125101308';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -6972,18 +6972,32 @@
     $('#br-mais').hidden = rank.length <= brMostrar; $('#br-mais').onclick = () => { brMostrar += 50; renderBrindes(); };
     $('#br-rank-nota').textContent = `"Selecionar todos" marca só as ${mostra.length} linhas que estão na tela (use "Mostrar mais 50" para incluir mais). Compras = valor líquido dos pedidos no exercício (devoluções abatidas), com o crescimento contra o mesmo período do ano anterior. Frequência pela média de dias com compra por mês: semanal (3,5 ou mais), quinzenal (1,8 ou mais), mensal (comprou em 75% dos meses), regular ou esporádica. ★ = não pode ficar de fora (5 primeiros da loja, ou todo mês e toda semana no grupo dos 50% das compras). Clique no código para ver o nome.`;
     // Sugestões de reconhecimento (para exportar e confrontar com a seleção): quem não pode ficar de fora e a lista de crescimento e frequência
-    const motivoSug = (c) => {
-      const m = [];
-      if (c.obrig) m.push(c.pos <= 5 ? `está entre os 5 que mais compram na loja (${c.pos}º)` : 'compra todo mês e toda semana e está no grupo dos 50% das compras');
-      if (c.cresceu) m.push(`cresceu ${pct0(c.cresc)} (+${money(c.aum)}) no mesmo período de ${ano - 1}`);
-      if (c.novoForte) m.push(`cliente novo já comprando forte (${money(c.v)})`);
-      if (c.sugCresc && !c.cresceu && !c.novoForte) m.push(`compra com muita frequência (${c.d} dias, ${c.meses.size} de ${nMeses} meses)`);
-      if (c.anosCasa >= 2 && c.meses.size >= nMeses && !c.obrig) m.push(`fiel: ${c.desdeBase ? 'desde o início da base' : `${c.anosCasa} anos de casa`} e comprou todos os meses`);
-      return m;
+    // Leitura crítica: a régua é o CORTE da loja = compras do último cliente que cabe na cota de brindes dela. Só entra quem tem volume
+    // comparável a esse corte (valores pequenos, mesmo crescendo muito ou comprando sempre, não chegam à diretoria).
+    const cortes = new Map(resumo.map((r) => { const lst = porLoja.get(r.loja) || []; const i = Math.min(lst.length, r.cota) - 1; return [r.loja, i >= 0 ? lst[i].v : null]; }));
+    const avaliar = (c) => {
+      const corte = cortes.get(c.loja); if (!corte) return null;
+      const rel = c.v / corte, consist = c.meses.size >= Math.ceil(nMeses * 0.75), mot = [], dist = `${money(c.v)} no ano (média de ${money(c.v / Math.max(1, nMeses))} por mês) = ${pct0(rel)} do corte da loja (${money(corte)})`;
+      let tipo = null;
+      const cresceuForte = c.va >= corte * 0.4 && c.cresc >= 0.3 && consist, fiel = c.fr === 'Semanal' || (c.meses.size >= nMeses && c.anosCasa >= 2);
+      if (c.obrig && (c.pos <= 5 || rel >= 1)) { tipo = 'Não pode ficar de fora'; mot.push(c.pos <= 5 ? `está entre os 5 que mais compram na loja (${c.pos}º)` : `compra todo mês e toda semana`); }
+      else if (rel >= 1) {   // compra mais que o último cliente da cota: só aparece na lista de "não selecionados" se foi deixado de fora
+        tipo = 'Acima do corte';
+        mot.push(`compra mais que o último cliente dentro da cota (${c.pos}º da loja)`);
+        if (!(c.va > 0) && c.anosCasa === 0) mot.push(`cliente novo: entrou em ${ano} e já comprou em ${c.meses.size} meses`);
+        if (fiel) mot.push(c.fr === 'Semanal' ? `compra toda semana (${c.d} dias)` : `${c.anosCasa} anos de casa e comprou todos os meses`);
+      }
+      else if (rel >= 0.75 && cresceuForte) { tipo = 'Perto do corte, crescendo'; mot.push(`cresceu ${pct0(c.cresc)} (de ${money(c.va)} para ${money(c.v)}) no mesmo período de ${ano - 1}, comprando em ${c.meses.size} de ${nMeses} meses`); }
+      else if (rel >= 0.75 && fiel) { tipo = 'Perto do corte, fiel e frequente'; mot.push(c.fr === 'Semanal' ? `compra toda semana (${c.d} dias com compra)` : `${c.desdeBase ? 'cliente desde o início da base' : `${c.anosCasa} anos de casa`} e comprou todos os ${nMeses} meses`); }
+      if (!tipo) return null;
+      if (c.cresc != null && tipo !== 'Perto do corte, crescendo' && Math.abs(c.cresc) >= 0.1) mot.push(`${c.cresc >= 0 ? 'cresceu' : 'caiu'} ${pct0(Math.abs(c.cresc))} contra ${ano - 1}`);
+      mot.push(dist);
+      return { c, tipo, motivos: mot, rel, corte };
     };
-    brUlt = { ano, ate, nMeses, lojaSel, esc,
-      sugestoes: doAno.filter((c) => daLoja(c) && (c.obrig || c.sugCresc)).map((c) => ({ c, motivos: motivoSug(c), tipo: c.obrig ? 'Não pode ficar de fora' : c.cresceu || c.novoForte ? 'Crescimento' : 'Frequência' }))
-        .sort((a, b) => a.c.loja.localeCompare(b.c.loja, 'pt-BR', { numeric: true }) || (b.c.obrig - a.c.obrig) || a.c.pos - b.c.pos),
+    const ordTipo = { 'Não pode ficar de fora': 0, 'Acima do corte': 1, 'Perto do corte, crescendo': 2, 'Perto do corte, fiel e frequente': 3 };
+    brUlt = { ano, ate, nMeses, lojaSel, esc, cortes, cotas: new Map(resumo.map((r) => [r.loja, r.cota])),
+      sugestoes: doAno.filter(daLoja).map(avaliar).filter(Boolean)
+        .sort((a, b) => a.c.loja.localeCompare(b.c.loja, 'pt-BR', { numeric: true }) || ordTipo[a.tipo] - ordTipo[b.tipo] || b.rel - a.rel),
       nomeDe, txtNome };
     const nSug = brUlt.sugestoes.filter((s) => !(esc[s.c.k] && esc[s.c.k].ok)).length;
     $('#br-sug-exp').textContent = `Sugestões de reconhecimento (${nSug} não selecionados)`;
@@ -6997,22 +7011,27 @@
     const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
     const fora = sugestoes.filter((s) => !(esc[s.c.k] && esc[s.c.k].ok)), dentro = sugestoes.filter((s) => esc[s.c.k] && esc[s.c.k].ok);
     const lojas = [...new Set(sugestoes.map((s) => s.c.loja))];
-    const linha = (s) => { const c = s.c, nm = nomeDe(c); return `<tr><td><b>${e2(c.cli)}</b>${nm ? `<br><small>${e2(nm)}</small>` : ''}</td><td>${c.pos}º</td><td>${e2(money(c.v))}${c.cresc != null ? `<br><small>${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${ano - 1}</small>` : '<br><small>novo</small>'}</td><td>${e2(c.fr)}<br><small>${c.d} dias · ${c.meses.size} de ${nMeses} meses</small></td><td><span class="tp t-${s.tipo === 'Não pode ficar de fora' ? 'a' : s.tipo === 'Crescimento' ? 'b' : 'c'}">${e2(s.tipo)}</span><br>${e2(s.motivos.join('; '))}</td></tr>`; };
+    const linha = (s) => { const c = s.c, nm = nomeDe(c); return `<tr><td><b>${e2(c.cli)}</b>${nm ? `<br><small>${e2(nm)}</small>` : ''}</td><td>${c.pos}º</td><td>${e2(money(c.v))}${c.cresc != null ? `<br><small>${c.cresc >= 0 ? '+' : ''}${pct0(c.cresc)} vs ${ano - 1}</small>` : '<br><small>novo</small>'}</td><td>${e2(c.fr)}<br><small>${c.d} dias · ${c.meses.size} de ${nMeses} meses</small></td><td><span class="tp t-${({ 'Não pode ficar de fora': 'a', 'Acima do corte': 'd', 'Perto do corte, crescendo': 'b', 'Perto do corte, fiel e frequente': 'c' })[s.tipo]}">${e2(s.tipo)}</span><br>${e2(s.motivos.join('; '))}</td></tr>`; };
     const cab = '<table><thead><tr><th>Cliente</th><th>Posição</th><th>Compras</th><th>Frequência</th><th>Por que reconhecer</th></tr></thead><tbody>';
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · sugestões de reconhecimento</title><style>
       body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
       main { padding: 16px 26px; max-width: 1000px; } .intro { background: #faf8f3; border-left: 6px solid #AF6839; padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.5; }
       h2 { font-size: 18px; margin: 22px 0 6px; } h3 { font-size: 15px; border-bottom: 2px solid #AF6839; padding-bottom: 3px; margin: 14px 0 6px; break-after: avoid; }
       table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 6px 7px; text-align: left; vertical-align: top; } th { background: #f1ece2; font-size: 11px; } tr { break-inside: avoid; } small { color: #555; }
-      .tp { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; } .t-a { background: #A62A2E; } .t-b { background: #2f7d3b; } .t-c { background: #AF6839; }
+      .tp { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; } .t-a { background: #A62A2E; } .t-b { background: #2f7d3b; } .t-c { background: #AF6839; } .t-d { background: #2a5d8f; }
       .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
       <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · sugestões de reconhecimento</h1><p>${lojaSel === 'Todas' ? 'Todas as lojas' : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${fora.length} sugeridos ainda não selecionados</p></div></header>
-      <main><div class="intro">Confronto com o ranking selecionado: abaixo estão os clientes que a análise sugere reconhecer e que <b>ainda não foram selecionados</b>, com o porquê. <span class="tp t-a">Não pode ficar de fora</span> = entre os 5 que mais compram na loja, ou compra todo mês e toda semana; <span class="tp t-b">Crescimento</span> = cresceu forte contra o ano anterior ou é cliente novo comprando forte; <span class="tp t-c">Frequência</span> = compra muitas vezes e quase todo mês. Vínculo do dia a dia e indicações a base não mostra: avalie com a loja.</div>
+      <main><div class="intro">Confronto com o ranking selecionado: abaixo estão os clientes que a análise sugere reconhecer e que <b>ainda não foram selecionados</b>, com o porquê. A régua é o <b>corte de cada loja</b>: as compras do último cliente que cabe na cota de brindes dela. Abaixo de 75% do corte ninguém entra, mesmo crescendo muito ou comprando sempre. O corte sobe se o total de brindes do grupo diminuir.<br>
+        <span class="tp t-a">Não pode ficar de fora</span> = entre os 5 que mais compram na loja, ou compra todo mês e toda semana e está acima do corte.<br>
+        <span class="tp t-d">Acima do corte</span> = compra mais que o último cliente da cota e ficou de fora da seleção (vale conferir o motivo).<br>
+        <span class="tp t-b">Perto do corte, crescendo</span> = entre 75% e 99% do corte, cresceu 30% ou mais sobre uma base de pelo menos 40% do corte no ano anterior e comprou em 75% dos meses ou mais.<br>
+        <span class="tp t-c">Perto do corte, fiel e frequente</span> = entre 75% e 99% do corte e compra toda semana, ou tem 2 anos de casa ou mais e comprou todos os meses.<br>
+        Vínculo do dia a dia e indicações a base não mostra: avalie com a loja.</div>
         <h2>Sugeridos e ainda não selecionados (${fora.length})</h2>
-        ${fora.length ? lojas.map((lj) => { const g = fora.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length}</h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Todos os sugeridos já estão selecionados.</p>'}
+        ${fora.length ? lojas.map((lj) => { const g = fora.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length} <small>· corte da loja: ${e2(money(brUlt.cortes.get(lj)))} (compras do ${brUlt.cotas.get(lj)}º cliente, o último dentro da cota)</small></h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Todos os sugeridos já estão selecionados.</p>'}
         <h2>Sugeridos que já estão selecionados (${dentro.length})</h2>
-        ${dentro.length ? lojas.map((lj) => { const g = dentro.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length}</h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Nenhum ainda.</p>'}
+        ${dentro.length ? lojas.map((lj) => { const g = dentro.filter((s) => s.c.loja === lj); return g.length ? `<h3>${e2(nomeLoja(lj))} · ${g.length} <small>· corte da loja: ${e2(money(brUlt.cortes.get(lj)))} (compras do ${brUlt.cotas.get(lj)}º cliente, o último dentro da cota)</small></h3>${cab}${g.map(linha).join('')}</tbody></table>` : ''; }).join('') : '<p>Nenhum ainda.</p>'}
       </main></body></html>`;
     const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
     w.document.open(); w.document.write(html); w.document.close();
