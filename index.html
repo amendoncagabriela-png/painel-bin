@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261125102817';</script>
+<script>window.BIN_BUILD = '20261125102929';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -6831,7 +6831,9 @@
     brCarregarNomes(); brBotaoNomes();
     const z = dash.data('clientes_mes'), base = z.status === 'ok' ? z.data : [];
     if (!base.length) { $('#br-headline').textContent = 'Sem a base de clientes por loja (relatório 01 com o código do cliente). Atualize os dados do ERP.'; return; }
-    const linhas = base.map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
+    // L6 (C. Guarulhos) fechou em fev/2026: fica fora dos brindes (distribuição, ranking e sugestões)
+    const BR_FORA = new Set(['L6']);
+    const linhas = base.filter((r) => !BR_FORA.has(r.loja)).map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
     const anos = [...new Set(linhas.map((r) => r.ano))].sort();
     const ano = anos.includes(Number(P().br_ano)) ? Number(P().br_ano) : anos[anos.length - 1];
     opcoes($('#br-ano'), anos.map((a) => [String(a), String(a)]), String(ano));
@@ -6921,7 +6923,7 @@
       { cls: 'forte', fmt: (r) => String(r.cota) },
       { cls: (r) => r.esc > r.cota ? 'down' : r.esc === r.cota && r.cota ? 'up' : '', render: (td, r) => cel2(String(r.esc), r.esc > r.cota ? `${r.esc - r.cota} acima da cota` : r.esc === r.cota ? 'cota completa' : `faltam ${r.cota - r.esc}`)(td) },
     ], { onClick: (r) => dash.setParams({ br_loja: r.loja }), selected: (r) => r.loja === lojaSel });
-    $('#br-dist-nota').textContent = `Relevantes = clientes que formam os primeiros 50% das compras dos clientes identificados da loja, mais os que não podem ficar de fora e os que compram toda semana. Sugestão = metade pela parte da loja na venda a clientes identificados, metade pela parte nos relevantes, sem ficar abaixo dos que não podem ficar de fora. Clique numa loja para ver os clientes dela. Venda de balcão sem cadastro (varejo) fica fora. Na L3 (até 2025) e na L8 (desde 2026) entram também os clientes da M N.`;
+    $('#br-dist-nota').textContent = `Relevantes = clientes que formam os primeiros 50% das compras dos clientes identificados da loja, mais os que não podem ficar de fora e os que compram toda semana. Sugestão = metade pela parte da loja na venda a clientes identificados, metade pela parte nos relevantes, sem ficar abaixo dos que não podem ficar de fora. Clique numa loja para ver os clientes dela. Venda de balcão sem cadastro (varejo) fica fora, e a L6 (C. Guarulhos, fechada em fev/2026) também. Na L3 (até 2025) e na L8 (desde 2026) entram também os clientes da M N.`;
     // controles de escolha (brinde e motivo, no mesmo lugar)
     const marcar = (c, ok, motivo) => { const e = esc[c.k] || {}; esc[c.k] = { ok, motivo: motivo != null ? motivo : e.motivo || (ok ? 'Ranking de compras' : ''), obs: e.obs || '' }; if (!esc[c.k].ok && !esc[c.k].motivo) delete esc[c.k]; };
     const ctrl = (td, c) => {
