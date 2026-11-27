@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127120159';</script>
+<script>window.BIN_BUILD = '20261127123114';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -2602,7 +2602,7 @@
       <label class="bd-f"><span>Brindes no grupo</span><input id="br-total" type="number" min="0" step="1" inputmode="numeric" style="width:7rem" aria-label="Total de brindes do grupo"></label>
       <button type="button" class="bd-btn-atu" id="br-exp">Lista dos escolhidos (PDF / imprimir)</button>
       <button type="button" class="bd-btn-atu sec" id="br-sug-exp">Sugestões de reconhecimento</button>
-      <button type="button" class="bd-btn-atu sec" id="br-cad-exp" title="Por loja, para o gerente conferir clientes com mais de um cadastro">Revisão de cadastros (gerentes)</button>
+      <button type="button" class="bd-btn-atu sec" id="br-cad-exp" title="Lista dos selecionados por loja, para cada gerente confirmar por mensagem">Lista para os gerentes (por loja)</button>
       <button type="button" class="bd-btn-atu sec" id="br-nomes" hidden>Ver nomes dos clientes (conta Google)</button>
     </div>
     <div class="bd-hero">
@@ -7230,62 +7230,50 @@
     const lojas = (lojaSel === 'Todas' ? [...porLoja.keys()] : [lojaSel]).filter((l) => (porLoja.get(l) || []).length).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
     const sel = (c) => !!(esc[c.k] && esc[c.k].ok);
     const nm = (c) => nomeDe(c) || '';
-    // lista dos gerentes: os já selecionados pela empresa e os sugeridos (relatório de sugestões) ainda não selecionados, em laranja
-    const sugNao = new Map(sugestoes.filter((s) => !sel(s.c)).map((s) => [s.c.k, s.tipo]));
-    const nsel = (c) => sugNao.has(c.k);
+    // lista dos gerentes: só os clientes selecionados pela empresa, com código e nome; quando dois selecionados parecem o mesmo
+    // comprador (nome igual ou muito parecido), a linha avisa, para o gerente confirmar se é um brinde só
     let totGr = 0;
     const blocos = lojas.map((lj) => {
-      const lst = porLoja.get(lj), cota = cotas.get(lj) || 0;
-      const naLista = (c) => sel(c) || nsel(c);
-      // grupos de possíveis repetidos que tocam a lista (um código pequeno pode ser o mesmo cliente de um grande)
-      const grupos = brRepetidos(lst, nomeDe).filter((g) => g.itens.some((x) => naLista(x.c))).sort((a, b) => d3.sum(b.itens, (x) => x.c.v) - d3.sum(a.itens, (x) => x.c.v));
-      totGr += grupos.length;
-      const grupoDe = new Map(); grupos.forEach((g, i) => g.itens.forEach((x) => grupoDe.set(x.c.k, i + 1)));
-      const lista = lst.filter(naLista);
-      const marca = (c) => sel(c) ? '<span class="tp t-e">selecionado</span>' : nsel(c) ? `<span class="tp t-s">sugerido · não selecionado</span><br><small>${e2(sugNao.get(c.k))}</small>` : '<small>fora da lista</small>';
-      const linhaG = (x) => `<tr${nsel(x.c) ? ' class="nsel"' : ''}><td><b>${e2(x.c.cli)}</b></td><td>${e2(x.nm)}</td><td>${x.c.pos}º</td><td>${e2(money(x.c.v))}<br><small>${x.c.d} dias · ${x.c.meses.size} de ${nMeses} meses</small></td><td>${marca(x.c)}</td></tr>`;
-      const htmlG = grupos.length ? grupos.map((g, i) => `<div class="grupo"><div class="gcab"><b>Grupo ${i + 1}</b> · ${g.igual ? 'mesmo nome' : 'nomes parecidos'} · ${g.itens.length} cadastros · somados ${e2(money(d3.sum(g.itens, (x) => x.c.v)))}${g.itens.filter((x) => sel(x.c)).length > 1 ? ' · <b class="alerta">mais de um código já selecionado</b>' : ''}</div>
-        <table><thead><tr><th>Código</th><th>Nome no cadastro</th><th>Posição</th><th>Compras no exercício</th><th>Brinde</th></tr></thead><tbody>${g.itens.map(linhaG).join('')}</tbody></table>
-        <div class="resp">É o mesmo cliente? &nbsp;☐ Sim, todos &nbsp;☐ Só alguns: ______________ &nbsp;☐ Não &nbsp;&nbsp; O brinde fica com o código: ____________</div></div>`).join('')
-        : '<p>Nenhum nome igual ou parecido entre os clientes da lista. Mesmo assim, confira abaixo se reconhece o mesmo cliente com nomes diferentes (ex.: razão social e nome fantasia).</p>';
-      const linhaL = (c) => `<tr${nsel(c) ? ' class="nsel"' : ''}><td>${c.pos}º</td><td><b>${e2(c.cli)}</b></td><td>${e2(nm(c))}${grupoDe.has(c.k) ? ` <span class="gref">grupo ${grupoDe.get(c.k)}</span>` : ''}</td><td>${e2(money(c.v))}</td><td>${marca(c)}</td><td class="pre"></td><td class="pre"></td></tr>`;
-      return `<section class="loja" data-loja="${e2(lj)}" data-nome="${e2(nomeLoja(lj))}" data-grupos="${grupos.length}"><h2>${e2(nomeLoja(lj))}</h2>
-        <p class="meta">Cota da loja: <b>${cota}</b> brindes · ${lst.length.toLocaleString('pt-BR')} clientes identificados compraram de jan a ${MESES[ate - 1]}/${ano} · ${lista.filter(sel).length} selecionados pela empresa e ${lista.filter(nsel).length} sugeridos ainda não selecionados <span class="leg-nsel">fundo laranja = sugerido, não selecionado</span></p>
-        <h3>1. Possíveis cadastros repetidos (${grupos.length})</h3>${htmlG}
-        <h3>2. Lista para conferência</h3><p class="dica">Se reconhecer o mesmo cliente em mais de um código (também com razão social de um lado e nome fantasia do outro), anote o outro código. Fundo laranja = sugerido pela análise e ainda não selecionado.</p>
-        <table class="lista"><thead><tr><th>Posição</th><th>Código</th><th>Nome no cadastro</th><th>Compras</th><th>Brinde</th><th>Mesmo cliente que o código</th><th>Observação</th></tr></thead><tbody>${lista.length ? lista.map(linhaL).join('') : '<tr><td colspan="7">Nenhum cliente selecionado nem sugerido nesta loja.</td></tr>'}</tbody></table>
-        <p class="assina">Conferido por: ______________________________ &nbsp; Data: ____/____/______</p></section>`;
+      const lst = porLoja.get(lj), lista = lst.filter(sel).sort((a, b) => nm(a).localeCompare(nm(b), 'pt-BR'));
+      const parecidos = new Map();
+      for (const g of brRepetidos(lst, nomeDe)) { const ss = g.itens.filter((x) => sel(x.c)); if (ss.length < 2) continue; totGr++;
+        for (const x of ss) parecidos.set(x.c.k, ss.filter((y) => y !== x).map((y) => `${y.c.cli} (${y.nm})`)); }
+      const linha = (c) => `<tr${parecidos.has(c.k) ? ' class="par"' : ''}><td><b>${e2(c.cli)}</b></td><td>${e2(nm(c)) || '<small>nome não encontrado no cadastro</small>'}</td><td>${parecidos.has(c.k) ? `<b>Mesmo comprador que ${e2(parecidos.get(c.k).join(', '))}?</b>` : ''}</td></tr>`;
+      return `<section class="loja" data-loja="${e2(lj)}" data-nome="${e2(nomeLoja(lj))}" data-grupos="${lista.length}"><h2>${e2(nomeLoja(lj))} · ${lista.length} ${lista.length === 1 ? 'cliente selecionado' : 'clientes selecionados'}</h2>
+        <table class="lista"><thead><tr><th>Código</th><th>Cliente</th><th>Atenção</th></tr></thead><tbody>${lista.length ? lista.map(linha).join('') : '<tr><td colspan="3">Nenhum cliente selecionado nesta loja ainda.</td></tr>'}</tbody></table></section>`;
     });
-    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · revisão de cadastros${lojaSel === 'Todas' ? '' : ' · ' + e2(lojaSel)}</title><style>
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · clientes selecionados${lojaSel === 'Todas' ? '' : ' · ' + e2(lojaSel)}</title><style>
       body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #191919; } header { background: #191919; color: #fff; padding: 18px 26px; display: flex; gap: 18px; align-items: center; border-bottom: 6px solid #AF6839; } header img { height: 52px; } h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; color: #FAF4B4; }
       main { padding: 16px 26px; max-width: 1000px; } .intro { background: #faf8f3; border-left: 6px solid #AF6839; padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.5; }
       section.loja { break-before: page; } section.loja:first-of-type { break-before: auto; } h2 { font-size: 20px; margin: 22px 0 2px; border-bottom: 3px solid #AF6839; padding-bottom: 4px; } h3 { font-size: 15px; margin: 16px 0 6px; break-after: avoid; } .meta, .dica { font-size: 13px; color: #555; margin: 4px 0 8px; }
       table { width: 100%; border-collapse: collapse; font-size: 12.5px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 5px 6px; text-align: left; vertical-align: top; } th { background: #f1ece2; font-size: 11px; } tr { break-inside: avoid; } small { color: #555; }
       .grupo { border: 1px solid #e3ddd0; border-left: 5px solid #AF6839; border-radius: 6px; padding: 6px 8px 8px; margin: 0 0 10px; break-inside: avoid; } .gcab { font-size: 13px; margin-bottom: 4px; } .resp { font-size: 12.5px; margin-top: 6px; } .alerta { color: #A62A2E; }
       .tp { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; white-space: nowrap; } .t-e { background: #191919; } .t-d { background: #2a5d8f; } .t-s { background: #AF6839; } tr.nsel td { background: #FFF1DC; } tr.nsel td:first-child { border-left: 5px solid #AF6839; } .leg-nsel { display: inline-block; background: #FFF1DC; border-left: 5px solid #AF6839; padding: 1px 8px; font-size: 12px; font-weight: 700; color: #191919; } .gref { font-size: 10.5px; font-weight: 700; color: #AF6839; white-space: nowrap; }
-      table.lista td.pre { border-bottom: 1px solid #999; min-width: 110px; } table.lista td:nth-child(4) { white-space: nowrap; } .assina { margin-top: 14px; font-size: 13px; }
+      table.lista { font-size: 14px; } table.lista td { padding: 7px 8px; } table.lista td:first-child { width: 6rem; } tr.par td { background: #FFF1DC; } tr.par td:first-child { border-left: 5px solid #AF6839; } .intro { font-size: 15px; line-height: 1.7; }
       .porloja { background: #faf8f3; border-bottom: 1px solid #e3ddd0; padding: 10px 26px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; } .porloja b { margin-right: 4px; }
       .porloja button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 700; cursor: pointer; font-size: 13px; } .porloja button.todas { background: #191919; }
-      @media print { .porloja { display: none; } header, .tp, tr.nsel td, .leg-nsel, .grupo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      @media print { .porloja { display: none; } header, tr.par td { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body>
-      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · revisão de cadastros</h1><p id="sub">${lojaSel === 'Todas' ? `${lojas.length} lojas (uma por página)` : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${totGr} grupos de possíveis repetidos</p></div></header>
+      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · clientes selecionados</h1><p id="sub">${lojaSel === 'Todas' ? `${lojas.length} lojas (uma por página)` : e2(nomeLoja(lojaSel))} · clientes selecionados para o brinde de ${ano}</p></div></header>
       <div class="porloja"><b>Salvar o PDF de cada gerente:</b>${lojas.map((lj) => `<button type="button" onclick="soLoja('${e2(lj)}')">${e2(nomeLoja(lj))}</button>`).join('')}${lojas.length > 1 ? '<button type="button" class="todas" onclick="soLoja(\'\')">Todas juntas</button>' : ''}<span style="color:#555">Na janela de impressão, escolha "Salvar como PDF"; o arquivo já vem com o nome da loja.</span></div>
       <script>
         // Imprime só a loja escolhida (cada gerente recebe o arquivo da própria loja); depois volta a mostrar todas
-        const tit0 = document.title, sub0 = document.getElementById('sub').textContent, per = ${JSON.stringify(`compras de jan a ${MESES[ate - 1]}/${ano}`)};
+        const tit0 = document.title, sub0 = document.getElementById('sub').textContent, per = ${JSON.stringify(`clientes selecionados para o brinde de ${ano}`)};
         function soLoja(lj) {
           const ss = [...document.querySelectorAll('section.loja')];
           ss.forEach((s) => { s.hidden = !!lj && s.dataset.loja !== lj; s.style.breakBefore = lj ? 'auto' : ''; });
           const s = ss.find((x) => x.dataset.loja === lj);
-          if (s) { document.title = tit0 + ' · ' + s.dataset.nome; document.getElementById('sub').textContent = s.dataset.nome + ' · ' + per + ' · ' + s.dataset.grupos + ' grupos de possíveis repetidos'; }
+          if (s) { document.title = tit0 + ' · ' + s.dataset.nome; document.getElementById('sub').textContent = s.dataset.nome + ' · ' + s.dataset.grupos + ' ' + per; }
           setTimeout(() => window.print(), 50);
         }
         window.addEventListener('afterprint', () => { document.querySelectorAll('section.loja').forEach((s) => { s.hidden = false; s.style.breakBefore = ''; }); document.title = tit0; document.getElementById('sub').textContent = sub0; });
       <\/script>
-      <main><div class="intro">Cada cliente recebe <b>um brinde só</b>, mesmo que tenha mais de um cadastro na loja. Pedimos ao gerente que confira:<br>
-        <b>1.</b> os grupos de possíveis cadastros repetidos, achados pelo nome (igual, ou quase igual), e marque se é o mesmo cliente e com qual código fica o brinde;<br>
-        <b>2.</b> a lista dos clientes já selecionados pela empresa e dos sugeridos ainda não selecionados (fundo laranja), anotando outros códigos do mesmo cliente que o sistema não achou (ex.: razão social num cadastro e nome fantasia no outro, ou cadastro no nome do dono).<br>
-        Somando as compras dos cadastros do mesmo cliente, ele pode subir no ranking; a diretoria refaz a seleção com as respostas. Documento interno: não repassar a terceiros.</div>
+      <main><div class="intro">Estes são os clientes da sua loja selecionados para receber o brinde de fim de ano. <b>Responda por mensagem</b>:<br>
+        • se estão certos e são clientes distintos;<br>
+        • se algum é da mesma rede ou tem o mesmo comprador que outro da lista (aí vai <b>um brinde só</b> para os dois cadastros);<br>
+        • se discorda de algum cliente da lista, e por quê;<br>
+        • se quer incluir algum cliente que não está na lista (vamos analisar antes de confirmar).<br>
+        Documento interno: não repassar a terceiros.</div>
         ${blocos.join('')}</main></body></html>`;
     const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
     w.document.open(); w.document.write(html); w.document.close();
