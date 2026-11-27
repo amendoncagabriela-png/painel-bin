@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127113303';</script>
+<script>window.BIN_BUILD = '20261127115628';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -7223,34 +7223,37 @@
   }
   function exportarCadastros() {
     if (!brUlt) return;
-    const { ano, ate, nMeses, esc, nomeDe, lojaSel, porLoja, cotas } = brUlt;
+    const { ano, ate, nMeses, esc, nomeDe, lojaSel, porLoja, cotas, sugestoes } = brUlt;
     if (!window.BIN_NOMES) { alert(window.BIN_WEB ? 'Para achar os cadastros repetidos é preciso ver os nomes: toque em "Ver nomes dos clientes (conta Google)" e exporte de novo.' : 'Os nomes dos clientes não foram carregados neste computador (local/clientes_nomes.js). Rode a atualização completa e exporte de novo.'); return; }
     const e2 = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
     const logo = (document.querySelector('img[src^="data:image"]') || {}).src || '';
     const lojas = (lojaSel === 'Todas' ? [...porLoja.keys()] : [lojaSel]).filter((l) => (porLoja.get(l) || []).length).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
     const sel = (c) => !!(esc[c.k] && esc[c.k].ok);
     const nm = (c) => nomeDe(c) || '';
+    // lista dos gerentes: os já selecionados pela empresa e os sugeridos (relatório de sugestões) ainda não selecionados, em laranja
+    const sugNao = new Map(sugestoes.filter((s) => !sel(s.c)).map((s) => [s.c.k, s.tipo]));
+    const nsel = (c) => sugNao.has(c.k);
     let totGr = 0;
     const blocos = lojas.map((lj) => {
-      const lst = porLoja.get(lj), cota = cotas.get(lj) || 0, lim = Math.max(2 * cota, 40);
-      const naLista = (c) => c.pos <= lim || sel(c);
+      const lst = porLoja.get(lj), cota = cotas.get(lj) || 0;
+      const naLista = (c) => sel(c) || nsel(c);
       // grupos de possíveis repetidos que tocam a lista (um código pequeno pode ser o mesmo cliente de um grande)
       const grupos = brRepetidos(lst, nomeDe).filter((g) => g.itens.some((x) => naLista(x.c))).sort((a, b) => d3.sum(b.itens, (x) => x.c.v) - d3.sum(a.itens, (x) => x.c.v));
       totGr += grupos.length;
       const grupoDe = new Map(); grupos.forEach((g, i) => g.itens.forEach((x) => grupoDe.set(x.c.k, i + 1)));
       const lista = lst.filter(naLista);
-      const marca = (c) => sel(c) ? '<span class="tp t-e">selecionado</span>' : c.pos <= cota ? '<span class="tp t-d">dentro da cota</span>' : '';
-      const linhaG = (x) => `<tr><td><b>${e2(x.c.cli)}</b></td><td>${e2(x.nm)}</td><td>${x.c.pos}º</td><td>${e2(money(x.c.v))}<br><small>${x.c.d} dias · ${x.c.meses.size} de ${nMeses} meses</small></td><td>${marca(x.c)}</td></tr>`;
+      const marca = (c) => sel(c) ? '<span class="tp t-e">selecionado</span>' : nsel(c) ? `<span class="tp t-s">sugerido · não selecionado</span><br><small>${e2(sugNao.get(c.k))}</small>` : '<small>fora da lista</small>';
+      const linhaG = (x) => `<tr${nsel(x.c) ? ' class="nsel"' : ''}><td><b>${e2(x.c.cli)}</b></td><td>${e2(x.nm)}</td><td>${x.c.pos}º</td><td>${e2(money(x.c.v))}<br><small>${x.c.d} dias · ${x.c.meses.size} de ${nMeses} meses</small></td><td>${marca(x.c)}</td></tr>`;
       const htmlG = grupos.length ? grupos.map((g, i) => `<div class="grupo"><div class="gcab"><b>Grupo ${i + 1}</b> · ${g.igual ? 'mesmo nome' : 'nomes parecidos'} · ${g.itens.length} cadastros · somados ${e2(money(d3.sum(g.itens, (x) => x.c.v)))}${g.itens.filter((x) => sel(x.c)).length > 1 ? ' · <b class="alerta">mais de um código já selecionado</b>' : ''}</div>
         <table><thead><tr><th>Código</th><th>Nome no cadastro</th><th>Posição</th><th>Compras no exercício</th><th>Brinde</th></tr></thead><tbody>${g.itens.map(linhaG).join('')}</tbody></table>
         <div class="resp">É o mesmo cliente? &nbsp;☐ Sim, todos &nbsp;☐ Só alguns: ______________ &nbsp;☐ Não &nbsp;&nbsp; O brinde fica com o código: ____________</div></div>`).join('')
         : '<p>Nenhum nome igual ou parecido entre os clientes da lista. Mesmo assim, confira abaixo se reconhece o mesmo cliente com nomes diferentes (ex.: razão social e nome fantasia).</p>';
-      const linhaL = (c) => `<tr${sel(c) ? ' class="sel"' : ''}><td>${c.pos}º</td><td><b>${e2(c.cli)}</b></td><td>${e2(nm(c))}${grupoDe.has(c.k) ? ` <span class="gref">grupo ${grupoDe.get(c.k)}</span>` : ''}</td><td>${e2(money(c.v))}</td><td>${marca(c)}</td><td class="pre"></td><td class="pre"></td></tr>`;
+      const linhaL = (c) => `<tr${nsel(c) ? ' class="nsel"' : ''}><td>${c.pos}º</td><td><b>${e2(c.cli)}</b></td><td>${e2(nm(c))}${grupoDe.has(c.k) ? ` <span class="gref">grupo ${grupoDe.get(c.k)}</span>` : ''}</td><td>${e2(money(c.v))}</td><td>${marca(c)}</td><td class="pre"></td><td class="pre"></td></tr>`;
       return `<section class="loja"><h2>${e2(nomeLoja(lj))}</h2>
-        <p class="meta">Cota da loja: <b>${cota}</b> brindes · ${lst.length.toLocaleString('pt-BR')} clientes identificados compraram de jan a ${MESES[ate - 1]}/${ano} · lista com os ${lista.length} primeiros do ranking e os já selecionados</p>
+        <p class="meta">Cota da loja: <b>${cota}</b> brindes · ${lst.length.toLocaleString('pt-BR')} clientes identificados compraram de jan a ${MESES[ate - 1]}/${ano} · ${lista.filter(sel).length} selecionados pela empresa e ${lista.filter(nsel).length} sugeridos ainda não selecionados <span class="leg-nsel">fundo laranja = sugerido, não selecionado</span></p>
         <h3>1. Possíveis cadastros repetidos (${grupos.length})</h3>${htmlG}
-        <h3>2. Lista para conferência</h3><p class="dica">Se reconhecer o mesmo cliente em mais de um código (também com razão social de um lado e nome fantasia do outro), anote o outro código. Fundo cinza = já selecionado para o brinde.</p>
-        <table class="lista"><thead><tr><th>Posição</th><th>Código</th><th>Nome no cadastro</th><th>Compras</th><th>Brinde</th><th>Mesmo cliente que o código</th><th>Observação</th></tr></thead><tbody>${lista.map(linhaL).join('')}</tbody></table>
+        <h3>2. Lista para conferência</h3><p class="dica">Se reconhecer o mesmo cliente em mais de um código (também com razão social de um lado e nome fantasia do outro), anote o outro código. Fundo laranja = sugerido pela análise e ainda não selecionado.</p>
+        <table class="lista"><thead><tr><th>Posição</th><th>Código</th><th>Nome no cadastro</th><th>Compras</th><th>Brinde</th><th>Mesmo cliente que o código</th><th>Observação</th></tr></thead><tbody>${lista.length ? lista.map(linhaL).join('') : '<tr><td colspan="7">Nenhum cliente selecionado nem sugerido nesta loja.</td></tr>'}</tbody></table>
         <p class="assina">Conferido por: ______________________________ &nbsp; Data: ____/____/______</p></section>`;
     });
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Brindes ${ano} · revisão de cadastros${lojaSel === 'Todas' ? '' : ' · ' + e2(lojaSel)}</title><style>
@@ -7259,14 +7262,14 @@
       section.loja { break-before: page; } section.loja:first-of-type { break-before: auto; } h2 { font-size: 20px; margin: 22px 0 2px; border-bottom: 3px solid #AF6839; padding-bottom: 4px; } h3 { font-size: 15px; margin: 16px 0 6px; break-after: avoid; } .meta, .dica { font-size: 13px; color: #555; margin: 4px 0 8px; }
       table { width: 100%; border-collapse: collapse; font-size: 12.5px; } td, th { border-bottom: 1px solid #e3ddd0; padding: 5px 6px; text-align: left; vertical-align: top; } th { background: #f1ece2; font-size: 11px; } tr { break-inside: avoid; } small { color: #555; }
       .grupo { border: 1px solid #e3ddd0; border-left: 5px solid #AF6839; border-radius: 6px; padding: 6px 8px 8px; margin: 0 0 10px; break-inside: avoid; } .gcab { font-size: 13px; margin-bottom: 4px; } .resp { font-size: 12.5px; margin-top: 6px; } .alerta { color: #A62A2E; }
-      .tp { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; white-space: nowrap; } .t-e { background: #191919; } .t-d { background: #2a5d8f; } .gref { font-size: 10.5px; font-weight: 700; color: #AF6839; white-space: nowrap; }
-      table.lista td.pre { border-bottom: 1px solid #999; min-width: 110px; } tr.sel td { background: #f1f1f1; } .assina { margin-top: 14px; font-size: 13px; }
-      .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp, tr.sel td, .grupo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      .tp { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; white-space: nowrap; } .t-e { background: #191919; } .t-d { background: #2a5d8f; } .t-s { background: #AF6839; } tr.nsel td { background: #FFF1DC; } tr.nsel td:first-child { border-left: 5px solid #AF6839; } .leg-nsel { display: inline-block; background: #FFF1DC; border-left: 5px solid #AF6839; padding: 1px 8px; font-size: 12px; font-weight: 700; color: #191919; } .gref { font-size: 10.5px; font-weight: 700; color: #AF6839; white-space: nowrap; }
+      table.lista td.pre { border-bottom: 1px solid #999; min-width: 110px; } table.lista td:nth-child(4) { white-space: nowrap; } .assina { margin-top: 14px; font-size: 13px; }
+      .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp, tr.nsel td, .leg-nsel, .grupo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
       <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · revisão de cadastros</h1><p>${lojaSel === 'Todas' ? `${lojas.length} lojas (uma por página)` : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${totGr} grupos de possíveis repetidos</p></div></header>
       <main><div class="intro">Cada cliente recebe <b>um brinde só</b>, mesmo que tenha mais de um cadastro na loja. Pedimos ao gerente que confira:<br>
         <b>1.</b> os grupos de possíveis cadastros repetidos, achados pelo nome (igual, ou quase igual), e marque se é o mesmo cliente e com qual código fica o brinde;<br>
-        <b>2.</b> a lista dos principais clientes da loja, anotando outros códigos do mesmo cliente que o sistema não achou (ex.: razão social num cadastro e nome fantasia no outro, ou cadastro no nome do dono).<br>
+        <b>2.</b> a lista dos clientes já selecionados pela empresa e dos sugeridos ainda não selecionados (fundo laranja), anotando outros códigos do mesmo cliente que o sistema não achou (ex.: razão social num cadastro e nome fantasia no outro, ou cadastro no nome do dono).<br>
         Somando as compras dos cadastros do mesmo cliente, ele pode subir no ranking; a diretoria refaz a seleção com as respostas. Documento interno: não repassar a terceiros.</div>
         ${blocos.join('')}</main></body></html>`;
     const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela. Permita pop-ups para o painel e tente de novo.'); return; }
