@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127105847';</script>
+<script>window.BIN_BUILD = '20261127113303';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -530,6 +530,16 @@
     .bd select { max-width: 9.5rem; }
     .bd-tablewrap { overflow: visible; }
   }
+  /* Indicadores no topo de cada tela (antes na lateral): faixa escura com a linha dourada, ícones e divisórias sutis entre os quadros.
+     Os quadros dividem a largura; quando não cabem numa linha, quebram e a última linha também ocupa a largura toda. */
+  .bd-layout, .br-larga { grid-template-columns: minmax(0, 1fr); }
+  .bd-rail, .br-kpis { display: flex; flex-flow: row wrap; }
+  .bd-rail .bd-goldline { flex: 0 0 100%; height: 3px; }
+  .bd-rail .bd-kpi { flex: 1 1 11.5rem; border-bottom: 0; box-shadow: -1px 0 0 rgba(255,255,255,.1), 0 -1px 0 rgba(255,255,255,.1); padding: var(--cds-pad-md) var(--cds-pad-lg); }
+  .bd-rail .bd-kpi.proj { box-shadow: inset 3px 0 0 var(--bin-proj), -1px 0 0 rgba(255,255,255,.1), 0 -1px 0 rgba(255,255,255,.1); }
+  .bd-rail .bd-kpi .val { font-size: 1.4rem; white-space: nowrap; overflow-wrap: normal; }
+  .bd-rail .bd-kpi .ico { width: 2.2rem; height: 2.2rem; }
+  @media (max-width: 40rem) { .bd-rail .bd-kpi { flex-basis: 9rem; padding: var(--cds-pad-md); } .bd-rail .bd-kpi .val { font-size: 1.2rem; } }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -2602,6 +2612,7 @@
     </div>
     <div class="bd-layout br-larga">
       <aside class="bd-rail br-kpis" aria-label="Indicadores dos brindes">
+        <div class="bd-goldline"></div>
         <div class="bd-kpi"><span class="lbl">Clientes identificados</span><span class="ico"><svg><use href="#i-box"/></svg></span><span class="val" data-br="cli">—</span><span class="sub" data-br="cli_sub">—</span></div>
         <div class="bd-kpi"><span class="lbl">Sugestão de brindes</span><span class="ico"><svg><use href="#i-target"/></svg></span><span class="val" data-br="sug">—</span><span class="sub" data-br="sug_sub">—</span></div>
         <div class="bd-kpi"><span class="lbl">Não podem ficar de fora</span><span class="ico"><svg><use href="#i-flag"/></svg></span><span class="val" data-br="obrig">—</span><span class="sub" data-br="obrig_sub">—</span></div>
@@ -2874,6 +2885,15 @@
           const mk = cc > 0 ? cv / cc - 1 : (dl.length ? null : m.markup ?? null);
           out.push({ mes, loja, nome: NOMES[loja] || loja, dia: d, realizado: tot, markup: mk, venda03: cv, custo03: cc, meta_loja: m.loja, meta_gerente: m.gerente || m.loja, fonte: 'erp' });
         }
+      }
+      // Loja que encerrou (sem venda nos meses seguintes, ex.: L6 em fev/2026): o último mês dela está fechado; a leitura vai até o fim
+      // do mês com o mesmo acumulado, para o mês não ficar "parcial" e o "Todas" não parar no último dia de venda dela
+      const ultMesGeral = out.reduce((a, r) => r.mes > a ? r.mes : a, '');
+      for (const loja of [...new Set(out.map((r) => r.loja))]) {
+        const ult = out.filter((r) => r.loja === loja).reduce((a, r) => !a || r.mes > a.mes || (r.mes === a.mes && r.dia > a.dia) ? r : a, null);
+        if (!ult || ult.mes >= ultMesGeral) continue;
+        const N = new Date(Date.UTC(Number(ult.mes.slice(0, 4)), Number(ult.mes.slice(5, 7)), 0)).getUTCDate();
+        if (ult.dia < N) out.push({ ...ult, dia: N, encerrada: true });
       }
       // "Todas": soma das lojas até o último dia em que todas têm leitura (o acumulado de cada loja segue igual nos dias sem venda)
       for (const mes of [...new Set(out.map((r) => r.mes))]) {
@@ -6953,7 +6973,9 @@
     if (!base.length) { $('#br-headline').textContent = 'Sem a base de clientes por loja (relatório 01 com o código do cliente). Atualize os dados do ERP.'; return; }
     // L6 (C. Guarulhos) fechou em fev/2026: fica fora dos brindes (distribuição, ranking e sugestões)
     const BR_FORA = new Set(['L6']);
-    const linhas = base.filter((r) => !BR_FORA.has(r.loja)).map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
+    // código 30501 = cliente genérico "PROMOÇÃO BIN EMBALAGENS" (venda de promoção sem cadastro do comprador): não é um cliente para brinde
+    const BR_CLI_FORA = new Set(['30501']);
+    const linhas = base.filter((r) => !BR_FORA.has(r.loja) && !BR_CLI_FORA.has(String(r.cliente))).map((r) => ({ loja: r.loja, cli: r.cliente, mes: r.mes, ano: Number(r.mes.slice(0, 4)), m: Number(r.mes.slice(5, 7)), v: Number(r.valor), p: Number(r.pedidos), d: Number(r.dias) }));
     const anos = [...new Set(linhas.map((r) => r.ano))].sort();
     const ano = anos.includes(Number(P().br_ano)) ? Number(P().br_ano) : anos[anos.length - 1];
     opcoes($('#br-ano'), anos.map((a) => [String(a), String(a)]), String(ano));
