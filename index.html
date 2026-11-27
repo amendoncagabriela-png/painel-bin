@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127155107';</script>
+<script>window.BIN_BUILD = '20261127155133';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -4277,7 +4277,7 @@
     const dTx = S.bruto > 0 ? S.desc / S.bruto : null, dTxA = A && A.bruto > 0 ? A.desc / A.bruto : null;
     const vDesc = dTx != null && dTxA > 0 ? dTx / dTxA - 1 : null;
     set('desc_var', pct(vDesc, true), vDesc == null ? null : -vDesc);
-    set('desc_ant', dTxA != null ? ` (era ${pct(dTxA)}; ${pp1(dTx - dTxA)}; em R$ ${pct(vr(S.desc, A.desc), true)})` : '');
+    set('desc_ant', dTxA != null ? ` (era ${pct(dTxA)}, ${pp1(dTx - dTxA)})` : '');
     const allPer = L.filter((r) => r.mes >= de && r.mes <= ate && formaOk(forma, r.forma) && r.faixa !== 'dev');
     const totPer = allPer.reduce((s, r) => s + r.val, 0), identPer = allPer.filter((r) => r.cli === 'identificado').reduce((s, r) => s + r.val, 0);
     set('ident', pct(totPer > 0 ? identPer / totPer : null));
