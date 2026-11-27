@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127115628';</script>
+<script>window.BIN_BUILD = '20261127120159';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -7249,7 +7249,7 @@
         <div class="resp">É o mesmo cliente? &nbsp;☐ Sim, todos &nbsp;☐ Só alguns: ______________ &nbsp;☐ Não &nbsp;&nbsp; O brinde fica com o código: ____________</div></div>`).join('')
         : '<p>Nenhum nome igual ou parecido entre os clientes da lista. Mesmo assim, confira abaixo se reconhece o mesmo cliente com nomes diferentes (ex.: razão social e nome fantasia).</p>';
       const linhaL = (c) => `<tr${nsel(c) ? ' class="nsel"' : ''}><td>${c.pos}º</td><td><b>${e2(c.cli)}</b></td><td>${e2(nm(c))}${grupoDe.has(c.k) ? ` <span class="gref">grupo ${grupoDe.get(c.k)}</span>` : ''}</td><td>${e2(money(c.v))}</td><td>${marca(c)}</td><td class="pre"></td><td class="pre"></td></tr>`;
-      return `<section class="loja"><h2>${e2(nomeLoja(lj))}</h2>
+      return `<section class="loja" data-loja="${e2(lj)}" data-nome="${e2(nomeLoja(lj))}" data-grupos="${grupos.length}"><h2>${e2(nomeLoja(lj))}</h2>
         <p class="meta">Cota da loja: <b>${cota}</b> brindes · ${lst.length.toLocaleString('pt-BR')} clientes identificados compraram de jan a ${MESES[ate - 1]}/${ano} · ${lista.filter(sel).length} selecionados pela empresa e ${lista.filter(nsel).length} sugeridos ainda não selecionados <span class="leg-nsel">fundo laranja = sugerido, não selecionado</span></p>
         <h3>1. Possíveis cadastros repetidos (${grupos.length})</h3>${htmlG}
         <h3>2. Lista para conferência</h3><p class="dica">Se reconhecer o mesmo cliente em mais de um código (também com razão social de um lado e nome fantasia do outro), anote o outro código. Fundo laranja = sugerido pela análise e ainda não selecionado.</p>
@@ -7264,9 +7264,24 @@
       .grupo { border: 1px solid #e3ddd0; border-left: 5px solid #AF6839; border-radius: 6px; padding: 6px 8px 8px; margin: 0 0 10px; break-inside: avoid; } .gcab { font-size: 13px; margin-bottom: 4px; } .resp { font-size: 12.5px; margin-top: 6px; } .alerta { color: #A62A2E; }
       .tp { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 6px; color: #fff; white-space: nowrap; } .t-e { background: #191919; } .t-d { background: #2a5d8f; } .t-s { background: #AF6839; } tr.nsel td { background: #FFF1DC; } tr.nsel td:first-child { border-left: 5px solid #AF6839; } .leg-nsel { display: inline-block; background: #FFF1DC; border-left: 5px solid #AF6839; padding: 1px 8px; font-size: 12px; font-weight: 700; color: #191919; } .gref { font-size: 10.5px; font-weight: 700; color: #AF6839; white-space: nowrap; }
       table.lista td.pre { border-bottom: 1px solid #999; min-width: 110px; } table.lista td:nth-child(4) { white-space: nowrap; } .assina { margin-top: 14px; font-size: 13px; }
-      .acoes { position: fixed; right: 16px; top: 16px; } .acoes button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; } @media print { .acoes { display: none; } header, .tp, tr.nsel td, .leg-nsel, .grupo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-    </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir / salvar PDF</button></div>
-      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · revisão de cadastros</h1><p>${lojaSel === 'Todas' ? `${lojas.length} lojas (uma por página)` : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${totGr} grupos de possíveis repetidos</p></div></header>
+      .porloja { background: #faf8f3; border-bottom: 1px solid #e3ddd0; padding: 10px 26px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; } .porloja b { margin-right: 4px; }
+      .porloja button { background: #AF6839; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 700; cursor: pointer; font-size: 13px; } .porloja button.todas { background: #191919; }
+      @media print { .porloja { display: none; } header, .tp, tr.nsel td, .leg-nsel, .grupo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style></head><body>
+      <header>${logo ? `<img src="${logo}" alt="BIN Embalagens">` : ''}<div><h1>Brindes ${ano} · revisão de cadastros</h1><p id="sub">${lojaSel === 'Todas' ? `${lojas.length} lojas (uma por página)` : e2(nomeLoja(lojaSel))} · compras de jan a ${MESES[ate - 1]}/${ano} · ${totGr} grupos de possíveis repetidos</p></div></header>
+      <div class="porloja"><b>Salvar o PDF de cada gerente:</b>${lojas.map((lj) => `<button type="button" onclick="soLoja('${e2(lj)}')">${e2(nomeLoja(lj))}</button>`).join('')}${lojas.length > 1 ? '<button type="button" class="todas" onclick="soLoja(\'\')">Todas juntas</button>' : ''}<span style="color:#555">Na janela de impressão, escolha "Salvar como PDF"; o arquivo já vem com o nome da loja.</span></div>
+      <script>
+        // Imprime só a loja escolhida (cada gerente recebe o arquivo da própria loja); depois volta a mostrar todas
+        const tit0 = document.title, sub0 = document.getElementById('sub').textContent, per = ${JSON.stringify(`compras de jan a ${MESES[ate - 1]}/${ano}`)};
+        function soLoja(lj) {
+          const ss = [...document.querySelectorAll('section.loja')];
+          ss.forEach((s) => { s.hidden = !!lj && s.dataset.loja !== lj; s.style.breakBefore = lj ? 'auto' : ''; });
+          const s = ss.find((x) => x.dataset.loja === lj);
+          if (s) { document.title = tit0 + ' · ' + s.dataset.nome; document.getElementById('sub').textContent = s.dataset.nome + ' · ' + per + ' · ' + s.dataset.grupos + ' grupos de possíveis repetidos'; }
+          setTimeout(() => window.print(), 50);
+        }
+        window.addEventListener('afterprint', () => { document.querySelectorAll('section.loja').forEach((s) => { s.hidden = false; s.style.breakBefore = ''; }); document.title = tit0; document.getElementById('sub').textContent = sub0; });
+      <\/script>
       <main><div class="intro">Cada cliente recebe <b>um brinde só</b>, mesmo que tenha mais de um cadastro na loja. Pedimos ao gerente que confira:<br>
         <b>1.</b> os grupos de possíveis cadastros repetidos, achados pelo nome (igual, ou quase igual), e marque se é o mesmo cliente e com qual código fica o brinde;<br>
         <b>2.</b> a lista dos clientes já selecionados pela empresa e dos sugeridos ainda não selecionados (fundo laranja), anotando outros códigos do mesmo cliente que o sistema não achou (ex.: razão social num cadastro e nome fantasia no outro, ou cadastro no nome do dono).<br>
