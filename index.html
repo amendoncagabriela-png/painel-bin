@@ -48,7 +48,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="config.js"></script>
-<script>window.BIN_BUILD = '20261127123114';</script>
+<script>window.BIN_BUILD = '20261127155107';</script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
   /* Motor do painel na versão web: os dados chegam depois do login (arquivo trancado do Google Drive). */
@@ -897,7 +897,7 @@
         <div class="bd-kpi"><span class="lbl">Ticket médio</span><span class="ico"><svg><use href="#i-pct"/></svg></span>
           <span class="val" data-k="tkt">—</span><span class="sub"><span data-k="tkt_var">—</span> vs. ano anterior</span></div>
         <div class="bd-kpi"><span class="lbl">Desconto concedido</span><span class="ico"><svg><use href="#i-flag"/></svg></span>
-          <span class="val" data-k="desc">—</span><span class="sub">do valor bruto · <span data-k="desc_rs">—</span></span></div>
+          <span class="val" data-k="desc">—</span><span class="sub">do valor bruto · <span data-k="desc_rs">—</span><br><span data-k="desc_var">—</span> vs. ano anterior<span data-k="desc_ant"></span></span></div>
         <div class="bd-kpi"><span class="lbl">Vendas com cliente identificado</span><span class="ico"><svg><use href="#i-user"/></svg></span>
           <span class="val" data-k="ident">—</span><span class="sub"><span data-k="ident_cli">—</span> clientes ativos por mês</span></div>
         <div class="bd-kpi"><span class="lbl">Margem bruta</span><span class="ico"><svg><use href="#i-proj"/></svg></span>
@@ -927,7 +927,7 @@
           </div>
           <div class="bd-card">
             <h3><span data-k="t_forma">Forma de pagamento</span> <span class="per">| % do faturamento</span></h3>
-            <p class="bd-note">Pela forma que pagou a maior parte do pedido. O traço é a fatia um ano antes.</p>
+            <p class="bd-note">Pedido pago em mais de uma forma entra dividido na proporção de cada uma. O traço é a fatia um ano antes.<span id="rx-forma-cob"></span></p>
             <div class="bd-chart" id="rx-chart-forma" style="min-height: 200px"></div>
           </div>
         </div>
@@ -4191,7 +4191,7 @@
     if (v.status !== 'ok') return null;
     if (rxCache && rxCache.src === v.data) return rxCache;
     const rows = v.data.map((r) => ({ loja: lojaDe(r), mes: r.mes, dow: Number(r.dow), cli: r.cliente, faixa: r.faixa, forma: r.forma, ped: Number(r.pedidos), val: Number(r.valor), bruto: Number(r.bruto), desc: Number(r.desconto) }));
-    rxCache = { src: v.data, rows, lojas: [...new Set(rows.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c)), comForma: new Set(rows.filter((r) => FORMAS.includes(r.forma)).map((r) => r.loja)) };
+    rxCache = { src: v.data, rows, lojas: [...new Set(rows.map((r) => r.loja))].sort((a, c) => ord(a) - ord(c)), comForma: new Set(rows.filter((r) => FORMAS.includes(r.forma)).map((r) => r.loja)), formaLM: new Set(rows.filter((r) => FORMAS.includes(r.forma)).map((r) => r.loja + '|' + r.mes)) };
     return rxCache;
   }
   function rxSoma(rows) {
@@ -4238,22 +4238,33 @@
     const optM = mesesAno.map((m) => [m, MESES_LONGOS[Number(m.slice(5, 7)) - 1] + (m === parcial ? ' (em curso)' : '')]);
     opcoesG($('#rx-de'), [[null, optM]], de); opcoesG($('#rx-ate'), [[null, optM]], ate);
     const cli = ['identificado', 'varejo'].includes(prm.rx_cli) ? prm.rx_cli : 'todos';
-    const temForma = loja !== 'Todas' && b.comForma.has(loja); // forma de pagamento só existe onde há o relatório 06
+    // Forma de pagamento: só nos meses de cada loja com o relatório 06 (L2 desde 2024; as demais desde que o 06 passou a ser salvo).
+    // A comparação com o ano anterior só entra quando todos os meses cobertos também têm o 06 um ano antes.
+    const cobre = (l, m) => b.formaLM.has(l + '|' + m);
+    const lmPer = [...new Set(L.filter((r) => r.mes >= de && r.mes <= ate).map((r) => r.loja + '|' + r.mes))];
+    const lmCob = lmPer.filter((k) => b.formaLM.has(k));
+    const temForma = lmCob.length > 0, formaParcial = temForma && lmCob.length < lmPer.length;
+    const formaAntOk = temForma && lmCob.every((k) => { const [l, m] = k.split('|'); return b.formaLM.has(l + '|' + addMes(m, -12)); });
+    const cobTxt = (() => { const g = d3.rollups(lmCob, (v) => v.map((k) => k.split('|')[1]).sort(), (k) => k.split('|')[0]).sort((a, c) => ord(a[0]) - ord(c[0]));
+      const porMeses = d3.rollups(g, (v) => v.map((x) => x[0]), (x) => x[1].length === 1 ? mesNome(x[1][0]) : `${mesNome(x[1][0])} a ${mesNome(x[1][x[1].length - 1])}`);
+      return porMeses.map(([p, ls]) => `${ls.join(', ')}: ${p}`).join(' · '); })();
+    const semFormaTxt = (() => { const ini = d3.rollups([...b.formaLM], (v) => v.map((k) => k.split('|')[1]).sort()[0], (k) => k.split('|')[0]).filter((x) => daLoja(x[0])).sort((a, c) => ord(a[0]) - ord(c[0]));
+      return ini.length ? 'O relatório 06 (forma de pagamento) existe ' + ini.map(([l, m]) => `na ${l} desde ${mesNome(m)}`).join(', ') + '.' : 'O ERP desta loja ainda não tem o relatório 06 (forma de pagamento).'; })();
     const forma = temForma && (FORMAS.includes(prm.rx_forma) || FORMA_GR[prm.rx_forma]) ? prm.rx_forma : 'todas';
     opcoesG($('#rx-cli'), CLI_OPS, cli);
-    opcoesG($('#rx-forma'), temForma ? FORMA_OPS : [[null, [['todas', loja === 'Todas' ? 'Só por loja (L2)' : 'Sem o relatório 06']]]], forma); $('#rx-forma').disabled = !temForma;
+    opcoesG($('#rx-forma'), temForma ? FORMA_OPS : [[null, [['todas', 'Sem o relatório 06 no período']]]], forma); $('#rx-forma').disabled = !temForma;
 
     const filtra = (r, d0, d1) => r.mes >= d0 && r.mes <= d1 && (cli === 'todos' || r.cli === cli) && formaOk(forma, r.forma);
     const de0 = addMes(de, -12), ate0 = addMes(ate, -12);
     const cur = L.filter((r) => filtra(r, de, ate));
     const ant = La.filter((r) => filtra(r, de0, ate0));
-    const temAnt = La.some((r) => r.mes >= de0 && r.mes <= ate0);
+    const temAnt = La.some((r) => r.mes >= de0 && r.mes <= ate0) && (forma === 'todas' || formaAntOk);
     const S = rxSoma(cur), A = temAnt ? rxSoma(ant) : null;
     const vr = (x, y) => y > 0 && x != null ? x / y - 1 : null;
     const perTxt = de === ate ? mesNome(de) : `${mesNome(de)} a ${mesNome(ate)}`;
     const perEm = de === ate ? `em ${mesNome(de)}` : `de ${mesNome(de)} a ${mesNome(ate)}`;
     const nomeForma = (FORMA_OPS.flatMap((g) => g[1]).find((x) => x[0] === forma) || [])[1];
-    const filtroTxt = [cli === 'identificado' ? 'clientes identificados' : cli === 'varejo' ? 'varejo de balcão' : '', forma !== 'todas' ? nomeForma : ''].filter(Boolean).join(' · ');
+    const filtroTxt = [cli === 'identificado' ? 'clientes identificados' : cli === 'varejo' ? 'varejo de balcão' : '', forma !== 'todas' ? nomeForma + (formaParcial ? ' (só os meses com o relatório 06)' : '') : ''].filter(Boolean).join(' · ');
     $('#rx-quem').textContent = `${nomeLoja(loja)} · ${perTxt}${filtroTxt ? ' · ' + filtroTxt : ''}`;
     const set = (k, txt, v) => { $$(`#raiox [data-k="${k}"]`).forEach((el) => { el.textContent = txt; el.classList.remove('up', 'down'); if (v != null) tone(el, v); }); };
 
@@ -4262,6 +4273,11 @@
     set('ped', int.format(S.ped)); set('ped_var', pct(vr(S.ped, A && A.ped), true), vr(S.ped, A && A.ped));
     set('tkt', S.tkt == null ? '—' : brl2.format(S.tkt)); set('tkt_var', pct(vr(S.tkt, A && A.tkt), true), vr(S.tkt, A && A.tkt));
     set('desc', pct(S.bruto > 0 ? S.desc / S.bruto : null)); set('desc_rs', money(S.desc));
+    // Desconto vs. ano anterior: variação do percentual (em %), com a diferença em pontos e o valor em R$. Desconto subindo é ruim (vermelho).
+    const dTx = S.bruto > 0 ? S.desc / S.bruto : null, dTxA = A && A.bruto > 0 ? A.desc / A.bruto : null;
+    const vDesc = dTx != null && dTxA > 0 ? dTx / dTxA - 1 : null;
+    set('desc_var', pct(vDesc, true), vDesc == null ? null : -vDesc);
+    set('desc_ant', dTxA != null ? ` (era ${pct(dTxA)}; ${pp1(dTx - dTxA)}; em R$ ${pct(vr(S.desc, A.desc), true)})` : '');
     const allPer = L.filter((r) => r.mes >= de && r.mes <= ate && formaOk(forma, r.forma) && r.faixa !== 'dev');
     const totPer = allPer.reduce((s, r) => s + r.val, 0), identPer = allPer.filter((r) => r.cli === 'identificado').reduce((s, r) => s + r.val, 0);
     set('ident', pct(totPer > 0 ? identPer / totPer : null));
@@ -4314,16 +4330,17 @@
     ]);
 
     // Forma de pagamento (ignora o filtro de forma, para mostrar a fatia de cada uma)
-    const baseForma = L.filter((r) => r.mes >= de && r.mes <= ate && (cli === 'todos' || r.cli === cli) && r.faixa !== 'dev');
-    const baseFormaAnt = La.filter((r) => r.mes >= de0 && r.mes <= ate0 && (cli === 'todos' || r.cli === cli) && r.faixa !== 'dev');
+    const baseForma = L.filter((r) => r.mes >= de && r.mes <= ate && cobre(r.loja, r.mes) && (cli === 'todos' || r.cli === cli) && r.faixa !== 'dev');
+    const baseFormaAnt = formaAntOk ? La.filter((r) => r.mes >= de0 && r.mes <= ate0 && cobre(r.loja, r.mes) && lmCob.includes(r.loja + '|' + addMes(r.mes, 12)) && (cli === 'todos' || r.cli === cli) && r.faixa !== 'dev') : [];
     const tf = d3.sum(baseForma, (r) => r.val), tfa = d3.sum(baseFormaAnt, (r) => r.val);
     const formaRows = FORMAS.map((f) => ({ f, v: tf > 0 ? d3.sum(baseForma.filter((r) => r.forma === f), (r) => r.val) / tf : 0, a: tfa > 0 ? d3.sum(baseFormaAnt.filter((r) => r.forma === f), (r) => r.val) / tfa : null })).filter((r) => r.v > 0.001).sort((a, c) => c.v - a.v);
     const vista = d3.sum(formaRows.filter((r) => FORMA_GR['g:vista'].includes(r.f)), (r) => r.v);
     emDev($('#raiox [data-k="t_forma"]').closest('.bd-card'), b.comForma.size <= 1, `Forma de pagamento só da ${[...b.comForma].join(', ') || 'L2'} por enquanto: as demais lojas entram quando o relatório 06 (vendas por forma de pagamento) delas for salvo na pasta.`);
-    if (!temForma) set('t_forma', loja === 'Todas' ? 'Forma de pagamento: só por loja (hoje, L2)' : 'Forma de pagamento: falta o relatório 06 desta loja');
+    $('#rx-forma-cob').textContent = !temForma ? '' : formaParcial ? ` Neste período, só os meses com o relatório 06: ${cobTxt}.` : formaAntOk ? '' : ' Sem o relatório 06 um ano antes: sem comparação.';
+    if (!temForma) set('t_forma', 'Forma de pagamento: sem o relatório 06 no período');
     else if (formaRows.length) set('t_forma', `${formaRows[0].f} lidera com ${pct0(formaRows[0].v)}; à vista somam ${pct0(vista)}`);
-    if (!temForma) vazio($('#rx-chart-forma'), loja === 'Todas' ? 'A forma de pagamento (relatório 06) hoje só existe para a L2: escolha a L2 para ver Pix, dinheiro, cartão e prazo.' : 'O ERP desta loja ainda não tem o relatório 06 (forma de pagamento). Extraia o 06 para ver Pix, dinheiro, cartão e prazo.');
-    else drawHBars($('#rx-chart-forma'), formaRows.map((r, i) => ({ key: r.f, label: r.f, value: r.v, ref: temAnt ? r.a : null, color: forma !== 'todas' ? (formaOk(forma, r.f) ? GOLD : MUTED) : i === 0 ? GOLD : MUTED, bold: forma !== 'todas' && formaOk(forma, r.f) })),
+    if (!temForma) vazio($('#rx-chart-forma'), `${semFormaTxt} Escolha um período coberto para ver Pix, dinheiro, cartão e prazo.`);
+    else drawHBars($('#rx-chart-forma'), formaRows.map((r, i) => ({ key: r.f, label: r.f, value: r.v, ref: formaAntOk ? r.a : null, color: forma !== 'todas' ? (formaOk(forma, r.f) ? GOLD : MUTED) : i === 0 ? GOLD : MUTED, bold: forma !== 'todas' && formaOk(forma, r.f) })),
       { fmt: (v) => pct(v), onClick: (r) => dash.setParams({ rx_forma: forma === r.key ? 'todas' : r.key }), tip: (r) => [{ text: `Fatia  ${pct(r.value)}` }, ...(r.ref != null ? [{ text: `Um ano antes  ${pct(r.ref)}` }] : [])] });
 
     // Faixas de ticket
@@ -4355,9 +4372,9 @@
       headline: vFat != null ? `${sujeito} ${verbo(vFat >= 0)} ${pct(Math.abs(vFat))} ${perEm}, com ${money(S.val)} faturados.` : `${sujeito} ${recorte ? 'somam' : 'fatura'} ${money(S.val)} ${perEm}.`,
       complemento: vFat != null ? `Ticket médio de ${brl2.format(S.tkt)} (${pct(vTkt, true)}) em ${int.format(S.ped)} pedidos (${pct(vPed, true)}): ${motor}` : `Ticket médio de ${S.tkt ? brl2.format(S.tkt) : '—'} em ${int.format(S.ped)} pedidos.`,
       evid1: tp ? `Pedidos de até R$ 50 são ${pp(peq.a)} dos pedidos e só ${pp(peq.b)} do faturamento; acima de R$ 300 são ${pp(fxRows[4].a + fxRows[5].a)} dos pedidos e ${pp(fxRows[4].b + fxRows[5].b)} do faturamento.` : '—',
-      evid2: !temForma ? (loja === 'Todas' ? 'Forma de pagamento: o relatório 06 hoje só existe para a L2.' : 'Forma de pagamento ainda sem dados nesta loja: falta o relatório 06.') : formaLider ? `${formaLider.f} é a forma principal em ${pct0(formaLider.v)} do faturamento${formaLider.a != null ? ` (era ${pct0(formaLider.a)} um ano antes)` : ''}; à vista somam ${pct0(vista)}.` : '—',
+      evid2: !temForma ? `Forma de pagamento: ${semFormaTxt}` : formaLider ? `${formaLider.f} é a forma principal em ${pct0(formaLider.v)} do faturamento${formaAntOk && formaLider.a != null ? ` (era ${pct0(formaLider.a)} um ano antes)` : ''}; à vista somam ${pct0(vista)}${formaParcial ? ` (só nos meses com o relatório 06: ${cobTxt})` : ''}.` : '—',
       evid3: `Clientes identificados respondem por ${pct0(totPer > 0 ? identPer / totPer : 0)} do faturamento; o resto é varejo de balcão.`,
-      onde_agir: melhorDow && dowRows.length > 2 ? (() => { const fraco = dowRows.slice().sort((a, c) => a.v - c.v)[0]; return `${DOW[fraco.d]} vende ${pct0(1 - fraco.v / melhorDow.v)} menos que ${DOW[melhorDow.d].toLowerCase()}: dia candidato a promoção ou ação com clientes identificados. Desconto concedido de ${pct(S.bruto > 0 ? S.desc / S.bruto : null)} do valor bruto (${money(S.desc)}).`; })() : `Desconto concedido de ${pct(S.bruto > 0 ? S.desc / S.bruto : null)} do valor bruto (${money(S.desc)}).`,
+      onde_agir: melhorDow && dowRows.length > 2 ? (() => { const fraco = dowRows.slice().sort((a, c) => a.v - c.v)[0]; return `${DOW[fraco.d]} vende ${pct0(1 - fraco.v / melhorDow.v)} menos que ${DOW[melhorDow.d].toLowerCase()}: dia candidato a promoção ou ação com clientes identificados. Desconto concedido de ${pct(S.bruto > 0 ? S.desc / S.bruto : null)} do valor bruto (${money(S.desc)})${dTxA != null ? `, contra ${pct(dTxA)} um ano antes` : ''}.`; })() : `Desconto concedido de ${pct(S.bruto > 0 ? S.desc / S.bruto : null)} do valor bruto (${money(S.desc)}).`,
       ressalva: `Dados do ERP de ${nomeLoja(loja)}. A comparação usa os mesmos meses do ano anterior.${parcial && ate >= parcial ? ` ${mesNome(parcial)} está incompleto (até ${dBR(ultData)}) e é comparado com o mês inteiro do ano anterior.` : ''}`,
     };
     $$('#hero-rx [data-k]').forEach((el) => { el.textContent = story[el.dataset.k] || '—'; });
